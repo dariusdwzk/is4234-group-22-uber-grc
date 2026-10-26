@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16-alpine@sha256:f4610795587492cd4fb887c2dc3de301b813278bb6f616992061141b5f15ac36
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: grc_owner
+      POSTGRES_PASSWORD: ${LOCAL_DB_PASSWORD:-localdev}
+      POSTGRES_DB: grc
+    volumes:
+      - ./docker/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U grc_owner -d grc"]
+      interval: 5s
+      timeout: 3s
+      retries: 10

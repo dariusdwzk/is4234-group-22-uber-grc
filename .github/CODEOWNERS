@@ -1,0 +1,22 @@
+# Replace @OWNER_A / @OWNER_B with real GitHub handles (human-only checklist).
+# A (Darius)
+/src/server/ledger/ @OWNER_A
+/src/server/auth/ @OWNER_A
+/src/server/authz.ts @OWNER_A
+/src/server/run-command.ts @OWNER_A
+/drizzle/ @OWNER_A
+/.github/ @OWNER_A
+/.claude/ @OWNER_A
+/src/domain/gate.ts @OWNER_A
+/src/domain/independence.ts @OWNER_A
+/src/domain/canonical-json.ts @OWNER_A
+/src/domain/hash.ts @OWNER_A
+# B (teammate)
+/src/domain/rules.ts @OWNER_B
+/src/domain/facts.ts @OWNER_B
+/src/domain/clocks.ts @OWNER_B
+/src/domain/conflicts.ts @OWNER_B
+/src/domain/board-text.ts @OWNER_B
+/rule-packs/ @OWNER_B
+/src/server/commands/ingest-*.ts @OWNER_B
+/tests/e2e/ @OWNER_B

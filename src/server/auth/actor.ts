@@ -1,5 +1,6 @@
 import "server-only";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import type { Actor } from "@/domain/types";
 import { getNow } from "../clock";
 import { actorFromToken, SESSION_TTL_MS } from "./session";
@@ -12,6 +13,7 @@ export async function getSessionToken(): Promise<string | undefined> {
 
 /** The signed-in actor for this request, or null. Authorisation still happens in runCommand. */
 export async function getActor(): Promise<Actor | null> {
+  await connection(); // getNow() reads the clock; Next rejects that during (runtime) prerender
   return actorFromToken(await getSessionToken(), await getNow());
 }
 

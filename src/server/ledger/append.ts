@@ -16,6 +16,16 @@ export type AppendInput = {
   ts: string;
 };
 
+/** Takes the ledger head lock. runCommand calls it first so every command shares one lock order. */
+export async function lockHead(tx: Tx) {
+  const [head] = await tx
+    .select()
+    .from(ledgerHead)
+    .where(eq(ledgerHead.id, 1))
+    .for("update");
+  return head;
+}
+
 /**
  * The only function that writes ledger_entries. It takes a Tx (never the pool) and locks
  * ledger_head FOR UPDATE, so concurrent writers serialise and the chain cannot fork.
@@ -28,11 +38,7 @@ export async function appendEntry(
   if (new Date(e.ts).toISOString() !== e.ts) {
     throw new Error(`ledger ts must be canonical ISO-8601 UTC, got ${e.ts}`);
   }
-  const [head] = await tx
-    .select()
-    .from(ledgerHead)
-    .where(eq(ledgerHead.id, 1))
-    .for("update");
+  const head = await lockHead(tx);
   if (!head)
     throw new Error("ledger_head row missing; seed it before appending");
 

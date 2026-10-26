@@ -3,6 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { computeClocks } from "@/domain/clocks";
 import { gateState, type Decision } from "@/domain/gate";
 import { loadRulePack } from "@/domain/rule-pack";
+import { SYSTEM_ACTOR } from "@/domain/types";
 import { createTier2 } from "./board/tier2";
 import { cases, decisions } from "./db/schema";
 import type { CommandCtx } from "./run-command";
@@ -14,11 +15,19 @@ import type { CommandCtx } from "./run-command";
  */
 export async function sweepEscalations(ctx: CommandCtx): Promise<number> {
   const { tx, now } = ctx;
+  // Spec §8: the sweep acts as the system, whoever happened to trigger it.
+  const sysCtx: CommandCtx = {
+    ...ctx,
+    actor: SYSTEM_ACTOR,
+    log: (type, payload) =>
+      ctx.log(type, payload, { actorId: SYSTEM_ACTOR.id }),
+  };
   const pack = loadRulePack("v1");
   const open = await tx
     .select()
     .from(cases)
-    .where(and(eq(cases.tier, "HIGH"), eq(cases.status, "open")));
+    .where(and(eq(cases.tier, "HIGH"), eq(cases.status, "open")))
+    .orderBy(cases.id);
   let created = 0;
   for (const c of open) {
     const rows = await tx
@@ -50,7 +59,7 @@ export async function sweepEscalations(ctx: CommandCtx): Promise<number> {
     for (const k of clocks) {
       if (k.status !== "due_soon" && k.status !== "overdue") continue;
       const body = `Case ${c.ref}: clock "${k.label}" is ${k.status === "overdue" ? "overdue" : "approaching its limit"} (${k.pctElapsed}% elapsed, due ${k.dueAt}).`;
-      if (await createTier2(ctx, c.id, `clock:${k.id}`, body)) created++;
+      if (await createTier2(sysCtx, c.id, `clock:${k.id}`, body)) created++;
     }
   }
   return created;

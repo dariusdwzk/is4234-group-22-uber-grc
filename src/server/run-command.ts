@@ -7,7 +7,7 @@ import { getNow } from "./clock";
 import { db, type Tx } from "./db/client";
 import { sweepEscalations } from "./escalation";
 import { Forbidden, ValidationError } from "./errors";
-import { appendEntry, type LedgerEventType } from "./ledger/append";
+import { appendEntry, lockHead, type LedgerEventType } from "./ledger/append";
 
 export type CommandCtx = {
   tx: Tx;
@@ -66,6 +66,8 @@ export async function runCommand<I, O>(
 
   try {
     return await db.transaction(async (tx) => {
+      // First statement: one global lock order (head, then rows) and a sweep that sees committed state.
+      await lockHead(tx);
       const now = await getNow(tx);
       const nowIso = now.toISOString();
       const effectiveActor = actor ?? SYSTEM_ACTOR; // only reachable for public actions (login)

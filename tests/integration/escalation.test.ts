@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { Actor } from "@/domain/types";
 import { db } from "@/server/db/client";
-import { boardItems } from "@/server/db/schema";
+import { boardItems, ledgerEntries } from "@/server/db/schema";
 import { advanceClock } from "@/server/commands/advance-clock";
 import { ingestEvent } from "@/server/commands/ingest-event";
 import { submitDecision } from "@/server/commands/submit-decision";
@@ -117,5 +117,46 @@ describe("escalation sweep", () => {
     await advance(60);
     await ingest("blocked_login", { account: "svc-test" }, "K3");
     expect(await tier2()).toContain("clock:GDPR_33");
+  });
+
+  it("US-19: automatic escalations are attributed to the system actor, not whoever triggered the sweep", async () => {
+    await highAlert();
+    await advance(60);
+    await ingest("blocked_login", { account: "svc-test" }, "K3");
+    const rows = (
+      await db
+        .select()
+        .from(ledgerEntries)
+        .where(eq(ledgerEntries.eventType, "TIER2_CREATED"))
+    ).filter((r) => JSON.stringify(r.payload).includes("clock:"));
+    expect(rows.length).toBeGreaterThan(0);
+    for (const r of rows) expect(r.actorId).toBe("system");
+  });
+
+  it("US-19: concurrent agreeing decisions plus a sweeping command all succeed (no deadlock)", async () => {
+    for (let i = 0; i < 5; i++) {
+      await resetTestDb();
+      const ids = await ownerDb.transaction((tx) =>
+        seed(tx, { demoPassword: "demo-password-12345", now: new Date() }),
+      );
+      const gc = { ...who.gc, id: ids.gc! };
+      const pco = { ...who.pco, id: ids.pco! };
+      await highAlert();
+      const caseId = (await db.select().from(boardItems))[0]!.caseId;
+      await advance(53);
+      const d = {
+        caseId,
+        outcome: "withhold",
+        reasonCode: "LEGAL_ADVICE",
+        checklist,
+      };
+      const results = await Promise.allSettled([
+        submitDecision(gc, d),
+        submitDecision(pco, d),
+        advance(2),
+        ingest("blocked_login", { account: "svc-test" }, `K${i}`),
+      ]);
+      expect(results.filter((r) => r.status === "rejected")).toEqual([]);
+    }
   });
 });

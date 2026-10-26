@@ -2,6 +2,7 @@ import "server-only";
 import { sql } from "drizzle-orm";
 import type { Actor } from "@/domain/types";
 import { authorize } from "../authz";
+import { assertDemoMode } from "../demo";
 import { getDemoDb } from "../db/demo-client";
 import { Forbidden } from "../errors";
 import { exportHead } from "../ledger/export-head";
@@ -34,7 +35,8 @@ export async function resetDemo(
   actor: Actor,
   demoPassword: string,
 ): Promise<void> {
-  const demoDb = getDemoDb(); // throws NotFound unless DEMO_MODE=true
+  assertDemoMode();
+  const demoDb = getDemoDb();
   const auth = authorize(actor, "resetDemo");
   if (!auth.ok) {
     await logRefusal(actor, "resetDemo", auth.reason);

@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { Actor } from "@/domain/types";
 import { db } from "@/server/db/client";
 import {
@@ -61,7 +61,11 @@ async function allCases() {
 }
 
 describe("intake", () => {
+  afterEach(() => {
+    delete process.env.DEMO_MODE;
+  });
   beforeEach(async () => {
+    process.env.DEMO_MODE = "true"; // the simulator only exists in demo mode
     await resetTestDb();
     await db.transaction((tx) =>
       writeGenesis(tx, "2026-10-27T00:00:00.000Z", "v1"),

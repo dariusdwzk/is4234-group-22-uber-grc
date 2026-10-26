@@ -3,6 +3,7 @@ import { z } from "zod";
 import { EVENT_PAYLOAD_SCHEMAS } from "@/domain/event-payloads";
 import type { Actor, EventKind, JsonValue } from "@/domain/types";
 import { attachEvent } from "../cases/intake";
+import { assertDemoMode } from "../demo";
 import { runCommand, type CommandDef } from "../run-command";
 
 const KINDS = Object.keys(EVENT_PAYLOAD_SCHEMAS) as [EventKind, ...EventKind[]];
@@ -55,5 +56,7 @@ export const ingestEventCommand: CommandDef<
   },
 };
 
-export const ingestEvent = (actor: Actor | null, raw: unknown) =>
-  runCommand(ingestEventCommand, actor, raw);
+export const ingestEvent = async (actor: Actor | null, raw: unknown) => {
+  assertDemoMode(); // the simulator does not exist outside demo mode
+  return runCommand(ingestEventCommand, actor, raw);
+};

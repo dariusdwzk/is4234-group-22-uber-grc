@@ -1,2 +1,23 @@
 .DS_Store
 *.pdf
+
+# dependencies / build
+/node_modules
+/.next/
+/out/
+/build
+/coverage
+*.tsbuildinfo
+next-env.d.ts
+.vercel
+
+# env: names only in .env.example
+.env*
+!.env.example
+
+# tooling
+.claude/settings.local.json
+/playwright-report
+/test-results
+.superpowers/
+npm-debug.log*

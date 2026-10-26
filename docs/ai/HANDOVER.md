@@ -1,9 +1,9 @@
 # Handover
 
-**Changed:** P0 complete: Next.js 16.4.1 scaffold with `/api/health`, local Postgres compose, gitleaks pre-commit, CI (lint/typecheck/test, gitleaks, audit), Claude guardrails (hooks, skills, reviewer), docs. CODEOWNERS has real handles.
-**Verified:** clean `npm ci` + lint + typecheck + `npm test` (14 tests) + build; compose up + `select 1` on `grc_test`; CI green on PR #1; prod `/api/health` returned 200 (run by Darius).
-**Not verified:** Claude Code `protect-files` hook blocking an `.env.local` edit in a live session (Darius will check).
-**Next:** P1 (`plans/pending/P1-ledger-auth-rules.md`): ledger, auth, rules. Ponytail OFF for ledger/auth/authz/gate paths. Needs roles `app_rw` and `demo_admin`; Vercel env vars after that.
+**Changed:** P1 complete in code. Drizzle schema + `0000` (generated) + `0001` (roles, grants, append-only trigger; Darius-reviewed). Canonical JSON, hash, pure verify; DB ledger append/verify/export-head/genesis; `authz.ts` POLICY; `runCommand`; scrypt passwords, sessions, login throttle, logout; rule pack v1, facts, `evaluate`; `/api/health` (db probe) and `/api/ledger/verify`; CI Postgres service + `test:int`; `docs/neon-setup.md`.
+**Verified (local, Postgres 16):** lint, typecheck, 85 unit, 52 integration, build.
+**Not verified:** CI run of the new `test:int` job; Neon (`CREATE ROLE`, `ALTER ROLE … PASSWORD`, `FOR UPDATE` via pooled URL, Postgres 18); preview `/api/health` `db:"ok"`.
+**Next:** Darius runs `docs/neon-setup.md`, then P2 (`plans/pending/P2-intake-cases.md`): seeding must create `ledger_head` (writeGenesis does) and `demo_settings` rows.
 **Blocked:** nothing.
-**Decisions:** see `docs/ai/DECISIONS.md` (Pro yes, Node 24, Neon is Postgres 18).
-**Gotchas:** dependabot PRs #2–#6 open; major bumps (eslint 10, typescript 7) should be closed. Never paste connection strings into chat.
+**Decisions / deviations:** `containsAny` op omitted from rule-pack schema (no string fact exists); `viewLedger` includes IA; `demo_admin` also has DELETE on all tables; owner can still TRUNCATE; login returns a result (does not throw) so failures persist; `CommandCtx.log` takes optional `actorId`; `connection()` used in routes (cacheComponents is on).
+**Gotchas:** integration suite TRUNCATEs the target DB, never point `TEST_DATABASE_URL_OWNER` at main. Tests are one-file-at-a-time. Several unit tests were written after the code.

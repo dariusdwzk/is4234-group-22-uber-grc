@@ -45,6 +45,9 @@ export async function resetDemo(
 
   await demoDb.transaction(async (tx) => {
     const now = new Date();
+    // Queue ahead of every writer: row-locking the head first deadlocks with appends that
+    // already wait on it while holding a table lock that TRUNCATE needs.
+    await tx.execute(sql`LOCK TABLE ledger_head IN ACCESS EXCLUSIVE MODE`);
     const previousHead = await exportHead(tx, actor.id, now.toISOString());
     await tx.execute(sql.raw(`TRUNCATE ${STATE_TABLES.join(", ")} CASCADE`));
     const ids = await seed(tx, { demoPassword, now });

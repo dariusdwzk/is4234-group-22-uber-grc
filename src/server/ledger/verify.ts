@@ -46,11 +46,23 @@ export async function verifyChain(
   }
   const result = verifier.result();
 
-  const [exported] = await client
+  // A reset restarts the chain at seq 1, so exports from before the latest DEMO_RESET
+  // belong to a chain that no longer exists (its head is kept in the DEMO_RESET payload).
+  const [reset] = await client
+    .select({ ts: ledgerEntries.tsIso })
+    .from(ledgerEntries)
+    .where(eq(ledgerEntries.eventType, "DEMO_RESET"))
+    .orderBy(desc(ledgerEntries.seq))
+    .limit(1);
+  const exports = await client
     .select()
     .from(headExports)
     .orderBy(desc(headExports.id))
     .limit(1);
+  const [exported] =
+    reset && exports[0] && exports[0].exportedAt.toISOString() <= reset.ts
+      ? []
+      : exports;
   if (!exported) return result;
   const [atSeq] = await client
     .select({ hash: ledgerEntries.hash })

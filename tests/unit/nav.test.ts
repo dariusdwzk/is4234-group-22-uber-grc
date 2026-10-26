@@ -6,13 +6,13 @@ const hrefs = (r: Parameters<typeof navLinks>[0]) =>
 
 describe("navLinks", () => {
   it("EMP sees only the report page", () => {
-    expect(hrefs("EMP")).toEqual(["/report"]);
+    expect(hrefs("EMP")).toEqual(["/report", "/flag"]);
   });
   it("SA sees cases and report, never board, ledger or demo", () => {
-    expect(hrefs("SA")).toEqual(["/cases", "/report"]);
+    expect(hrefs("SA")).toEqual(["/cases", "/report", "/flag"]);
   });
   it("ACC sees report, board and ledger", () => {
-    expect(hrefs("ACC")).toEqual(["/report", "/board", "/ledger"]);
+    expect(hrefs("ACC")).toEqual(["/report", "/board", "/flag", "/ledger"]);
   });
   it("only DEMO sees /demo", () => {
     expect(hrefs("DEMO")).toContain("/demo");

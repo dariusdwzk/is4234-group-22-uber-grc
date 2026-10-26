@@ -1,7 +1,14 @@
 import { expect, test } from "@playwright/test";
-import { firePreset, loginAs, resetDemo } from "./fixtures";
+import {
+  firePreset,
+  loginAs,
+  raiseFlag,
+  resetDemo,
+  tamper,
+  verifyLedger,
+} from "./fixtures";
 
-test.describe.serial("replay: Uber 2016, steps 1-5", () => {
+test.describe.serial("replay: Uber 2016, steps 1-8", () => {
   test.beforeAll(async ({ browser }) => {
     const page = await browser.newPage();
     await resetDemo(page);
@@ -106,6 +113,50 @@ test.describe.serial("replay: Uber 2016, steps 1-5", () => {
     await expect(
       page.getByRole("region", { name: "Tier 1 board notice" }),
     ).toContainText("CASE-0001");
+  });
+
+  test("Step 6 (F6): employee challenge flag escalates to Tier 2", async ({
+    page,
+  }) => {
+    await raiseFlag(page, "CASE-0001", "The case was closed too quickly.");
+    await loginAs(page, "acc");
+    await page.goto("/board");
+    const item = page
+      .getByTestId("tier2-item")
+      .filter({ hasText: "challenge flag" });
+    await expect(item).toHaveCount(1);
+    await expect(item).toContainText("CASE-0001");
+  });
+
+  test("Step 7 (F10): demo tamper makes verify fail at entry N", async ({
+    page,
+  }) => {
+    await loginAs(page, "acc");
+    await page.goto("/ledger");
+    await verifyLedger(page);
+    await expect(page.getByTestId("verify-result")).toContainText("Ledger OK");
+    await tamper(page, 4);
+    await page.goto("/ledger");
+    await verifyLedger(page);
+    await expect(page.getByTestId("verify-result")).toContainText(
+      "Verification failed at entry 4",
+    );
+  });
+
+  test("Step 8 (F9): dashboard shows days-to-board vs 371", async ({
+    page,
+  }) => {
+    await loginAs(page, "acc");
+    await page.goto("/board");
+    await expect(page.getByTestId("kpi-card").first()).toContainText(
+      "Detection → board notice",
+    );
+    await expect(page.getByTestId("kpi-uber")).toContainText(
+      "Uber 2016: 371 days to disclosure",
+    );
+    await expect(page.getByTestId("head-status")).toContainText(
+      "Verification failed at entry 4",
+    );
   });
 
   test("Scenario C: low-risk login auto-logged as LOW", async ({ page }) => {

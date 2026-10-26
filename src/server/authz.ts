@@ -30,6 +30,8 @@ export const POLICY = {
   exportHead: ["ACC", "IA"],
   verifyLedger: ["IA", "ACC", "DEMO"],
   publishRulePack: ["GC"],
+  // Only the system actor sweeps; viewers trigger it on page load but never act as it.
+  sweep: ["EXEC"],
   advanceClock: ["DEMO"],
   resetDemo: ["DEMO"],
   tamperEntry: ["DEMO"],
@@ -37,7 +39,8 @@ export const POLICY = {
   viewCase: ["SA", "CISO", "GC", "PCO", "IA"],
   viewBoard: ["ACC"],
   // IA verifies and exports, so IA must be able to read the ledger it verifies.
-  viewLedger: ["ACC", "IA"],
+  // DEMO operates the tamper control on this page (spec §6).
+  viewLedger: ["ACC", "IA", "DEMO"],
   viewDemo: ["DEMO"],
 } as const satisfies Record<string, readonly Role[]>;
 

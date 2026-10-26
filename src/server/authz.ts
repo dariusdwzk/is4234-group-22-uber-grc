@@ -39,7 +39,8 @@ export const POLICY = {
   viewCase: ["SA", "CISO", "GC", "PCO", "IA"],
   viewBoard: ["ACC"],
   // IA verifies and exports, so IA must be able to read the ledger it verifies.
-  viewLedger: ["ACC", "IA"],
+  // DEMO operates the tamper control on this page (spec §6).
+  viewLedger: ["ACC", "IA", "DEMO"],
   viewDemo: ["DEMO"],
 } as const satisfies Record<string, readonly Role[]>;
 

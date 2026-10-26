@@ -14,6 +14,7 @@ import { resolveFlag } from "@/server/commands/resolve-flag";
 import { Conflict, Forbidden } from "@/server/errors";
 import { verifyChain } from "@/server/ledger/verify";
 import { getBoard } from "@/server/queries/board";
+import { getBoardFlags } from "@/server/queries/flags";
 import { seed } from "@/server/seed/seed";
 import { SEED_USERS, type SeedKey } from "@/server/seed/users";
 import { ownerDb, resetTestDb } from "./setup/db";
@@ -63,7 +64,7 @@ describe("challenge flags", () => {
     expect((await verifyChain()).ok).toBe(true);
   });
 
-  it("an unknown case ref is not dropped: ledgered and shown on the board", async () => {
+  it("US-18: an unknown case ref is not dropped: ledgered and shown on the board", async () => {
     const out = await flag(who.emp, "CASE-9999");
     expect(out.matched).toBe(false);
     expect(await db.select().from(challengeFlags)).toHaveLength(0);
@@ -98,7 +99,7 @@ describe("challenge flags", () => {
     ).rejects.toBeInstanceOf(Forbidden);
   });
 
-  it("IA resolves flag; a second resolve is a Conflict", async () => {
+  it("US-18: IA resolves flag; a second resolve is a Conflict", async () => {
     await flag(who.emp);
     const [f] = await db.select().from(challengeFlags);
     await resolveFlag(who.ia, {
@@ -117,7 +118,7 @@ describe("challenge flags", () => {
     expect((await verifyChain()).ok).toBe(true);
   });
 
-  it("unique (case_id, reason_key): double-submitted flag form creates two flags but each Tier 2 exactly once", async () => {
+  it("US-18: unique (case_id, reason_key): double-submitted flag form creates two flags but each Tier 2 exactly once", async () => {
     await Promise.all([flag(who.emp), flag(who.emp)]);
     const flags = await db.select().from(challengeFlags);
     expect(flags).toHaveLength(2);
@@ -127,9 +128,52 @@ describe("challenge flags", () => {
     );
   });
 
-  it("flag text is validated", async () => {
+  it("US-18: flag text is validated", async () => {
     await expect(
       raiseFlag(who.emp, { caseRef: "CASE-0001", text: "no" }),
     ).rejects.toThrow();
+  });
+
+  it("US-18: every signed-in role may raise a flag; no actor may not", async () => {
+    for (const k of [
+      "demo",
+      "ia",
+      "sa",
+      "ciso",
+      "gc",
+      "pco",
+      "acc",
+      "emp",
+    ] as const)
+      await expect(flag(who[k])).resolves.toEqual({ matched: true });
+    // EXEC has no seeded user; the policy alone decides.
+    await expect(
+      flag({ id: who.emp.id, role: "EXEC", displayName: "x" }),
+    ).resolves.toEqual({ matched: true });
+    await expect(flag(null as unknown as Actor)).rejects.toBeInstanceOf(
+      Forbidden,
+    );
+  });
+
+  it("US-18: unmatched flags are capped per actor so the ledger cannot be flooded", async () => {
+    for (let i = 0; i < 27; i++) await flag(who.emp, `NOPE-${i}`);
+    const rows = await db
+      .select()
+      .from(ledgerEntries)
+      .where(eq(ledgerEntries.eventType, "FLAG_RAISED"));
+    expect(rows).toHaveLength(25);
+    expect((await getBoard(who.acc)).unmatchedFlags.length).toBeLessThanOrEqual(
+      25,
+    );
+  });
+
+  it("US-18: only ACC and IA may list open flags; refusal is logged", async () => {
+    await expect(getBoardFlags(who.sa)).rejects.toBeInstanceOf(Forbidden);
+    await expect(getBoardFlags(who.ia)).resolves.toEqual([]);
+    const refused = await db
+      .select()
+      .from(ledgerEntries)
+      .where(eq(ledgerEntries.eventType, "REFUSED"));
+    expect(refused).toHaveLength(1);
   });
 });

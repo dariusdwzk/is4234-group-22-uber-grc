@@ -8,7 +8,8 @@ import { acknowledgeTier2 } from "@/server/commands/acknowledge-tier2";
 import { advanceClock } from "@/server/commands/advance-clock";
 import { ingestEvent } from "@/server/commands/ingest-event";
 import { submitDecision } from "@/server/commands/submit-decision";
-import { sweep } from "@/server/commands/sweep";
+import { sweep, sweepCommand } from "@/server/commands/sweep";
+import { runCommand } from "@/server/run-command";
 import { Conflict, Forbidden } from "@/server/errors";
 import { verifyChain } from "@/server/ledger/verify";
 import { getBoard } from "@/server/queries/board";
@@ -152,12 +153,12 @@ describe("board", () => {
     expect(b.verify.ok).toBe(true);
   });
 
-  it("board query is ACC only", async () => {
+  it("US-24: board query is ACC only", async () => {
     await expect(getBoard(who.sa)).rejects.toBeInstanceOf(Forbidden);
     await expect(getBoard(who.gc)).rejects.toBeInstanceOf(Forbidden);
   });
 
-  it("sweep creates the escalation Tier 2 once, as the system", async () => {
+  it("US-19: sweep creates the escalation Tier 2 once, as the system", async () => {
     await advanceClock(who.demo, { hours: 60 });
     // advanceClock's own sweep already ran at the old time; a viewer sweep sees the new time.
     await sweep();
@@ -172,5 +173,17 @@ describe("board", () => {
       .where(eq(ledgerEntries.eventType, "TIER2_CREATED"));
     expect(created).toHaveLength(keys.length);
     expect(created.every((e) => e.actorId === "system")).toBe(true);
+  });
+
+  it("US-19: sweep is refused for every role except the system actor, and logged", async () => {
+    for (const k of ["sa", "gc", "acc", "ia", "demo", "emp"] as const)
+      await expect(runCommand(sweepCommand, who[k], {})).rejects.toBeInstanceOf(
+        Forbidden,
+      );
+    const refused = await db
+      .select()
+      .from(ledgerEntries)
+      .where(eq(ledgerEntries.eventType, "REFUSED"));
+    expect(refused).toHaveLength(6);
   });
 });

@@ -1,11 +1,14 @@
 import "server-only";
-import { eq } from "drizzle-orm";
+import { and, count, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Actor } from "@/domain/types";
 import { createTier2 } from "../board/tier2";
 import { classifyCase } from "../cases/classify";
-import { cases, challengeFlags } from "../db/schema";
+import { cases, challengeFlags, ledgerEntries } from "../db/schema";
 import { runCommand, type CommandDef } from "../run-command";
+
+/** Unmatched flags per actor kept in the ledger (entries cannot be deleted). */
+const UNMATCHED_CAP = 25;
 
 const schema = z.strictObject({
   caseRef: z.string().trim().min(1).max(40),
@@ -27,7 +30,23 @@ export const raiseFlagCommand: CommandDef<
     const { tx, actor, log } = ctx;
     const [c] = await tx.select().from(cases).where(eq(cases.ref, caseRef));
     if (!c) {
-      await log("FLAG_RAISED", { caseRef, text, matched: false });
+      // shortcut: past the cap the flag is dropped without a trace; add a resolvable store if abuse matters.
+      const [{ n }] = (await tx
+        .select({ n: count() })
+        .from(ledgerEntries)
+        .where(
+          and(
+            eq(ledgerEntries.eventType, "FLAG_RAISED"),
+            eq(ledgerEntries.actorId, actor.id),
+            sql`${ledgerEntries.payload}->>'matched' = 'false'`,
+          ),
+        )) as [{ n: number }];
+      if (n < UNMATCHED_CAP)
+        await log("FLAG_RAISED", {
+          caseRef,
+          text: text.slice(0, 200),
+          matched: false,
+        });
       return { matched: false };
     }
     const [flag] = await tx

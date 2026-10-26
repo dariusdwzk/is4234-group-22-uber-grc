@@ -54,7 +54,7 @@ describe("ledger UI commands", () => {
     expect((await verifyChain()).ok).toBe(true);
   });
 
-  it("tamper is refused for non-DEMO roles and logged", async () => {
+  it("US-22: tamper is refused for non-DEMO roles and logged", async () => {
     await expect(tamperEntry(who.ia, { seq: 5 })).rejects.toBeInstanceOf(
       Forbidden,
     );
@@ -66,7 +66,7 @@ describe("ledger UI commands", () => {
     expect((await verifyChain()).ok).toBe(true);
   });
 
-  it("tamper rejects the genesis entry and unknown entries", async () => {
+  it("US-22: tamper rejects the genesis entry and unknown entries", async () => {
     await expect(tamperEntry(who.demo, { seq: 1 })).rejects.toThrow();
     await expect(tamperEntry(who.demo, { seq: 9999 })).rejects.toBeInstanceOf(
       NotFound,
@@ -95,12 +95,12 @@ describe("ledger UI commands", () => {
     expect(res.ok).toBe(false);
   });
 
-  it("export head refused for SA", async () => {
+  it("US-23: export head refused for SA", async () => {
     await expect(exportLedgerHead(who.sa)).rejects.toBeInstanceOf(Forbidden);
     expect(await db.select().from(headExports)).toHaveLength(0);
   });
 
-  it("listLedger pages newest first, 50 per page, and is role-gated", async () => {
+  it("US-22: listLedger pages newest first, 50 per page, and is role-gated", async () => {
     for (let i = 0; i < 50; i++) await advanceClock(who.demo, { hours: 1 });
     const p1 = await listLedger(who.acc, { page: 1 });
     expect(p1.rows).toHaveLength(50);
@@ -114,7 +114,7 @@ describe("ledger UI commands", () => {
     );
   });
 
-  it("reset after concurrent appends verifies OK", async () => {
+  it("US-22: reset after concurrent appends verifies OK", async () => {
     const appends = Array.from({ length: 10 }, () =>
       advanceClock(who.demo, { hours: 1 }).catch(() => undefined),
     );

@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { Actor } from "@/domain/types";
 import { db } from "@/server/db/client";
-import { headExports, ledgerEntries } from "@/server/db/schema";
+import { headExports, ledgerEntries, users } from "@/server/db/schema";
 import { advanceClock } from "@/server/commands/advance-clock";
 import { exportLedgerHead } from "@/server/commands/export-head";
 import { resetDemo } from "@/server/commands/reset-demo";
@@ -122,5 +122,17 @@ describe("ledger UI commands", () => {
     const res = await verifyChain();
     expect(res.ok).toBe(true);
     expect(res.ok && res.count).toBeGreaterThanOrEqual(2);
+  });
+
+  it("US-23: after a reset the old chain's export is not compared with the new chain", async () => {
+    await exportLedgerHead(who.acc);
+    await resetDemo(who.demo, "demo-password-12345");
+    const res = await verifyChain();
+    expect(res.ok).toBe(true);
+    expect(res.exportedHead).toBeUndefined();
+    const ids = await db.select().from(users);
+    const acc = ids.find((u) => u.role === "ACC")!;
+    await exportLedgerHead({ id: acc.id, role: "ACC", displayName: "acc" });
+    expect((await verifyChain()).exportedHead?.matches).toBe(true);
   });
 });

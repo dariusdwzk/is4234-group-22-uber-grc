@@ -2,7 +2,12 @@
 import { redirect } from "next/navigation";
 import { acknowledgeTier2 } from "@/server/commands/acknowledge-tier2";
 import { resolveFlag } from "@/server/commands/resolve-flag";
-import { Conflict, Forbidden, ValidationError } from "@/server/errors";
+import {
+  Conflict,
+  Forbidden,
+  NotFound,
+  ValidationError,
+} from "@/server/errors";
 import { requireActor } from "@/server/page-guard";
 
 const str = (f: FormData, k: string) => String(f.get(k) ?? "");
@@ -15,6 +20,7 @@ async function back(go: () => Promise<unknown>, to: string): Promise<never> {
     if (
       e instanceof Forbidden ||
       e instanceof Conflict ||
+      e instanceof NotFound ||
       e instanceof ValidationError
     )
       error = "?error=INVALID";

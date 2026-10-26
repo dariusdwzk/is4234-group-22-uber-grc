@@ -3,7 +3,12 @@ import { redirect } from "next/navigation";
 import { exportLedgerHead } from "@/server/commands/export-head";
 import { tamperEntry } from "@/server/commands/tamper-entry";
 import { assertDemoMode } from "@/server/demo";
-import { Conflict, Forbidden, ValidationError } from "@/server/errors";
+import {
+  Conflict,
+  Forbidden,
+  NotFound,
+  ValidationError,
+} from "@/server/errors";
 import { requireActor } from "@/server/page-guard";
 
 export async function exportAction(): Promise<void> {
@@ -26,9 +31,13 @@ export async function tamperAction(f: FormData): Promise<void> {
   try {
     await tamperEntry(actor, { seq: Number(f.get("seq")) });
   } catch (e) {
-    if (e instanceof Forbidden || e instanceof ValidationError)
+    if (
+      e instanceof Forbidden ||
+      e instanceof ValidationError ||
+      e instanceof NotFound
+    )
       error = "?error=INVALID";
-    else throw e; // NotFound (no such entry) surfaces as a 404
+    else throw e;
   }
   redirect(`/ledger${error}`);
 }

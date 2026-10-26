@@ -1,8 +1,9 @@
 # Handover
 
-**Changed:** P0 Tasks 1-5 on branch `p0/scaffold` (scaffold, local Postgres compose, gitleaks hook, CI, Claude guardrails).
-**Verified:** see PROGRESS; unit tests and clean build pass locally. Docker `select 1` and Vercel deploy not yet run.
-**Next:** P0 Task 6 (push, Vercel, prod `/api/health`) after the human-only checklist.
-**Blocked:** GitHub repo, Neon, Vercel, CODEOWNERS handles — Darius.
-**Decisions:** next pinned to 16.4.1 (16.4.0 has critical advisories).
-**Gotchas:** `next build` on 16.4.0 intermittently exits 1 with an upgrade nudge; fixed by 16.4.1.
+**Changed:** P0 complete: Next.js 16.4.1 scaffold with `/api/health`, local Postgres compose, gitleaks pre-commit, CI (lint/typecheck/test, gitleaks, audit), Claude guardrails (hooks, skills, reviewer), docs. CODEOWNERS has real handles.
+**Verified:** clean `npm ci` + lint + typecheck + `npm test` (14 tests) + build; compose up + `select 1` on `grc_test`; CI green on PR #1; prod `/api/health` returned 200 (run by Darius).
+**Not verified:** Claude Code `protect-files` hook blocking an `.env.local` edit in a live session (Darius will check).
+**Next:** P1 (`plans/pending/P1-ledger-auth-rules.md`): ledger, auth, rules. Ponytail OFF for ledger/auth/authz/gate paths. Needs roles `app_rw` and `demo_admin`; Vercel env vars after that.
+**Blocked:** nothing.
+**Decisions:** see `docs/ai/DECISIONS.md` (Pro yes, Node 24, Neon is Postgres 18).
+**Gotchas:** dependabot PRs #2–#6 open; major bumps (eslint 10, typescript 7) should be closed. Never paste connection strings into chat.

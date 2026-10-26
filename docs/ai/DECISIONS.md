@@ -18,6 +18,8 @@ Hard-to-reverse decisions only. Seeded from spec §2 (26 Oct, Darius).
 | Architecture | Approach A: relational state + ledger append in the same transaction |
 | Password hash | Node `crypto.scrypt` (stdlib), not argon2 — no native dependency |
 
-## P0 human-only items (to fill in)
-- GitHub Pro (education): _unknown_ — ruleset or convention fallback: _TBD_
-- Vercel Node version / Hobby + private personal repo works: _TBD_
+## P0 human-only items (26 Oct)
+- GitHub Pro (education): yes — ruleset on `main` (PR, required checks `lint-typecheck-test` + `gitleaks`, squash only).
+- Vercel Node version: 24.x. Hobby + private personal repo: works (production deploy live).
+- Neon: Postgres 18 (local compose is 16); project `is4234-uber-grc`, db `grc`, branch `preview`. Keep migrations portable across 16 and 18.
+- `next` pinned 16.4.1 (16.4.0 has critical advisories); dependabot major bumps (eslint 10, typescript 7) rejected for now.

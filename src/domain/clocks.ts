@@ -81,7 +81,8 @@ export function computeClocks(
       dueAt: due?.toISOString() ?? null,
       ...(note ? { note } : {}),
     };
-    if (c.closedAt)
+    // Intake classifies synchronously, so once a case is HIGH the classify SLA is met.
+    if (c.closedAt || (id === "INT_CLASSIFY" && high))
       return { ...base, pctElapsed: pct(start, due, now), status: "stopped" };
     if (!start || !due)
       return { ...base, pctElapsed: null, status: "not_started" };

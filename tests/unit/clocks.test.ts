@@ -62,6 +62,11 @@ describe("computeClocks", () => {
     expect(k.status).toBe("due_soon");
     expect(k.pctElapsed).toBe(75);
   });
+  it("classify SLA stops once the case is HIGH, runs while LOW", () => {
+    expect(byId(highCase, plus(100))["INT_CLASSIFY"]!.status).toBe("stopped");
+    const low: ClockCase = { ...highCase, highSince: null, tier: "LOW" };
+    expect(byId(low, plus(100))["INT_CLASSIFY"]!.status).toBe("overdue");
+  });
   it("overdue after due", () =>
     expect(byId(highCase, plus(73))["GDPR_33"]!.status).toBe("overdue"));
   it("PDPA is 3 calendar days from high_since", () =>

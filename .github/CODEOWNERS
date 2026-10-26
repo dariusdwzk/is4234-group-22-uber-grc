@@ -1,22 +1,22 @@
-# Replace @OWNER_A / @OWNER_B with real GitHub handles (human-only checklist).
+# Owners: A = @dariusdwzk (Darius), B = @bestCoder88 (teammate).
 # A (Darius)
-/src/server/ledger/ @OWNER_A
-/src/server/auth/ @OWNER_A
-/src/server/authz.ts @OWNER_A
-/src/server/run-command.ts @OWNER_A
-/drizzle/ @OWNER_A
-/.github/ @OWNER_A
-/.claude/ @OWNER_A
-/src/domain/gate.ts @OWNER_A
-/src/domain/independence.ts @OWNER_A
-/src/domain/canonical-json.ts @OWNER_A
-/src/domain/hash.ts @OWNER_A
+/src/server/ledger/ @dariusdwzk
+/src/server/auth/ @dariusdwzk
+/src/server/authz.ts @dariusdwzk
+/src/server/run-command.ts @dariusdwzk
+/drizzle/ @dariusdwzk
+/.github/ @dariusdwzk
+/.claude/ @dariusdwzk
+/src/domain/gate.ts @dariusdwzk
+/src/domain/independence.ts @dariusdwzk
+/src/domain/canonical-json.ts @dariusdwzk
+/src/domain/hash.ts @dariusdwzk
 # B (teammate)
-/src/domain/rules.ts @OWNER_B
-/src/domain/facts.ts @OWNER_B
-/src/domain/clocks.ts @OWNER_B
-/src/domain/conflicts.ts @OWNER_B
-/src/domain/board-text.ts @OWNER_B
-/rule-packs/ @OWNER_B
-/src/server/commands/ingest-*.ts @OWNER_B
-/tests/e2e/ @OWNER_B
+/src/domain/rules.ts @bestCoder88
+/src/domain/facts.ts @bestCoder88
+/src/domain/clocks.ts @bestCoder88
+/src/domain/conflicts.ts @bestCoder88
+/src/domain/board-text.ts @bestCoder88
+/rule-packs/ @bestCoder88
+/src/server/commands/ingest-*.ts @bestCoder88
+/tests/e2e/ @bestCoder88

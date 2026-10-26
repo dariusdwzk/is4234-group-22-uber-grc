@@ -102,6 +102,26 @@ describe("gate commands", () => {
     await expect(closeCase(null, { caseId })).rejects.toBeInstanceOf(Forbidden);
   });
 
+  it("US-11: a role that cannot view cases learns nothing about the gate or whether the case exists", async () => {
+    const err = await closeCase(who.emp, { caseId }).catch((e: unknown) => e);
+    expect((err as Forbidden).reason).not.toMatch(/Missing/);
+    const unknown = "00000000-0000-4000-8000-000000000000";
+    await expect(
+      closeCase(who.emp, { caseId: unknown }),
+    ).rejects.toBeInstanceOf(Forbidden);
+  });
+
+  it("notify_later with a past or far-future date is refused", async () => {
+    for (const notifyBy of ["2016-01-01", "2099-01-01"])
+      await expect(
+        submitDecision(who.gc, {
+          caseId,
+          ...decide("notify_later", { notifyBy }),
+        }),
+      ).rejects.toThrow(/NOTIFY_DATE_INVALID/);
+    expect(await db.select().from(decisions)).toHaveLength(0);
+  });
+
   it("closeCase on an already closed case → Conflict", async () => {
     await submitDecision(who.gc, { caseId, ...decide("withhold") });
     await submitDecision(who.pco, { caseId, ...decide("withhold") });

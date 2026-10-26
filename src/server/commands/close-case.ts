@@ -26,10 +26,12 @@ export async function closeCase(
   const auth = authorize(actor, "closeCase");
   if (auth.ok) throw new Error("closeCase must stay denied by policy");
 
-  const [c] = actor
-    ? await db.select().from(cases).where(eq(cases.id, parsed.data.caseId))
-    : [];
-  if (actor && !c) throw new NotFound();
+  // Gate detail and case existence are for roles that may view cases (same rule as the page).
+  const [c] =
+    actor && authorize(actor, "viewCase").ok
+      ? await db.select().from(cases).where(eq(cases.id, parsed.data.caseId))
+      : [];
+  if (actor && authorize(actor, "viewCase").ok && !c) throw new NotFound();
   if (c && c.status !== "open") throw new Conflict("case is not open");
 
   let reason = auth.reason;

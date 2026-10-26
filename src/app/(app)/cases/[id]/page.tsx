@@ -9,6 +9,18 @@ import { ApprovalForm } from "./ApprovalForm";
 import { DecisionSummary } from "./DecisionSummary";
 import { RecommendationForm } from "./RecommendationForm";
 
+const ERROR_TEXT: Record<string, string> = {
+  WRONG_ROLE: "Only General Counsel and Privacy/Compliance may decide.",
+  NOT_INDEPENDENT: "You are not independent of the CISO and cannot decide.",
+  SAME_APPROVER: "The same person cannot hold both approvals.",
+  CHECKLIST_INCOMPLETE: "Every checklist item must be confirmed.",
+  NOTIFY_DATE_REQUIRED: "A notify-by date is required for notify later.",
+  NOTIFY_DATE_INVALID: "Notify-by must be between today and one year ahead.",
+  CONFLICT: "That action is no longer possible for this case.",
+  INVALID: "Please check the form.",
+  FORBIDDEN: "You are not allowed to do that.",
+};
+
 async function Detail({ params, searchParams }: PageProps<"/cases/[id]">) {
   const actor = await requireActor("viewCase");
   const { id } = await params;
@@ -27,7 +39,13 @@ async function Detail({ params, searchParams }: PageProps<"/cases/[id]">) {
       </h1>
       {typeof error === "string" && (
         <p role="alert" className="mt-4 border-2 border-red-700 p-2">
-          {error}
+          {error === "CLOSE_REFUSED"
+            ? `Cannot close: a HIGH case closes only when General Counsel and Privacy/Compliance agree.${
+                c.gate.status === "awaiting"
+                  ? ` Missing: ${c.gate.missing.map((r) => (r === "GC" ? "General Counsel" : "Privacy/Compliance")).join(", ")}`
+                  : ""
+              }`
+            : (ERROR_TEXT[error] ?? ERROR_TEXT.FORBIDDEN)}
         </p>
       )}
       <DecisionSummary

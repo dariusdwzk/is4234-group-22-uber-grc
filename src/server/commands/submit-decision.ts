@@ -73,6 +73,14 @@ export const submitDecisionCommand: CommandDef<z.infer<typeof schema>, void> = {
 
     const notifyBy =
       input.outcome === "notify_later" ? (input.notifyBy ?? null) : null;
+    if (notifyBy) {
+      const today = day(now)!;
+      const latest = day(new Date(now.getTime() + 365 * 86_400_000))!;
+      if (notifyBy < today || notifyBy > latest)
+        throw new Forbidden(
+          "NOTIFY_DATE_INVALID: notify-by must be between today and one year ahead",
+        );
+    }
     const check = checkDecision({
       approver: actor,
       independent: isIndependent(actor.id, reportsTo, cisoIds),

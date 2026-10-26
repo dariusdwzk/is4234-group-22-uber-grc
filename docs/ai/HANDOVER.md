@@ -2,7 +2,8 @@
 
 **Changed:** P2 complete in code. Seed users + `resetDemo` (demo_admin tx, head kept in `head_exports`); login page, `(app)` layout/nav, `requireActor` page guard, CSP and security headers; `declareIncident` / `ingestEvent` with correlation, `classifyCase`, Tier 1 board item in the same tx; demo gate (`assertDemoMode`), replay presets, `advanceClock`, demo panel; report page, case list/detail; Playwright harness and `replay.spec.ts`.
 **Verified (local, Postgres 16):** typecheck, 178 unit, 79 integration, build, `npm run e2e` (4/4: replay steps 1-3 + scenario C).
-**Not verified:** CI (new `e2e` job in `.github/workflows/ci.yml` needs Darius's review before merge); `npm run db:seed` script (written, not run by hand; e2e uses its own `scripts/e2e-db.ts`); Neon; manual click-through of every role's nav.
+**CI:** PR #9 merged with all 10 checks green, including the new `e2e` job.
+**Not verified:** `npm run db:seed` script (written, not run by hand; e2e uses its own `scripts/e2e-db.ts`); Neon; manual click-through of every role's nav.
 **Next:** P3 (`plans/pending/P3-gate-clocks.md`). Vercel needs `DEMO_PASSWORD` (reset action) and `DEMO_MODE=true`.
 **Blocked:** nothing.
 **Decisions / deviations:** `resetDemo` does not use `runCommand` (needs the demo_admin connection) but repeats authorize + refusal logging; `getActor` calls `connection()` (Next rejects `Date.now()` in runtime prerender); Tier 1 `createdAt` is `cases.high_since` (`board_items` has no timestamp); Tier 1 body omits clocks until P3; report page has no challenge-flag link until P4; `/board` and `/ledger` nav links 404 until P4; unauthorised pages return the 404 UI with status 200 (streamed under Suspense); replay preset keeps the 57M record figure (cite in report or replace); e2e uses Playwright 1.64.0 (1.64.1 is under 14 days old); `tests/unit/nav.test.ts` was written after the code.

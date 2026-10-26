@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { firePreset, loginAs, resetDemo } from "./fixtures";
 
-test.describe.serial("replay: Uber 2016, steps 1-3", () => {
+test.describe.serial("replay: Uber 2016, steps 1-5", () => {
   test.beforeAll(async ({ browser }) => {
     const page = await browser.newPage();
     await resetDemo(page);
@@ -59,6 +59,53 @@ test.describe.serial("replay: Uber 2016, steps 1-3", () => {
     const tier1 = page.getByRole("region", { name: "Tier 1 board notice" });
     await expect(tier1).toContainText("CASE-0001");
     await expect(tier1).toContainText("Read-only notice — no action required.");
+  });
+
+  test('Step 4 (F1): security recommends "treat as bug bounty", close is refused naming missing approvals', async ({
+    page,
+  }) => {
+    await loginAs(page, "sa");
+    await page.goto("/cases");
+    await page.getByRole("link", { name: "CASE-0001" }).click();
+    await page.getByLabel("Was data taken?").selectOption("no");
+    await page.getByLabel("Treat as").selectOption("bug_bounty");
+    await page.getByLabel("Proposed outcome").selectOption("withhold");
+    await page.getByLabel("Recommendation", { exact: true }).fill("Bounty.");
+    await page.getByRole("button", { name: "Record recommendation" }).click();
+    await expect(
+      page.getByText("Recommendation conflicts with evidence"),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Close case" }).click();
+    await expect(page.getByRole("alert").first()).toContainText(
+      "Missing: General Counsel, Privacy/Compliance",
+    );
+    await expect(page.getByTestId("tier")).toHaveText("HIGH");
+    await expect(page.getByTestId("status")).toHaveText("open");
+  });
+
+  test("Step 5 (F2): GC and PCO sign withhold with checklist and reason code → case closed; board Tier 1 still present", async ({
+    page,
+  }) => {
+    for (const who of ["gc", "pco"] as const) {
+      await loginAs(page, who);
+      await page.goto("/cases");
+      await page.getByRole("link", { name: "CASE-0001" }).click();
+      await page.getByLabel("Withhold").check();
+      await page.getByLabel("Reason code").selectOption("LEGAL_ADVICE");
+      for (const box of await page
+        .getByRole("group", { name: /Checklist/ })
+        .getByRole("checkbox")
+        .all())
+        await box.check();
+      await page.getByRole("button", { name: "Submit decision" }).click();
+    }
+    await expect(page.getByTestId("status")).toHaveText("closed");
+    await expect(page.getByTestId("gate-state")).toContainText(
+      "Agreed: withhold",
+    );
+    await expect(
+      page.getByRole("region", { name: "Tier 1 board notice" }),
+    ).toContainText("CASE-0001");
   });
 
   test("Scenario C: low-risk login auto-logged as LOW", async ({ page }) => {

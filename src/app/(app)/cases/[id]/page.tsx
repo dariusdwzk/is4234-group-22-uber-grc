@@ -22,7 +22,8 @@ async function Detail({ params, searchParams }: PageProps<"/cases/[id]">) {
   return (
     <>
       <h1 className="text-2xl font-semibold">
-        {c.ref} <span data-testid="tier">{c.tier}</span> <span>{c.status}</span>
+        {c.ref} <span data-testid="tier">{c.tier}</span>{" "}
+        <span data-testid="status">{c.status}</span>
       </h1>
       {typeof error === "string" && (
         <p role="alert" className="mt-4 border-2 border-red-700 p-2">

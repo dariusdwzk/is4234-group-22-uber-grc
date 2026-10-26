@@ -29,7 +29,13 @@ export type BoardView = {
     daysToBoard: number | null;
     clocks: ClockState[];
   }[];
-  tier1: { id: string; caseId: string; ref: string; body: string; at: string | null }[];
+  tier1: {
+    id: string;
+    caseId: string;
+    ref: string;
+    body: string;
+    at: string | null;
+  }[];
   tier2: {
     id: string;
     caseId: string;
@@ -126,7 +132,9 @@ export async function getBoard(actor: Actor | null): Promise<BoardView> {
         ackNote: b.ackNote,
       }))
       // Open items stay on top until handled.
-      .sort((a, b) => Number(b.status === "open") - Number(a.status === "open")),
+      .sort(
+        (a, b) => Number(b.status === "open") - Number(a.status === "open"),
+      ),
     flags: flagRows.map(({ f, ref, name }) => ({
       id: f.id,
       ref,

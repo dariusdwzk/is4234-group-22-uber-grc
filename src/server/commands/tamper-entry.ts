@@ -30,7 +30,9 @@ export async function tamperEntry(
   }
   const rows = await getDemoDb()
     .update(ledgerEntries)
-    .set({ payload: sql`${ledgerEntries.payload} || '{"tampered":true}'::jsonb` })
+    .set({
+      payload: sql`${ledgerEntries.payload} || '{"tampered":true}'::jsonb`,
+    })
     .where(eq(ledgerEntries.seq, parsed.data.seq))
     .returning({ seq: ledgerEntries.seq });
   if (rows.length === 0) throw new NotFound();

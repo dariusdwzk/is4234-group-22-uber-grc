@@ -101,7 +101,10 @@ describe("challenge flags", () => {
   it("IA resolves flag; a second resolve is a Conflict", async () => {
     await flag(who.emp);
     const [f] = await db.select().from(challengeFlags);
-    await resolveFlag(who.ia, { flagId: f!.id, resolution: "Reviewed; escalated." });
+    await resolveFlag(who.ia, {
+      flagId: f!.id,
+      resolution: "Reviewed; escalated.",
+    });
     const [after] = await db.select().from(challengeFlags);
     expect(after).toMatchObject({
       status: "resolved",

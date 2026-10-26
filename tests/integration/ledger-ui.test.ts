@@ -118,10 +118,7 @@ describe("ledger UI commands", () => {
     const appends = Array.from({ length: 10 }, () =>
       advanceClock(who.demo, { hours: 1 }).catch(() => undefined),
     );
-    await Promise.all([
-      ...appends,
-      resetDemo(who.demo, "demo-password-12345"),
-    ]);
+    await Promise.all([...appends, resetDemo(who.demo, "demo-password-12345")]);
     const res = await verifyChain();
     expect(res.ok).toBe(true);
     expect(res.ok && res.count).toBeGreaterThanOrEqual(2);

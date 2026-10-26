@@ -8,7 +8,12 @@ const LINKS: { href: string; label: string; roles: readonly Role[] }[] = [
     label: "Report",
     roles: ["SA", "CISO", "GC", "PCO", "IA", "ACC", "EMP", "EXEC", "DEMO"],
   },
-  { href: "/board", label: "Board", roles: ["ACC", "IA"] },
+  { href: "/board", label: "Board", roles: ["ACC"] },
+  {
+    href: "/flag",
+    label: "Flag",
+    roles: ["SA", "CISO", "GC", "PCO", "IA", "ACC", "EMP", "EXEC"],
+  },
   { href: "/ledger", label: "Ledger", roles: ["IA", "ACC", "DEMO"] },
   { href: "/demo", label: "Demo", roles: ["DEMO"] },
 ];

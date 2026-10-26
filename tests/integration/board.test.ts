@@ -75,8 +75,14 @@ describe("board", () => {
 
   it("US-17: ACC acknowledges Tier 2 with note → handled and logged", async () => {
     const itemId = await disagree();
-    await acknowledgeTier2(who.acc, { itemId, actionNote: "Called GC and PCO." });
-    const [row] = await db.select().from(boardItems).where(eq(boardItems.id, itemId));
+    await acknowledgeTier2(who.acc, {
+      itemId,
+      actionNote: "Called GC and PCO.",
+    });
+    const [row] = await db
+      .select()
+      .from(boardItems)
+      .where(eq(boardItems.id, itemId));
     expect(row).toMatchObject({
       status: "acknowledged",
       ackNote: "Called GC and PCO.",
@@ -104,22 +110,35 @@ describe("board", () => {
     await expect(
       acknowledgeTier2(who.gc, { itemId, actionNote: "Nope nope." }),
     ).rejects.toBeInstanceOf(Forbidden);
-    const [row] = await db.select().from(boardItems).where(eq(boardItems.id, itemId));
+    const [row] = await db
+      .select()
+      .from(boardItems)
+      .where(eq(boardItems.id, itemId));
     expect(row!.status).toBe("open");
   });
 
   it("US-17: a note is required", async () => {
     const itemId = await disagree();
-    await expect(acknowledgeTier2(who.acc, { itemId, actionNote: "x" })).rejects.toThrow();
+    await expect(
+      acknowledgeTier2(who.acc, { itemId, actionNote: "x" }),
+    ).rejects.toThrow();
   });
 
   it("US-16: Tier 1 has no edit/delete command and cannot be acknowledged", async () => {
-    expect(Object.keys(POLICY).filter((a) => /tier1|editBoard|deleteBoard/i.test(a))).toEqual([]);
-    const [t1] = await db.select().from(boardItems).where(eq(boardItems.reasonKey, "tier1"));
+    expect(
+      Object.keys(POLICY).filter((a) => /tier1|editBoard|deleteBoard/i.test(a)),
+    ).toEqual([]);
+    const [t1] = await db
+      .select()
+      .from(boardItems)
+      .where(eq(boardItems.reasonKey, "tier1"));
     await expect(
       acknowledgeTier2(who.acc, { itemId: t1!.id, actionNote: "Try to ack." }),
     ).rejects.toBeInstanceOf(Conflict);
-    const [after] = await db.select().from(boardItems).where(eq(boardItems.id, t1!.id));
+    const [after] = await db
+      .select()
+      .from(boardItems)
+      .where(eq(boardItems.id, t1!.id));
     expect(after!.status).toBe("open");
   });
 

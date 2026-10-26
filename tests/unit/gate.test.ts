@@ -59,7 +59,11 @@ describe("gateState truth table", () => {
         d("GC", "notify_later", "2026-11-05"),
         d("PCO", "notify_later", "2026-11-05"),
       ]),
-    ).toEqual({ status: "agreed", outcome: "notify_later", notifyBy: "2026-11-05" }));
+    ).toEqual({
+      status: "agreed",
+      outcome: "notify_later",
+      notifyBy: "2026-11-05",
+    }));
   it("re-deciding replaces the actor's own role entry (last wins)", () =>
     expect(
       gateState([
@@ -110,7 +114,10 @@ describe("checkDecision", () => {
     ).toEqual({ ok: false, reason: "SAME_APPROVER" }));
   it("re-deciding one's own role is not SAME_APPROVER", () =>
     expect(
-      checkDecision({ ...base, existing: [d("PCO", "notify_now", null, "pco")] }),
+      checkDecision({
+        ...base,
+        existing: [d("PCO", "notify_now", null, "pco")],
+      }),
     ).toEqual({ ok: true }));
   it.each(Object.keys(full) as (keyof Checklist)[])(
     "checklist %s false → CHECKLIST_INCOMPLETE",
@@ -126,6 +133,10 @@ describe("checkDecision", () => {
     }));
   it("notify_later with a date is ok", () =>
     expect(
-      checkDecision({ ...base, outcome: "notify_later", notifyBy: "2026-11-05" }),
+      checkDecision({
+        ...base,
+        outcome: "notify_later",
+        notifyBy: "2026-11-05",
+      }),
     ).toEqual({ ok: true }));
 });

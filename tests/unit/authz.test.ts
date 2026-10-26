@@ -37,6 +37,7 @@ describe("authorize", () => {
       "exportHead",
       "verifyLedger",
       "publishRulePack",
+      "sweep",
       "advanceClock",
       "resetDemo",
       "tamperEntry",

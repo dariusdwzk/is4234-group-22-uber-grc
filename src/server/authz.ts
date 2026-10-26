@@ -30,6 +30,8 @@ export const POLICY = {
   exportHead: ["ACC", "IA"],
   verifyLedger: ["IA", "ACC", "DEMO"],
   publishRulePack: ["GC"],
+  // Only the system actor sweeps; viewers trigger it on page load but never act as it.
+  sweep: ["EXEC"],
   advanceClock: ["DEMO"],
   resetDemo: ["DEMO"],
   tamperEntry: ["DEMO"],

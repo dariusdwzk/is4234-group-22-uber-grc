@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Banner } from "@/components/Banner";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -24,12 +25,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <div
-          role="note"
-          className="bg-amber-200 px-4 py-2 text-center text-sm font-medium text-black"
-        >
-          Demonstration — synthetic data
-        </div>
+        <Banner />
         {children}
       </body>
     </html>

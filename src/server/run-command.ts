@@ -29,7 +29,7 @@ export type CommandDef<I, O> = {
 };
 
 /** A refusal is itself an auditable event (F-series: failures must be visible). Own transaction. */
-async function logRefusal(
+export async function logRefusal(
   actor: Actor | null,
   action: Action,
   reason: string,

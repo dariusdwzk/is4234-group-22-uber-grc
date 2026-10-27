@@ -195,7 +195,14 @@ test("cases list and case detail keep their contract in the dashboard layout", a
     page.getByRole("region", { name: "Decision gate" }),
   ).toBeInViewport();
   await expect(page.getByRole("button", { name: "Close case" })).toBeEnabled();
-  // Narrow rail: no clock row is clipped or scrolls sideways.
+  const clocks = page.getByRole("region", { name: "Clocks (illustrative)" });
+  const gateBox = await page.getByRole("region", { name: "Decision gate" }).boundingBox();
+  const clocksBox = await clocks.boundingBox();
+  expect(clocksBox!.y).toBeGreaterThan(gateBox!.y + gateBox!.height);
+  expect(clocksBox!.width).toBeGreaterThan(900);
+  const due = page.locator('[data-testid^="clock-"]').nth(1).locator("td").nth(2);
+  await expect(due).toHaveCSS("white-space", "nowrap");
+  expect((await due.boundingBox())!.height).toBeLessThan(48);
   await expect(page.locator('[data-testid^="clock-"]').first()).toBeVisible();
   expect(
     await page.evaluate(() =>
@@ -240,6 +247,20 @@ test("ledger shows verify result, failure label and a Demo only region", async (
     ),
   ).toBe(true);
   // Key columns (#, Time, Actor, Event) stay readable without sideways scrolling.
+  await expect(page.getByRole("columnheader", { name: "Time" })).toBeHidden();
+  const firstEvent = await page.locator("tbody tr").first().locator("td").nth(3).boundingBox();
+  // Event names may wrap only at underscores: each cell's longest word fits.
+  expect(
+    await page.evaluate(() =>
+      [...document.querySelectorAll("tbody tr td:nth-child(4)")].some(
+        (c) => c.scrollWidth > c.clientWidth,
+      ),
+    ),
+  ).toBe(false);
+  expect(firstEvent!.x + firstEvent!.width).toBeLessThanOrEqual(375);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(page.getByRole("columnheader", { name: "Time" })).toBeVisible();
+  await page.setViewportSize({ width: 375, height: 812 });
   const eventHead = await page
     .getByRole("columnheader", { name: "Event" })
     .boundingBox();
@@ -282,4 +303,37 @@ test("report receipt and flag confirmation use one status each", async ({
   await expect(page.getByRole("status")).toContainText(
     "Flag recorded for review.",
   );
+});
+
+test("board integrity card shows the alert icon when verification fails", async ({
+  page,
+}) => {
+  await resetDemo(page);
+  await firePreset(page, /Cloud download alert/);
+  await loginAs(page, "ia");
+  await page.goto("/ledger");
+  await page.getByRole("button", { name: "Export head" }).click();
+  await tamper(page, 2);
+  await loginAs(page, "acc");
+  await page.goto("/board");
+  await expect(page.getByTestId("head-status")).toContainText("Verification failed");
+  const card = page.getByTestId("head-status").locator("..");
+  await expect(card.locator('svg path[d^="M12 3 2 20"]')).toHaveCount(1);
+  await expect(card.locator('svg circle')).toHaveCount(0);
+});
+
+test("board integrity card shows the alert icon when the export line says DOES NOT MATCH", async ({
+  page,
+}) => {
+  await resetDemo(page);
+  await loginAs(page, "ia");
+  await page.goto("/ledger");
+  await page.getByRole("button", { name: "Export head" }).click();
+  await resetDemo(page);
+  await loginAs(page, "acc");
+  await page.goto("/board");
+  await expect(page.getByTestId("head-status")).toContainText("Verified");
+  await expect(page.getByTestId("head-status")).toContainText("DOES NOT MATCH");
+  const card = page.getByTestId("head-status").locator("..");
+  await expect(card.locator('svg path[d^="M12 3 2 20"]')).toHaveCount(1);
 });

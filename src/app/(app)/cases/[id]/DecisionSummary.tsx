@@ -102,48 +102,6 @@ export function DecisionSummary({
               </form>
             )}
           </Card>
-          <Card titleId="clocks" title="Clocks (illustrative)">
-            <DataTable>
-              <thead>
-                <tr>
-                  <Th>Clock</Th>
-                  <Th>Status</Th>
-                  <Th>Due</Th>
-                  <Th>Elapsed</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {c.clocks.map((k) => {
-                  const cb = clockBadge(k.status);
-                  return (
-                    <tr key={k.id} data-testid={`clock-${k.id}`}>
-                      <Td className="min-w-16 break-words">
-                        {k.label}
-                        {k.note && (
-                          <div className="text-xs text-muted">{k.note}</div>
-                        )}
-                      </Td>
-                      <Td>
-                        <Badge variant={cb.variant}>{k.status}</Badge>
-                      </Td>
-                      <Td className="break-all">{k.dueAt ?? "—"}</Td>
-                      <Td>
-                        {k.pctElapsed === null ? "—" : `${k.pctElapsed}%`}
-                      </Td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </DataTable>
-            {canMateriality && !c.materialityRecorded && c.status === "open" && (
-              <form action={materialityAction} className="mt-4">
-                <input type="hidden" name="caseId" value={c.id} />
-                <SubmitButton variant="secondary">
-                  Record materiality determination
-                </SubmitButton>
-              </form>
-            )}
-          </Card>
           <Card titleId="rules" title="Fired rules">
             <ul className="flex flex-col gap-2 text-sm text-ink">
               {c.firedRuleIds.map((r) => (
@@ -161,6 +119,48 @@ export function DecisionSummary({
           </Card>
         </div>
       </div>
+      <Card titleId="clocks" title="Clocks (illustrative)" className="mt-6">
+        <DataTable>
+          <thead>
+            <tr>
+              <Th>Clock</Th>
+              <Th>Status</Th>
+              <Th>Due</Th>
+              <Th>Elapsed</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {c.clocks.map((k) => {
+              const cb = clockBadge(k.status);
+              return (
+                <tr key={k.id} data-testid={`clock-${k.id}`}>
+                  <Td className="min-w-40 break-words">
+                    {k.label}
+                    {k.note && (
+                      <div className="text-xs text-muted">{k.note}</div>
+                    )}
+                  </Td>
+                  <Td>
+                    <Badge variant={cb.variant}>{k.status}</Badge>
+                  </Td>
+                  <Td className="whitespace-nowrap">{k.dueAt ?? "—"}</Td>
+                  <Td>
+                    {k.pctElapsed === null ? "—" : `${k.pctElapsed}%`}
+                  </Td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </DataTable>
+        {canMateriality && !c.materialityRecorded && c.status === "open" && (
+          <form action={materialityAction} className="mt-4">
+            <input type="hidden" name="caseId" value={c.id} />
+            <SubmitButton variant="secondary">
+              Record materiality determination
+            </SubmitButton>
+          </form>
+        )}
+      </Card>
     </section>
   );
 }

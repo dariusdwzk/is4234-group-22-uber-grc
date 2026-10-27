@@ -16,6 +16,16 @@ const before: Views = {
   board: { as: "acc", path: "/board" },
   "ledger-ok": { as: "ia", path: "/ledger?verify=1" },
 };
+const ready: Record<string, string> = {
+  login: "Sign in",
+  report: "Report",
+  cases: "Cases",
+  board: "Board",
+  "ledger-ok": "Ledger",
+  "ledger-failed": "Ledger",
+  flag: "Flag",
+  demo: "Demo panel",
+};
 const afterTamper: Views = {
   "ledger-failed": { as: "ia", path: "/ledger?verify=1" },
   flag: { as: "emp", path: "/flag" },
@@ -59,6 +69,12 @@ test.describe.serial("screenshots", () => {
           await page.getByRole("link", { name: "CASE-0001" }).click();
           await page.getByRole("region", { name: "Decision gate" }).waitFor();
         }
+        else
+          await page
+            .getByRole("heading", { level: 1, name: ready[name] })
+            .waitFor();
+        if (name.startsWith("ledger"))
+          await page.getByTestId("verify-result").waitFor();
         await page.waitForLoadState("networkidle");
         await page.screenshot({
           path: `docs/evidence/screens/${vp.dir}/${name}.png`,

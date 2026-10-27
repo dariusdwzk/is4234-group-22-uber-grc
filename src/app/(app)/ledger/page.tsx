@@ -115,24 +115,33 @@ async function Ledger({ searchParams }: PageProps<"/ledger">) {
           <thead>
             <tr>
               <Th>#</Th>
-              <Th>Time</Th>
+              <Th className="hidden md:table-cell">Time</Th>
               <Th>Actor</Th>
               <Th>Event</Th>
-              <Th>Hash</Th>
-              <Th>Payload</Th>
+              <Th className="hidden md:table-cell">Hash</Th>
+              <Th className="hidden md:table-cell">Payload</Th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r) => (
               <tr key={r.seq}>
                 <Td>{r.seq}</Td>
-                <Td className="min-w-16 break-all text-xs">{r.ts}</Td>
-                <Td className="min-w-16 break-words">{r.actorName}</Td>
-                <Td className="min-w-20 break-all">{r.eventType}</Td>
-                <Td className="min-w-28 break-all font-mono text-xs">
+                <Td className="hidden break-all text-xs md:table-cell">{r.ts}</Td>
+                <Td className="min-w-16 break-words">
+                  {r.actorName}
+                  <span className="block whitespace-nowrap text-xs text-muted md:hidden">
+                    {r.ts.slice(0, 19).replace("T", " ")}
+                  </span>
+                </Td>
+                <Td>
+                  {r.eventType.split("_").flatMap((w, i, a) =>
+                    i < a.length - 1 ? [`${w}_`, <wbr key={i} />] : [w],
+                  )}
+                </Td>
+                <Td className="hidden min-w-28 break-all font-mono text-xs md:table-cell">
                   {r.hashShort}
                 </Td>
-                <Td className="min-w-56 break-all font-mono text-xs">
+                <Td className="hidden min-w-56 break-all font-mono text-xs md:table-cell">
                   {r.payloadPreview}
                 </Td>
               </tr>

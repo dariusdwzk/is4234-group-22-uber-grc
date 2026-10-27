@@ -11,9 +11,9 @@ export function DataTable({ children, caption }: { children: ReactNode; caption?
   );
 }
 
-export function Th({ children }: { children?: ReactNode }) {
+export function Th({ children, className = "" }: { children?: ReactNode; className?: string }) {
   return (
-    <th scope="col" className="border-b border-line px-3 py-2 text-xs font-semibold uppercase text-muted">
+    <th scope="col" className={`border-b border-line px-3 py-2 text-xs font-semibold uppercase text-muted ${className}`}>
       {children}
     </th>
   );

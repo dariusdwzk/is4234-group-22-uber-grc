@@ -52,7 +52,11 @@ async function Board({ searchParams }: PageProps<"/board">) {
           />
           <div className="rounded-xl border border-line bg-surface p-5 shadow-sm">
             <p className="flex items-center gap-2 text-sm font-medium text-ink">
-              {b.verify.ok ? <IconCheck /> : <IconAlert />}
+              {b.verify.ok && !(b.lastExport && !b.verify.exportedHead?.matches) ? (
+                <IconCheck />
+              ) : (
+                <IconAlert />
+              )}
               Ledger integrity
             </p>
             <p

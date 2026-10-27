@@ -1,16 +1,11 @@
 import { Suspense } from "react";
-import { Nav } from "@/components/Nav";
+import { AppShell } from "@/components/shell/AppShell";
 import { getActor } from "@/server/auth/actor";
 
 // Cookie reads must sit behind Suspense with cacheComponents on. Pages enforce their own authz.
 async function Shell({ children }: { children: React.ReactNode }) {
   const actor = await getActor();
-  return (
-    <>
-      {actor && <Nav actor={actor} />}
-      {children}
-    </>
-  );
+  return actor ? <AppShell actor={actor}>{children}</AppShell> : <>{children}</>;
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {

@@ -96,3 +96,23 @@ test("mobile menu opens by keyboard", async ({ page }) => {
   await page.keyboard.press("Enter");
   await expect(cases).toBeHidden();
 });
+
+test("board shows the 371-day comparison and Tier 2 inbox on the first screen", async ({
+  page,
+}) => {
+  await firePreset(page, /Cloud download alert/);
+  await raiseFlag(page, "CASE-0001", "Board layout check flag.");
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await loginAs(page, "acc");
+  await page.goto("/board");
+  await expect(page.getByTestId("kpi-uber")).toContainText("371");
+  await expect(page.getByTestId("kpi-uber")).toBeInViewport();
+  // compare bar: one decorative track per side
+  await expect(
+    page.getByTestId("kpi-uber").locator('[aria-hidden="true"]'),
+  ).toHaveCount(2);
+  await expect(page.getByTestId("head-status")).toBeInViewport();
+  await expect(
+    page.getByRole("heading", { name: "Tier 2 inbox" }),
+  ).toBeInViewport();
+});

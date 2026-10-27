@@ -25,10 +25,10 @@ export function Topbar({
           <SidebarLinks links={links} />
         </nav>
       </details>
-      <span className="ml-auto text-sm">{actor.displayName}</span>
+      <span className="ml-auto max-w-[40vw] truncate text-sm md:max-w-none">{actor.displayName}</span>
       <Badge variant="neutral">{actor.role}</Badge>
       <form action="/logout" method="post">
-        <Button type="submit" variant="secondary">
+        <Button type="submit" variant="secondary" className="whitespace-nowrap">
           Sign out
         </Button>
       </form>

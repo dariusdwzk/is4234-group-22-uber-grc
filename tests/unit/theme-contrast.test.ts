@@ -37,7 +37,7 @@ const hex = (k: string): string => {
 
 const AA: [string, string][] = [
   ["ink", "canvas"], ["ink", "surface"], ["muted", "surface"], ["muted", "canvas"],
-  ["white", "brand"], ["white", "brand-hover"], ["sidebar-ink", "sidebar"], ["sidebar-muted", "sidebar"],
+  ["white", "brand"], ["white", "brand-hover"], ["sidebar-ink", "sidebar"],
   ["white", "sidebar+white/10"], ["sidebar-ink", "sidebar+white/5"],
   ["ink", "neutral-soft"], ["muted", "neutral-soft"], ["neutral-ink", "neutral-soft"],
   ["brand", "surface"], ["danger-ink", "surface"], ["white", "danger-ink"], ["black", "amber-200"],

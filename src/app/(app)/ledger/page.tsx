@@ -126,17 +126,21 @@ async function Ledger({ searchParams }: PageProps<"/ledger">) {
             {rows.map((r) => (
               <tr key={r.seq}>
                 <Td>{r.seq}</Td>
-                <Td className="hidden break-all text-xs md:table-cell">{r.ts}</Td>
+                <Td className="hidden text-xs md:table-cell md:whitespace-nowrap">{r.ts}</Td>
                 <Td className="min-w-16 break-words">
                   {r.actorName}
                   <span className="block whitespace-nowrap text-xs text-muted md:hidden">
                     {r.ts.slice(0, 19).replace("T", " ")}
                   </span>
                 </Td>
-                <Td>
-                  {r.eventType.split("_").flatMap((w, i, a) =>
-                    i < a.length - 1 ? [`${w}_`, <wbr key={i} />] : [w],
-                  )}
+                <Td className="md:whitespace-nowrap">
+                  {/* wbr still breaks under nowrap in Chrome, so md+ gets plain text */}
+                  <span className="md:hidden">
+                    {r.eventType.split("_").flatMap((w, i, a) =>
+                      i < a.length - 1 ? [`${w}_`, <wbr key={i} />] : [w],
+                    )}
+                  </span>
+                  <span className="hidden md:inline">{r.eventType}</span>
                 </Td>
                 <Td className="hidden min-w-28 break-all font-mono text-xs md:table-cell">
                   {r.hashShort}

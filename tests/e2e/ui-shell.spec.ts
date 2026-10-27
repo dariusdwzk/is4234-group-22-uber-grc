@@ -367,3 +367,31 @@ test("board integrity card treats a pre-reset export as stale, not a mismatch", 
   await expect(page.getByTestId("head-status")).not.toContainText("DOES NOT MATCH");
   await expect(page.getByTestId("integrity-icon")).toHaveAttribute("data-state", "ok");
 });
+
+test("topbar Sign out stays on one line at 375 px", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await loginAs(page, "sa");
+  await page.goto("/cases");
+  await ready(page);
+  await expect(page.getByRole("button", { name: "Sign out" })).toHaveCSS(
+    "white-space",
+    "nowrap",
+  );
+  const header = page.locator("header").first();
+  const box = await header.boundingBox();
+  expect(box!.height).toBeLessThan(70);
+  expect(
+    await header.evaluate((h) => h.scrollWidth <= h.clientWidth),
+  ).toBe(true);
+});
+
+test("ledger Time and Event cells do not wrap at 1440 px", async ({ page }) => {
+  await firePreset(page, /Cloud download alert/);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await loginAs(page, "ia");
+  await page.goto("/ledger");
+  await ready(page);
+  const cells = page.locator("tbody tr").first().locator("td");
+  await expect(cells.nth(1)).toHaveCSS("white-space", "nowrap");
+  await expect(cells.nth(3)).toHaveCSS("white-space", "nowrap");
+});

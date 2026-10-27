@@ -20,6 +20,15 @@ async function Board({ searchParams }: PageProps<"/board">) {
   await sweep(); // escalations are evaluated on load (spec §8), as the system actor
   const b = await getBoard(actor);
   const sp = await searchParams;
+  // verify.ts ignores exports made before the last DEMO_RESET but getBoard's lastExport does not.
+  const exportState = !b.lastExport
+    ? "none"
+    : b.verify.exportedHead === undefined
+      ? "stale"
+      : b.verify.exportedHead.matches
+        ? "match"
+        : "mismatch";
+  const iconState = b.verify.ok && exportState !== "mismatch" ? "ok" : "alert";
   const openTier2 = b.tier2.filter((t) => t.status === "open").length;
   const first = b.cases[0];
   return (
@@ -52,11 +61,9 @@ async function Board({ searchParams }: PageProps<"/board">) {
           />
           <div className="rounded-xl border border-line bg-surface p-5 shadow-sm">
             <p className="flex items-center gap-2 text-sm font-medium text-ink">
-              {b.verify.ok && !(b.lastExport && !b.verify.exportedHead?.matches) ? (
-                <IconCheck />
-              ) : (
-                <IconAlert />
-              )}
+              <span data-testid="integrity-icon" data-state={iconState}>
+                {iconState === "ok" ? <IconCheck /> : <IconAlert />}
+              </span>
               Ledger integrity
             </p>
             <p
@@ -66,9 +73,11 @@ async function Board({ searchParams }: PageProps<"/board">) {
               {b.verify.ok
                 ? `Verified: ${b.verify.count} entries, head ${b.verify.headHash.slice(0, 12)}.`
                 : `Verification failed at entry ${b.verify.failedAtSeq}.`}{" "}
-              {b.lastExport
-                ? `Last export (simulated auditor inbox): entry ${b.lastExport.seq}, ${b.verify.exportedHead?.matches ? "matches" : "DOES NOT MATCH"}.`
-                : "No head exported yet."}
+              {exportState === "none"
+                ? "No head exported yet."
+                : exportState === "stale"
+                  ? "No head exported since the last reset."
+                  : `Last export (simulated auditor inbox): entry ${b.lastExport!.seq}, ${exportState === "match" ? "matches" : "DOES NOT MATCH"}.`}
             </p>
           </div>
         </div>

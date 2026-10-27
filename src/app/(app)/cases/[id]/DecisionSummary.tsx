@@ -134,7 +134,7 @@ export function DecisionSummary({
               const cb = clockBadge(k.status);
               return (
                 <tr key={k.id} data-testid={`clock-${k.id}`}>
-                  <Td className="min-w-40 break-words">
+                  <Td className="break-words lg:min-w-40">
                     {k.label}
                     {k.note && (
                       <div className="text-xs text-muted">{k.note}</div>
@@ -143,7 +143,21 @@ export function DecisionSummary({
                   <Td>
                     <Badge variant={cb.variant}>{k.status}</Badge>
                   </Td>
-                  <Td className="whitespace-nowrap">{k.dueAt ?? "—"}</Td>
+                  <Td className="break-words lg:whitespace-nowrap">
+                    {k.dueAt ? (
+                      <>
+                        {k.dueAt.split("T")[0]}
+                        {k.dueAt.includes("T") && (
+                          <>
+                            T<wbr />
+                            {k.dueAt.split("T").slice(1).join("T")}
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      "—"
+                    )}
+                  </Td>
                   <Td>
                     {k.pctElapsed === null ? "—" : `${k.pctElapsed}%`}
                   </Td>

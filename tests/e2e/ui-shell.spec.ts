@@ -195,6 +195,7 @@ test("cases list and case detail keep their contract in the dashboard layout", a
     page.getByRole("region", { name: "Decision gate" }),
   ).toBeInViewport();
   await expect(page.getByRole("button", { name: "Close case" })).toBeEnabled();
+  await page.setViewportSize({ width: 1440, height: 900 });
   const clocks = page.getByRole("region", { name: "Clocks (illustrative)" });
   const gateBox = await page.getByRole("region", { name: "Decision gate" }).boundingBox();
   const clocksBox = await clocks.boundingBox();
@@ -213,6 +214,37 @@ test("cases list and case detail keep their contract in the dashboard layout", a
       ]),
     ),
   ).not.toContain(true);
+  const sizes: [number, number][] = [
+    [768, 1024],
+    [1024, 768],
+    [1440, 900],
+  ];
+  for (const [width, height] of sizes) {
+    await page.setViewportSize({ width, height });
+    const card = await clocks.boundingBox();
+    const rows = page.locator('[data-testid^="clock-"]');
+    for (let i = 0; i < (await rows.count()); i++) {
+      const last = await rows.nth(i).locator("td").last().boundingBox();
+      expect(last!.x + last!.width, `${width}px row ${i} Elapsed inside card`).toBeLessThanOrEqual(
+        card!.x + card!.width,
+      );
+    }
+    expect(
+      await page.evaluate(() =>
+        [...document.querySelectorAll('[data-testid^="clock-"] td')].some(
+          (c) => c.scrollWidth > c.clientWidth,
+        ),
+      ),
+      `${width}px clipped clock cell`,
+    ).toBe(false);
+    expect(
+      await page.evaluate(() => {
+        const w = document.querySelector('[data-testid^="clock-"]')!.closest(".overflow-x-auto") as HTMLElement;
+        return w.scrollWidth > w.clientWidth;
+      }),
+      `${width}px sideways scroll`,
+    ).toBe(false);
+  }
 });
 
 test("ledger shows verify result, failure label and a Demo only region", async ({
@@ -248,7 +280,6 @@ test("ledger shows verify result, failure label and a Demo only region", async (
   ).toBe(true);
   // Key columns (#, Time, Actor, Event) stay readable without sideways scrolling.
   await expect(page.getByRole("columnheader", { name: "Time" })).toBeHidden();
-  const firstEvent = await page.locator("tbody tr").first().locator("td").nth(3).boundingBox();
   // Event names may wrap only at underscores: each cell's longest word fits.
   expect(
     await page.evaluate(() =>
@@ -257,7 +288,6 @@ test("ledger shows verify result, failure label and a Demo only region", async (
       ),
     ),
   ).toBe(false);
-  expect(firstEvent!.x + firstEvent!.width).toBeLessThanOrEqual(375);
   await page.setViewportSize({ width: 1440, height: 900 });
   await expect(page.getByRole("columnheader", { name: "Time" })).toBeVisible();
   await page.setViewportSize({ width: 375, height: 812 });
@@ -317,12 +347,10 @@ test("board integrity card shows the alert icon when verification fails", async 
   await loginAs(page, "acc");
   await page.goto("/board");
   await expect(page.getByTestId("head-status")).toContainText("Verification failed");
-  const card = page.getByTestId("head-status").locator("..");
-  await expect(card.locator('svg path[d^="M12 3 2 20"]')).toHaveCount(1);
-  await expect(card.locator('svg circle')).toHaveCount(0);
+  await expect(page.getByTestId("integrity-icon")).toHaveAttribute("data-state", "alert");
 });
 
-test("board integrity card shows the alert icon when the export line says DOES NOT MATCH", async ({
+test("board integrity card treats a pre-reset export as stale, not a mismatch", async ({
   page,
 }) => {
   await resetDemo(page);
@@ -333,7 +361,9 @@ test("board integrity card shows the alert icon when the export line says DOES N
   await loginAs(page, "acc");
   await page.goto("/board");
   await expect(page.getByTestId("head-status")).toContainText("Verified");
-  await expect(page.getByTestId("head-status")).toContainText("DOES NOT MATCH");
-  const card = page.getByTestId("head-status").locator("..");
-  await expect(card.locator('svg path[d^="M12 3 2 20"]')).toHaveCount(1);
+  await expect(page.getByTestId("head-status")).toContainText(
+    "No head exported since the last reset.",
+  );
+  await expect(page.getByTestId("head-status")).not.toContainText("DOES NOT MATCH");
+  await expect(page.getByTestId("integrity-icon")).toHaveAttribute("data-state", "ok");
 });

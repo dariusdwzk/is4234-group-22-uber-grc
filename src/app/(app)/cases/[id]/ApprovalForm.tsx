@@ -1,4 +1,6 @@
 import { REASON_CODES } from "@/domain/gate";
+import { controlClass, Field } from "@/components/ui/Field";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { decideAction } from "./actions";
 
 const CHECKS: [string, string][] = [
@@ -11,10 +13,10 @@ const CHECKS: [string, string][] = [
 
 export function ApprovalForm({ caseId }: { caseId: string }) {
   return (
-    <form action={decideAction} className="flex max-w-xl flex-col gap-2">
+    <form action={decideAction} className="flex max-w-xl flex-col gap-4">
       <input type="hidden" name="caseId" value={caseId} />
-      <fieldset className="flex flex-col gap-1">
-        <legend>Outcome</legend>
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-1 text-sm font-medium text-ink">Outcome</legend>
         {(
           [
             ["notify_now", "Notify now"],
@@ -22,36 +24,59 @@ export function ApprovalForm({ caseId }: { caseId: string }) {
             ["withhold", "Withhold"],
           ] as const
         ).map(([v, l]) => (
-          <label key={v}>
-            <input type="radio" name="outcome" value={v} required /> {l}
+          <label key={v} className="flex items-center gap-2 text-sm text-ink">
+            <input
+              type="radio"
+              name="outcome"
+              value={v}
+              required
+              className="size-4 accent-brand"
+            />
+            {l}
           </label>
         ))}
       </fieldset>
-      <label className="flex flex-col gap-1">
-        Notify-by date (only for notify later)
-        <input type="date" name="notifyBy" className="border px-2 py-1" />
-      </label>
-      <label className="flex flex-col gap-1">
-        Reason code
-        <select name="reasonCode" className="border px-2 py-1">
-          {REASON_CODES.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </select>
-      </label>
-      <fieldset className="flex flex-col gap-1">
-        <legend>Checklist (all required)</legend>
+      <Field label="Notify-by date (only for notify later)">
+        {({ id, describedBy }) => (
+          <input
+            id={id}
+            aria-describedby={describedBy}
+            type="date"
+            name="notifyBy"
+            className={controlClass}
+          />
+        )}
+      </Field>
+      <Field label="Reason code">
+        {({ id, describedBy }) => (
+          <select
+            id={id}
+            aria-describedby={describedBy}
+            name="reasonCode"
+            className={controlClass}
+          >
+            {REASON_CODES.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
+        )}
+      </Field>
+      <fieldset className="flex flex-col gap-2">
+        <legend className="mb-1 text-sm font-medium text-ink">
+          Checklist (all required)
+        </legend>
         {CHECKS.map(([k, l]) => (
-          <label key={k}>
-            <input type="checkbox" name={k} /> {l}
+          <label key={k} className="flex items-center gap-2 text-sm text-ink">
+            <input type="checkbox" name={k} className="size-4 accent-brand" />
+            {l}
           </label>
         ))}
       </fieldset>
-      <button type="submit" className="border px-3 py-1">
-        Submit decision
-      </button>
+      <div>
+        <SubmitButton>Submit decision</SubmitButton>
+      </div>
     </form>
   );
 }

@@ -1,26 +1,49 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+@theme {
+  --color-canvas: #F8FAFC;
+  --color-surface: #FFFFFF;
+  --color-line: #E2E8F0;
+  --color-field: #64748B;
+  --color-ink: #0F172A;
+  --color-muted: #475569;
+  --color-sidebar: #0F172A;
+  --color-sidebar-ink: #E2E8F0;
+  --color-brand: #1D4ED8;
+  --color-brand-hover: #1E40AF;
+  --color-ring: #2563EB;
+  --color-danger-ink: #B91C1C;
+  --color-danger-soft: #FEF2F2;
+  --color-warn-ink: #92400E;
+  --color-warn-soft: #FFFBEB;
+  --color-ok-ink: #166534;
+  --color-ok-soft: #F0FDF4;
+  --color-info-ink: #1E40AF;
+  --color-info-soft: #EFF6FF;
+  --color-neutral-ink: #334155;
+  --color-neutral-soft: #F1F5F9;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: light;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  @apply bg-canvas text-ink font-sans;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
 }

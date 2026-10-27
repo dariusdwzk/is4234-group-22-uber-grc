@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { CompareBar } from "@/components/ui/CompareBar";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Field } from "@/components/ui/Field";
+import { Field, controlClass } from "@/components/ui/Field";
 import { IconAlert, IconCheck } from "@/components/ui/icons";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
@@ -14,9 +14,6 @@ import { sweep } from "@/server/commands/sweep";
 import { requireActor } from "@/server/page-guard";
 import { getBoard } from "@/server/queries/board";
 import { acknowledgeAction, resolveFlagAction } from "./actions";
-
-const inputCls =
-  "min-h-10 rounded-lg border border-field bg-surface px-3 text-sm text-ink";
 
 async function Board({ searchParams }: PageProps<"/board">) {
   const actor = await requireActor("viewBoard");
@@ -151,7 +148,7 @@ async function Board({ searchParams }: PageProps<"/board">) {
                             required
                             minLength={5}
                             maxLength={2000}
-                            className={inputCls}
+                            className={controlClass}
                           />
                         )}
                       </Field>
@@ -206,7 +203,7 @@ async function Board({ searchParams }: PageProps<"/board">) {
                           required
                           minLength={5}
                           maxLength={2000}
-                          className={inputCls}
+                          className={controlClass}
                         />
                       )}
                     </Field>

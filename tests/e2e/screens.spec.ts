@@ -57,6 +57,7 @@ test.describe.serial("screenshots", () => {
         await page.goto(v.path);
         if (name === "case-detail") {
           await page.getByRole("link", { name: "CASE-0001" }).click();
+          await page.getByRole("region", { name: "Decision gate" }).waitFor();
         }
         await page.waitForLoadState("networkidle");
         await page.screenshot({

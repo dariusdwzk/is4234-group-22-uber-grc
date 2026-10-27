@@ -195,6 +195,17 @@ test("cases list and case detail keep their contract in the dashboard layout", a
     page.getByRole("region", { name: "Decision gate" }),
   ).toBeInViewport();
   await expect(page.getByRole("button", { name: "Close case" })).toBeEnabled();
+  // Narrow rail: no clock row is clipped or scrolls sideways.
+  await expect(page.locator('[data-testid^="clock-"]').first()).toBeVisible();
+  expect(
+    await page.evaluate(() =>
+      [...document.querySelectorAll('[data-testid^="clock-"]')].flatMap((tr) => [
+        ...[...tr.querySelectorAll("td")].map((c) => c.scrollWidth > c.clientWidth),
+        (tr.closest(".overflow-x-auto") as HTMLElement).scrollWidth >
+          (tr.closest(".overflow-x-auto") as HTMLElement).clientWidth,
+      ]),
+    ),
+  ).not.toContain(true);
 });
 
 test("ledger shows verify result, failure label and a Demo only region", async ({
@@ -228,6 +239,13 @@ test("ledger shows verify result, failure label and a Demo only region", async (
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBe(true);
+  // Key columns (#, Time, Actor, Event) stay readable without sideways scrolling.
+  const eventHead = await page
+    .getByRole("columnheader", { name: "Event" })
+    .boundingBox();
+  const eventCell = await page.locator("tbody tr").first().locator("td").nth(3).boundingBox();
+  expect(eventHead!.x + eventHead!.width).toBeLessThanOrEqual(375);
+  expect(eventCell!.x + eventCell!.width).toBeLessThanOrEqual(375);
 });
 
 test("demo panel groups replay, clock and reset", async ({ page }) => {

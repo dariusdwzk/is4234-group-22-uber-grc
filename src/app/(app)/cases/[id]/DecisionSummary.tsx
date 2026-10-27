@@ -42,8 +42,8 @@ export function DecisionSummary({
           </Alert>
         </div>
       )}
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="flex flex-col gap-6 lg:col-span-2">
+      <div className="grid gap-6 lg:grid-cols-5">
+        <div className="flex flex-col gap-6 lg:col-span-3">
           <Card titleId="events" title="Events">
             <Timeline
               items={c.events.map((e) => ({
@@ -69,7 +69,7 @@ export function DecisionSummary({
             )}
           </Card>
         </div>
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6 lg:col-span-2">
           <Card titleId="gate" title="Decision gate">
             <p data-testid="gate-state" className="text-sm font-medium text-ink">
               {c.gate.status === "awaiting" &&
@@ -117,7 +117,7 @@ export function DecisionSummary({
                   const cb = clockBadge(k.status);
                   return (
                     <tr key={k.id} data-testid={`clock-${k.id}`}>
-                      <Td>
+                      <Td className="min-w-16 break-words">
                         {k.label}
                         {k.note && (
                           <div className="text-xs text-muted">{k.note}</div>
@@ -126,7 +126,7 @@ export function DecisionSummary({
                       <Td>
                         <Badge variant={cb.variant}>{k.status}</Badge>
                       </Td>
-                      <Td>{k.dueAt ?? "—"}</Td>
+                      <Td className="break-all">{k.dueAt ?? "—"}</Td>
                       <Td>
                         {k.pctElapsed === null ? "—" : `${k.pctElapsed}%`}
                       </Td>

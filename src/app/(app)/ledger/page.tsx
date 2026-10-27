@@ -126,13 +126,13 @@ async function Ledger({ searchParams }: PageProps<"/ledger">) {
             {rows.map((r) => (
               <tr key={r.seq}>
                 <Td>{r.seq}</Td>
-                <Td>{r.ts}</Td>
-                <Td>{r.actorName}</Td>
-                <Td>{r.eventType}</Td>
-                <Td className="min-w-0 break-all font-mono text-xs">
+                <Td className="min-w-16 break-all text-xs">{r.ts}</Td>
+                <Td className="min-w-16 break-words">{r.actorName}</Td>
+                <Td className="min-w-20 break-all">{r.eventType}</Td>
+                <Td className="min-w-28 break-all font-mono text-xs">
                   {r.hashShort}
                 </Td>
-                <Td className="min-w-0 break-all font-mono text-xs">
+                <Td className="min-w-56 break-all font-mono text-xs">
                   {r.payloadPreview}
                 </Td>
               </tr>

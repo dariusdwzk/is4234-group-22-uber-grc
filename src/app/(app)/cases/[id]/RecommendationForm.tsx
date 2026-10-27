@@ -1,9 +1,6 @@
-import { Field } from "@/components/ui/Field";
+import { controlClass, Field } from "@/components/ui/Field";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { recommendAction } from "./actions";
-
-const inputCls =
-  "min-h-10 rounded-lg border border-field bg-surface px-3 py-2 text-sm text-ink";
 
 export function RecommendationForm({ caseId }: { caseId: string }) {
   return (
@@ -15,7 +12,7 @@ export function RecommendationForm({ caseId }: { caseId: string }) {
             id={id}
             aria-describedby={describedBy}
             name="proposedOutcome"
-            className={inputCls}
+            className={controlClass}
           >
             <option value="notify_now">Notify now</option>
             <option value="notify_later">Notify later</option>
@@ -29,7 +26,7 @@ export function RecommendationForm({ caseId }: { caseId: string }) {
             id={id}
             aria-describedby={describedBy}
             name="dataTaken"
-            className={inputCls}
+            className={controlClass}
           >
             <option value="yes">Yes</option>
             <option value="no">No</option>
@@ -43,7 +40,7 @@ export function RecommendationForm({ caseId }: { caseId: string }) {
             id={id}
             aria-describedby={describedBy}
             name="treatAs"
-            className={inputCls}
+            className={controlClass}
           >
             <option value="incident">Incident</option>
             <option value="bug_bounty">Bug bounty</option>
@@ -59,7 +56,7 @@ export function RecommendationForm({ caseId }: { caseId: string }) {
             required
             maxLength={2000}
             rows={3}
-            className={inputCls}
+            className={controlClass}
           />
         )}
       </Field>

@@ -1,5 +1,7 @@
 "use client";
 
+import { SubmitButton } from "@/components/ui/SubmitButton";
+
 export function ResetButton({ action }: { action: () => Promise<void> }) {
   return (
     <form
@@ -11,9 +13,7 @@ export function ResetButton({ action }: { action: () => Promise<void> }) {
           e.preventDefault();
       }}
     >
-      <button type="submit" className="border px-3 py-1">
-        Reset demo
-      </button>
+      <SubmitButton variant="danger">Reset demo</SubmitButton>
     </form>
   );
 }

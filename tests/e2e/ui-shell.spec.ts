@@ -193,3 +193,39 @@ test("ledger shows verify result, failure label and a Demo only region", async (
     ),
   ).toBe(true);
 });
+
+test("demo panel groups replay, clock and reset", async ({ page }) => {
+  await loginAs(page, "demo");
+  await page.goto("/demo");
+  await expect(page.getByRole("heading", { name: "Demo panel" })).toBeVisible();
+  const replay = page.getByRole("region", { name: "Replay scenario" });
+  const labels = await replay.getByRole("button").allTextContents();
+  expect(labels.length).toBeGreaterThan(1);
+  expect(labels[0]).toMatch(/^1\./);
+  expect(labels).toEqual([...labels].sort((a, b) => parseInt(a) - parseInt(b)));
+  const reset = page.getByRole("region", { name: "Reset" });
+  await expect(reset.getByRole("button", { name: "Reset demo" })).toBeVisible();
+  await expect(reset.getByRole("button", { name: "Advance +24h" })).toHaveCount(
+    0,
+  );
+  await expect(page.getByRole("button", { name: "Advance +24h" })).toBeVisible();
+});
+
+test("report receipt and flag confirmation use one status each", async ({
+  page,
+}) => {
+  await loginAs(page, "emp");
+  await page.goto("/report");
+  await page.getByLabel("Description").fill("Layout check report.");
+  await page.getByRole("button", { name: "Submit report" }).click();
+  await expect(page.getByRole("status")).toHaveCount(1);
+  await expect(page.getByRole("status")).toContainText("Thank you — receipt");
+  await page.goto("/flag");
+  await page.getByLabel("Case reference").fill("CASE-0001");
+  await page.getByLabel("What concerns you?").fill("Layout check flag text.");
+  await page.getByRole("button", { name: "Raise flag" }).click();
+  await expect(page.getByRole("status")).toHaveCount(1);
+  await expect(page.getByRole("status")).toContainText(
+    "Flag recorded for review.",
+  );
+});

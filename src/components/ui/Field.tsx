@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 import { useId } from "react";
 
+export const controlClass =
+  "w-full min-h-10 rounded-lg border border-field bg-surface px-3 py-2 text-sm text-ink";
+
 export function Field({
   label,
   hint,

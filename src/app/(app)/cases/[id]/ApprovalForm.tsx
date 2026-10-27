@@ -1,10 +1,7 @@
 import { REASON_CODES } from "@/domain/gate";
-import { Field } from "@/components/ui/Field";
+import { controlClass, Field } from "@/components/ui/Field";
 import { SubmitButton } from "@/components/ui/SubmitButton";
 import { decideAction } from "./actions";
-
-const inputCls =
-  "min-h-10 rounded-lg border border-field bg-surface px-3 py-2 text-sm text-ink";
 
 const CHECKS: [string, string][] = [
   ["reviewedEvidence", "I have reviewed the evidence on this page"],
@@ -46,7 +43,7 @@ export function ApprovalForm({ caseId }: { caseId: string }) {
             aria-describedby={describedBy}
             type="date"
             name="notifyBy"
-            className={inputCls}
+            className={controlClass}
           />
         )}
       </Field>
@@ -56,7 +53,7 @@ export function ApprovalForm({ caseId }: { caseId: string }) {
             id={id}
             aria-describedby={describedBy}
             name="reasonCode"
-            className={inputCls}
+            className={controlClass}
           >
             {REASON_CODES.map((r) => (
               <option key={r} value={r}>

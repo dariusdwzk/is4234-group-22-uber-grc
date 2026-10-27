@@ -1,4 +1,9 @@
 import { Suspense } from "react";
+import { Alert } from "@/components/ui/Alert";
+import { Card } from "@/components/ui/Card";
+import { controlClass, Field } from "@/components/ui/Field";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { authorize } from "@/server/authz";
 import { requireActor } from "@/server/page-guard";
 import { reportAction } from "./actions";
@@ -8,49 +13,57 @@ async function Report({ searchParams }: PageProps<"/report">) {
   const { receipt, error } = await searchParams;
   if (typeof receipt === "string")
     return (
-      <p role="status">
+      <Alert tone="success">
         Thank you — receipt {receipt}. The case is now with the incident
         governance process.
-      </p>
+      </Alert>
     );
   if (!authorize(actor, "declareIncident").ok)
     return <p>Your role cannot declare incidents.</p>;
   return (
-    <form action={reportAction} className="flex max-w-xl flex-col gap-3">
-      {error !== undefined && (
-        <p role="alert">
-          Please describe what happened (up to 2000 characters).
-        </p>
-      )}
-      <label className="flex flex-col gap-1">
-        Description
-        <textarea
-          name="description"
-          required
-          maxLength={2000}
-          rows={5}
-          className="border px-2 py-1"
-        />
-      </label>
-      <label className="flex flex-col gap-1">
-        Related reference (optional)
-        <input
-          name="relatedReference"
-          maxLength={200}
-          className="border px-2 py-1"
-        />
-      </label>
-      <button type="submit" className="border px-3 py-1">
-        Submit report
-      </button>
-    </form>
+    <Card className="max-w-[640px]">
+      <form action={reportAction} className="flex flex-col gap-4">
+        {error !== undefined && (
+          <Alert tone="error">
+            Please describe what happened (up to 2000 characters).
+          </Alert>
+        )}
+        <Field label="Description">
+          {({ id, describedBy }) => (
+            <textarea
+              id={id}
+              aria-describedby={describedBy}
+              name="description"
+              required
+              maxLength={2000}
+              rows={5}
+              className={controlClass}
+            />
+          )}
+        </Field>
+        <Field label="Related reference (optional)">
+          {({ id, describedBy }) => (
+            <input
+              id={id}
+              aria-describedby={describedBy}
+              name="relatedReference"
+              maxLength={200}
+              className={controlClass}
+            />
+          )}
+        </Field>
+        <div>
+          <SubmitButton disableWhilePending>Submit report</SubmitButton>
+        </div>
+      </form>
+    </Card>
   );
 }
 
 export default function ReportPage(props: PageProps<"/report">) {
   return (
-    <main className="p-8">
-      <h1 className="mb-4 text-2xl font-semibold">Report a concern</h1>
+    <main className="p-6 lg:p-8">
+      <PageHeader title="Report a concern" />
       <Suspense fallback={null}>
         <Report {...props} />
       </Suspense>

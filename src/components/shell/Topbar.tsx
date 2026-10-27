@@ -14,7 +14,7 @@ export function Topbar({
   return (
     <header className="relative flex items-center gap-3 border-b border-line bg-surface px-4 py-2">
       <details className="md:hidden">
-        <summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 rounded-lg border border-field px-3 text-sm font-medium">
+        <summary className="flex min-h-10 cursor-pointer list-none items-center [&::-webkit-details-marker]:hidden gap-2 rounded-lg border border-field px-3 text-sm font-medium">
           <IconMenu />
           Menu
         </summary>

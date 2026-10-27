@@ -1,11 +1,14 @@
 import { expect, test } from "@playwright/test";
-import {
-  firePreset,
-  loginAs,
-  raiseFlag,
-  resetDemo,
-  tamper,
-} from "./fixtures";
+import { REPLAY_PRESETS } from "../../src/server/demo/replay-presets";
+import { firePreset, loginAs, raiseFlag, resetDemo, tamper } from "./fixtures";
+
+// Cold-start guard: wait until the document is rendered before keyboard input.
+const ready = async (page: import("@playwright/test").Page) => {
+  await expect(
+    page.getByRole("link", { name: "Skip to main content" }),
+  ).toBeAttached();
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+};
 
 const mainNav = (page: import("@playwright/test").Page) =>
   page.getByRole("navigation", { name: "Main" });
@@ -19,8 +22,11 @@ test.beforeAll(async ({ browser }) => {
 test("skip link is the first tab stop", async ({ page }) => {
   await loginAs(page, "sa");
   await page.goto("/cases");
+  await ready(page);
   await page.keyboard.press("Tab");
-  await expect(page.locator(":focus")).toHaveText("Skip to main content");
+  await expect(
+    page.getByRole("link", { name: "Skip to main content" }),
+  ).toBeFocused();
 });
 
 test("banner and one h1 on every page", async ({ page }) => {
@@ -60,8 +66,12 @@ test("nav shows only the role's links", async ({ page }) => {
 
   await loginAs(page, "acc");
   await page.goto("/board");
-  await expect(mainNav(page).getByRole("link", { name: "Board" })).toBeVisible();
-  await expect(mainNav(page).getByRole("link", { name: "Ledger" })).toBeVisible();
+  await expect(
+    mainNav(page).getByRole("link", { name: "Board" }),
+  ).toBeVisible();
+  await expect(
+    mainNav(page).getByRole("link", { name: "Ledger" }),
+  ).toBeVisible();
 });
 
 test("active link has aria-current", async ({ page }) => {
@@ -81,12 +91,15 @@ test("no horizontal scroll at 375 px", async ({ page }) => {
       () => document.documentElement.scrollWidth <= window.innerWidth,
     );
   await page.goto("/flag");
+  await ready(page);
   expect(await noOverflow()).toBe(true);
   await loginAs(page, "sa");
   await page.goto("/cases");
+  await ready(page);
   expect(await noOverflow()).toBe(true);
   await loginAs(page, "acc");
   await page.goto("/ledger");
+  await ready(page);
   expect(await noOverflow()).toBe(true);
 });
 
@@ -94,6 +107,7 @@ test("mobile menu opens by keyboard", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await loginAs(page, "sa");
   await page.goto("/report");
+  await ready(page);
   const summary = page.getByText("Menu", { exact: true });
   const cases = mainNav(page).getByRole("link", { name: "Cases" });
   await summary.focus();
@@ -101,6 +115,30 @@ test("mobile menu opens by keyboard", async ({ page }) => {
   await expect(cases).toBeVisible();
   await page.keyboard.press("Enter");
   await expect(cases).toBeHidden();
+
+  await page.keyboard.press("Enter");
+  await cases.click();
+  await expect(page).toHaveURL(/\/cases/);
+  await expect(cases).toBeHidden();
+});
+
+test("reason code select shows a focus ring", async ({ page }) => {
+  await resetDemo(page);
+  await firePreset(page, /Cloud download alert/);
+  await loginAs(page, "gc");
+  await page.goto("/cases");
+  await page.getByRole("link", { name: "CASE-0001" }).click();
+  const select = page.getByLabel("Reason code");
+  await page.getByLabel("Notify-by date (only for notify later)").focus();
+  // a date input has several inner tab stops (month, day, year, picker)
+  for (
+    let i = 0;
+    i < 6 && !(await select.evaluate((e) => e === document.activeElement));
+    i++
+  )
+    await page.keyboard.press("Tab");
+  await expect(select).toBeFocused();
+  await expect(select).toHaveCSS("outline-style", "solid");
 });
 
 test("board shows the 371-day comparison and Tier 2 inbox on the first screen", async ({
@@ -169,9 +207,7 @@ test("ledger shows verify result, failure label and a Demo only region", async (
   await expect(page.getByTestId("verify-result")).toContainText("Ledger OK");
   await expect(page.getByTestId("entry-count")).toBeVisible();
   await expect(page.getByRole("status")).toHaveCount(1);
-  await expect(
-    page.getByRole("region", { name: "Demo only" }),
-  ).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Demo only" })).toHaveCount(0);
 
   await tamper(page, 2);
   await expect(
@@ -200,15 +236,15 @@ test("demo panel groups replay, clock and reset", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Demo panel" })).toBeVisible();
   const replay = page.getByRole("region", { name: "Replay scenario" });
   const labels = await replay.getByRole("button").allTextContents();
-  expect(labels.length).toBeGreaterThan(1);
-  expect(labels[0]).toMatch(/^1\./);
-  expect(labels).toEqual([...labels].sort((a, b) => parseInt(a) - parseInt(b)));
+  expect(labels).toEqual(Object.values(REPLAY_PRESETS).map((p) => p.label));
   const reset = page.getByRole("region", { name: "Reset" });
   await expect(reset.getByRole("button", { name: "Reset demo" })).toBeVisible();
   await expect(reset.getByRole("button", { name: "Advance +24h" })).toHaveCount(
     0,
   );
-  await expect(page.getByRole("button", { name: "Advance +24h" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Advance +24h" }),
+  ).toBeVisible();
 });
 
 test("report receipt and flag confirmation use one status each", async ({

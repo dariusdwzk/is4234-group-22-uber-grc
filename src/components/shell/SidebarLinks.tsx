@@ -44,6 +44,9 @@ export function SidebarLinks({
             <Link
               href={l.href}
               aria-current={active ? "page" : undefined}
+              onClick={(e) =>
+                e.currentTarget.closest("details")?.removeAttribute("open")
+              }
               className={`flex min-h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium ${tone}`}
             >
               {Icon && <Icon />}

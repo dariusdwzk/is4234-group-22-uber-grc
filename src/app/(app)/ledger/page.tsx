@@ -84,9 +84,13 @@ async function Ledger({ searchParams }: PageProps<"/ledger">) {
         <Card
           title="Demo only"
           titleId="demo-only"
-          className="mb-6 border-danger-ink"
+          tone="danger"
+          className="mb-6"
         >
-          <form action={tamperAction} className="flex flex-wrap items-end gap-3">
+          <form
+            action={tamperAction}
+            className="flex flex-wrap items-end gap-3"
+          >
             <Field label="Entry number">
               {({ id, describedBy }) => (
                 <input
@@ -100,7 +104,9 @@ async function Ledger({ searchParams }: PageProps<"/ledger">) {
                 />
               )}
             </Field>
-            <SubmitButton variant="danger">Demo only — alter entry</SubmitButton>
+            <SubmitButton variant="danger">
+              Demo only — alter entry
+            </SubmitButton>
           </form>
         </Card>
       )}
@@ -134,24 +140,26 @@ async function Ledger({ searchParams }: PageProps<"/ledger">) {
           </tbody>
         </DataTable>
       </div>
-      <nav aria-label="Ledger pages" className="mt-4 flex gap-3">
-        {page > 1 && (
-          <Link
-            href={`/ledger?page=${page - 1}`}
-            className={buttonClass("secondary")}
-          >
-            Newer
-          </Link>
-        )}
-        {page < pages && (
-          <Link
-            href={`/ledger?page=${page + 1}`}
-            className={buttonClass("secondary")}
-          >
-            Older
-          </Link>
-        )}
-      </nav>
+      {pages > 1 && (
+        <nav aria-label="Ledger pages" className="mt-4 flex gap-3">
+          {page > 1 && (
+            <Link
+              href={`/ledger?page=${page - 1}`}
+              className={buttonClass("secondary")}
+            >
+              Newer
+            </Link>
+          )}
+          {page < pages && (
+            <Link
+              href={`/ledger?page=${page + 1}`}
+              className={buttonClass("secondary")}
+            >
+              Older
+            </Link>
+          )}
+        </nav>
+      )}
     </>
   );
 }

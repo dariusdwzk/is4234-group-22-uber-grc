@@ -43,7 +43,7 @@ async function Panel() {
             ))}
           </ol>
         </Card>
-        <Card title="Clock" as="section">
+        <Card title="Clock">
           <form action={advanceAction}>
             <SubmitButton variant="secondary">Advance +24h</SubmitButton>
           </form>
@@ -51,7 +51,7 @@ async function Panel() {
         <Card
           titleId="reset"
           title="Reset"
-          className="border-danger-ink! bg-danger-soft!"
+          tone="danger"
         >
           <ResetButton action={resetAction} />
         </Card>

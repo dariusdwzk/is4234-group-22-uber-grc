@@ -16,14 +16,34 @@ const ratio = (a: string, b: string) => {
   const [la, lb] = [lum(a), lum(b)];
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
 };
-const hex = (k: string): string => (k === "white" ? "#FFFFFF" : (t[k] ?? ""));
+// white at alpha a over a token colour, as SidebarLinks does (bg-white/10, bg-white/5)
+const over = (bg: string, a: number) =>
+  "#" +
+  [1, 3, 5]
+    .map((i) =>
+      Math.round(255 * a + parseInt(bg.slice(i, i + 2), 16) * (1 - a))
+        .toString(16)
+        .padStart(2, "0"),
+    )
+    .join("");
+const hex = (k: string): string => {
+  if (k === "white") return "#FFFFFF";
+  if (k === "black") return "#000000";
+  if (k === "amber-200") return "#FDE68A"; // Tailwind default; Banner.tsx
+  const m = /^sidebar\+white\/(\d+)$/.exec(k);
+  if (m) return over(t.sidebar as string, Number(m[1]) / 100);
+  return t[k] ?? "";
+};
 
 const AA: [string, string][] = [
   ["ink", "canvas"], ["ink", "surface"], ["muted", "surface"], ["muted", "canvas"],
   ["white", "brand"], ["white", "brand-hover"], ["sidebar-ink", "sidebar"], ["sidebar-muted", "sidebar"],
+  ["white", "sidebar+white/10"], ["sidebar-ink", "sidebar+white/5"],
+  ["ink", "neutral-soft"], ["muted", "neutral-soft"], ["neutral-ink", "neutral-soft"],
+  ["brand", "surface"], ["danger-ink", "surface"], ["white", "danger-ink"], ["black", "amber-200"],
   ...["danger", "warn", "ok", "info", "neutral"].map((v): [string, string] => [`${v}-ink`, `${v}-soft`]),
 ];
-const UI: [string, string][] = [["field", "surface"], ["ring", "surface"], ["brand", "surface"]];
+const UI: [string, string][] = [["field", "surface"], ["ring", "surface"]];
 
 describe("theme contrast", () => {
   it.each(AA)("%s on %s >= 4.5", (fg, bg) => {

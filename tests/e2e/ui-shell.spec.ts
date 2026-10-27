@@ -1,5 +1,11 @@
 import { expect, test } from "@playwright/test";
-import { firePreset, loginAs, raiseFlag, resetDemo } from "./fixtures";
+import {
+  firePreset,
+  loginAs,
+  raiseFlag,
+  resetDemo,
+  tamper,
+} from "./fixtures";
 
 const mainNav = (page: import("@playwright/test").Page) =>
   page.getByRole("navigation", { name: "Main" });
@@ -151,4 +157,39 @@ test("cases list and case detail keep their contract in the dashboard layout", a
     page.getByRole("region", { name: "Decision gate" }),
   ).toBeInViewport();
   await expect(page.getByRole("button", { name: "Close case" })).toBeEnabled();
+});
+
+test("ledger shows verify result, failure label and a Demo only region", async ({
+  page,
+}) => {
+  await resetDemo(page);
+  await firePreset(page, /Cloud download alert/);
+  await loginAs(page, "ia");
+  await page.goto("/ledger?verify=1");
+  await expect(page.getByTestId("verify-result")).toContainText("Ledger OK");
+  await expect(page.getByTestId("entry-count")).toBeVisible();
+  await expect(page.getByRole("status")).toHaveCount(1);
+  await expect(
+    page.getByRole("region", { name: "Demo only" }),
+  ).toHaveCount(0);
+
+  await tamper(page, 2);
+  await expect(
+    page
+      .getByRole("region", { name: "Demo only" })
+      .getByRole("button", { name: /alter entry/i }),
+  ).toBeVisible();
+  await loginAs(page, "ia");
+  await page.goto("/ledger?verify=1");
+  await expect(page.getByTestId("verify-result")).toContainText(
+    "Verification failed at entry",
+  );
+  await expect(page.getByText("Failed", { exact: true })).toBeVisible();
+  await expect(page.getByRole("status")).toHaveCount(1);
+  await page.setViewportSize({ width: 375, height: 812 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
 });

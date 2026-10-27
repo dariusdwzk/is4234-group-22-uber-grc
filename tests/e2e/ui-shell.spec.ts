@@ -116,3 +116,39 @@ test("board shows the 371-day comparison and Tier 2 inbox on the first screen", 
     page.getByRole("heading", { name: "Tier 2 inbox" }),
   ).toBeInViewport();
 });
+
+test("cases list and case detail keep their contract in the dashboard layout", async ({
+  page,
+}) => {
+  await resetDemo(page);
+  await loginAs(page, "emp");
+  await page.goto("/report");
+  await page
+    .getByLabel("Description")
+    .fill("External party demanded payment for rider data.");
+  await page.getByLabel("Related reference (optional)").fill("REPLAY-2016");
+  await page.getByRole("button", { name: "Submit report" }).click();
+  await expect(page.getByRole("status")).toContainText("Thank you");
+  await firePreset(page, /Cloud download alert/);
+  await firePreset(page, /Bug bounty report/);
+  await firePreset(page, /Payment request/);
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await loginAs(page, "sa");
+  await page.goto("/cases");
+  await expect(page.getByRole("link", { name: /CASE-/ })).toHaveCount(1);
+  await expect(
+    page.getByRole("row", { name: /CASE-0001/ }).getByText("HIGH"),
+  ).toBeVisible();
+
+  await page.getByRole("link", { name: "CASE-0001" }).click();
+  await expect(page.getByTestId("tier")).toHaveText("HIGH");
+  await expect(page.getByTestId("status")).toHaveText("open");
+  await expect(
+    page.getByRole("region", { name: "Events" }).getByRole("listitem"),
+  ).toHaveCount(4);
+  await expect(
+    page.getByRole("region", { name: "Decision gate" }),
+  ).toBeInViewport();
+  await expect(page.getByRole("button", { name: "Close case" })).toBeEnabled();
+});

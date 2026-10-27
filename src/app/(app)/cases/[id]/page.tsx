@@ -1,6 +1,10 @@
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { loadRulePack } from "@/domain/rule-pack";
+import { Alert } from "@/components/ui/Alert";
+import { Badge } from "@/components/ui/Badge";
+import { Card } from "@/components/ui/Card";
+import { statusBadge, tierBadge } from "@/components/ui/status";
 import { authorize } from "@/server/authz";
 import { NotFound } from "@/server/errors";
 import { requireActor } from "@/server/page-guard";
@@ -31,59 +35,65 @@ async function Detail({ params, searchParams }: PageProps<"/cases/[id]">) {
   const descriptions = new Map(
     loadRulePack("v1").rules.map((r) => [r.id, r.description]),
   );
+  const tb = tierBadge(c.tier);
+  const sb = statusBadge(c.status);
   return (
     <>
-      <h1 className="text-2xl font-semibold">
-        {c.ref} <span data-testid="tier">{c.tier}</span>{" "}
-        <span data-testid="status">{c.status}</span>
-      </h1>
+      <header className="mb-6">
+        <h1 className="flex flex-wrap items-center gap-3 text-2xl font-semibold text-ink">
+          {c.ref}{" "}
+          <span data-testid="tier">
+            <Badge variant={tb.variant}>{c.tier}</Badge>
+          </span>{" "}
+          <span data-testid="status">
+            <Badge variant={sb.variant}>{c.status}</Badge>
+          </span>
+        </h1>
+      </header>
       {typeof error === "string" && (
-        <p role="alert" className="mt-4 border-2 border-red-700 p-2">
-          {error === "CLOSE_REFUSED"
-            ? `Cannot close: a HIGH case closes only when General Counsel and Privacy/Compliance agree.${
-                c.gate.status === "awaiting"
-                  ? ` Missing: ${c.gate.missing.map((r) => (r === "GC" ? "General Counsel" : "Privacy/Compliance")).join(", ")}`
-                  : ""
-              }`
-            : (ERROR_TEXT[error] ?? ERROR_TEXT.FORBIDDEN)}
-        </p>
+        <div className="mb-6">
+          <Alert tone="error">
+            {error === "CLOSE_REFUSED"
+              ? `Cannot close: a HIGH case closes only when General Counsel and Privacy/Compliance agree.${
+                  c.gate.status === "awaiting"
+                    ? ` Missing: ${c.gate.missing.map((r) => (r === "GC" ? "General Counsel" : "Privacy/Compliance")).join(", ")}`
+                    : ""
+                }`
+              : (ERROR_TEXT[error] ?? ERROR_TEXT.FORBIDDEN)}
+          </Alert>
+        </div>
       )}
       <DecisionSummary
         c={c}
         descriptions={descriptions}
         canMateriality={authorize(actor, "recordMateriality").ok}
       />
-      {c.status === "open" && authorize(actor, "recordRecommendation").ok && (
-        <section aria-labelledby="rec" className="mt-4">
-          <h2 id="rec" className="font-semibold">
-            Record recommendation
-          </h2>
-          <RecommendationForm caseId={c.id} />
-        </section>
-      )}
-      {c.status === "open" && authorize(actor, "submitDecision").ok && (
-        <section aria-labelledby="approve" className="mt-4">
-          <h2 id="approve" className="font-semibold">
-            Your decision
-          </h2>
-          <ApprovalForm caseId={c.id} />
-        </section>
-      )}
-      {c.tier1 && (
-        <section aria-labelledby="tier1" className="mt-4">
-          <h2 id="tier1" className="font-semibold">
-            Tier 1 board notice
-          </h2>
-          <p className="whitespace-pre-line">{c.tier1.body}</p>
-        </section>
-      )}
+      <div className="mt-6 flex flex-col gap-6">
+        {c.status === "open" && authorize(actor, "recordRecommendation").ok && (
+          <Card titleId="rec" title="Record recommendation">
+            <RecommendationForm caseId={c.id} />
+          </Card>
+        )}
+        {c.status === "open" && authorize(actor, "submitDecision").ok && (
+          <Card titleId="approve" title="Your decision">
+            <ApprovalForm caseId={c.id} />
+          </Card>
+        )}
+        {c.tier1 && (
+          <Card titleId="tier1" title="Tier 1 board notice">
+            <blockquote className="whitespace-pre-line break-words border-l-4 border-brand pl-4 text-sm text-ink">
+              {c.tier1.body}
+            </blockquote>
+          </Card>
+        )}
+      </div>
     </>
   );
 }
 
 export default function CasePage(props: PageProps<"/cases/[id]">) {
   return (
-    <main className="p-8">
+    <main className="p-6 lg:p-8">
       <Suspense fallback={null}>
         <Detail {...props} />
       </Suspense>

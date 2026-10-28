@@ -1,33 +1,29 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import { Banner } from "@/components/Banner";
+import { IBM_Plex_Mono, Inter } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// The mockup's fonts, self-hosted by next/font so the CSP needs no external origins.
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const plexMono = IBM_Plex_Mono({
+  variable: "--font-plex-mono",
   subsets: ["latin"],
+  weight: "400",
 });
 
 export const metadata: Metadata = {
-  title: "Uber 2016 GRC prototype",
-  description: "Governance, risk and compliance demonstrator (synthetic data)",
+  title: "Disclosure Gate: prototype flow",
+  description: "Replays Uber's 2016 breach with simulated data",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">
-        <Banner />
-        {children}
-      </body>
+    <html lang="en" className={`${inter.variable} ${plexMono.variable}`}>
+      <body>{children}</body>
     </html>
   );
 }

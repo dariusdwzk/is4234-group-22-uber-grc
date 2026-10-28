@@ -1,25 +1,43 @@
-export type Role =
-  "SA" | "CISO" | "GC" | "PCO" | "IA" | "ACC" | "EMP" | "EXEC" | "DEMO";
+export type RoleKey =
+  "employee" | "security" | "cso" | "finance" | "gc" | "cpo" | "ceo" | "board";
 
-export type Tier = "LOW" | "HIGH";
-export type CaseStatus = "open" | "auto_closed" | "closed";
-export type Outcome = "notify_now" | "notify_later" | "withhold";
+export type Severity = "LOW" | "HIGH";
 
-export type EventKind =
-  | "bounty_report"
-  | "payment_request"
-  | "cloud_download_alert"
-  | "manual_declaration"
-  | "regulator_inquiry"
-  | "blocked_login";
+export type SignalOrigin = "system" | "manual";
+
+export type PaymentStatus =
+  "Held" | "Approved for release" | "Released" | "Cancelled";
 
 export type JsonValue =
   string | number | boolean | null | JsonValue[] | { [k: string]: JsonValue };
 
-export type Actor = { id: string; role: Role; displayName: string };
+/** Who acted. `name` is what the ledger records, e.g. "Finance" or "Anonymous employee". */
+export type Actor = { role: RoleKey | null; name: string };
 
-export const SYSTEM_ACTOR: Actor = {
-  id: "system",
-  role: "EXEC",
-  displayName: "System",
+export const SYSTEM_ACTOR: Actor = { role: null, name: "System" };
+
+/** Case facts come only from signals; no role can edit them. */
+export type Facts = {
+  dataAccessed: boolean;
+  objects: number;
+  records: string;
+  licences: string;
+  /** Requested payout in US cents (the mockup's `payment`, in dollars). */
+  paymentCents: number;
+  payeeVerified: boolean;
+  extortion: boolean;
+  flags: number;
+  jurisdictions: string[];
 };
+
+export const defaultFacts = (): Facts => ({
+  dataAccessed: false,
+  objects: 0,
+  records: "0",
+  licences: "",
+  paymentCents: 0,
+  payeeVerified: true,
+  extortion: false,
+  flags: 0,
+  jurisdictions: [],
+});

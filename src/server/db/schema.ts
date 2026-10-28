@@ -1,166 +1,154 @@
 import {
   bigint,
+  boolean,
   char,
   check,
-  index,
   integer,
   jsonb,
   pgTable,
   serial,
   text,
-  timestamp,
   unique,
-  uuid,
-  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import type {
-  CaseStatus,
-  EventKind,
+  Facts,
   JsonValue,
-  Outcome,
-  Role,
-  Tier,
+  PaymentStatus,
+  RoleKey,
+  Severity,
+  SignalOrigin,
 } from "@/domain/types";
 
-const tstz = (name: string) =>
-  timestamp(name, { withTimezone: true, mode: "date" });
+// Every *_h column is whole hours relative to Day 0 (src/domain/demo-time.ts).
 
-export const users = pgTable("users", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  email: text("email").notNull().unique(),
-  displayName: text("display_name").notNull(),
-  role: text("role").$type<Role>().notNull(),
-  reportsTo: uuid("reports_to").references((): AnyPgColumn => users.id),
-  passwordHash: text("password_hash").notNull(),
-  failedLogins: integer("failed_logins").notNull().default(0),
-  lockedUntil: tstz("locked_until"),
-});
-
-export const sessions = pgTable("sessions", {
-  tokenSha256: char("token_sha256", { length: 64 }).primaryKey(),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id),
-  expiresAt: tstz("expires_at").notNull(),
-});
-
-export const cases = pgTable(
-  "cases",
+export const settings = pgTable(
+  "settings",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    ref: text("ref").notNull().unique(),
-    correlationKey: text("correlation_key").notNull(),
-    source: text("source").$type<"manual" | "simulator">().notNull(),
-    tier: text("tier").$type<Tier>().notNull().default("LOW"),
-    status: text("status").$type<CaseStatus>().notNull().default("open"),
-    detectedAt: tstz("detected_at").notNull(),
-    highSince: tstz("high_since"),
-    materialityDeterminedAt: tstz("materiality_determined_at"),
-    declaredBy: uuid("declared_by").references(() => users.id),
-    outcome: text("outcome").$type<Outcome>(),
-    notifyBy: tstz("notify_by"),
-    closedAt: tstz("closed_at"),
+    id: integer("id").primaryKey().default(1),
+    clockH: integer("clock_h").notNull().default(0),
+    regulatorInquiryOpen: boolean("regulator_inquiry_open")
+      .notNull()
+      .default(true),
   },
-  (t) => [index("cases_correlation_key_idx").on(t.correlationKey)],
+  (t) => [check("settings_single_row", sql`${t.id} = 1`)],
 );
 
-export const intakeEvents = pgTable("intake_events", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  caseId: uuid("case_id")
-    .notNull()
-    .references(() => cases.id),
-  kind: text("kind").$type<EventKind>().notNull(),
-  occurredAt: tstz("occurred_at").notNull(),
-  payload: jsonb("payload").$type<JsonValue>().notNull(),
+export const cases = pgTable("cases", {
+  id: text("id").primaryKey(),
+  title: text("title").notNull(),
+  severity: text("severity").$type<Severity>().notNull(),
+  status: text("status").notNull(),
+  detectedH: integer("detected_h").notNull(),
+  facts: jsonb("facts").$type<Facts>().notNull(),
+  clocksStartH: integer("clocks_start_h"),
+  finding: text("finding"),
+  disclosedH: integer("disclosed_h"),
 });
 
-export const ruleEvaluations = pgTable("rule_evaluations", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  caseId: uuid("case_id")
-    .notNull()
-    .references(() => cases.id),
-  rulePackVersion: text("rule_pack_version").notNull(),
-  firedRuleIds: text("fired_rule_ids").array().notNull(),
-  tier: text("tier").$type<Tier>().notNull(),
-  evaluatedAt: tstz("evaluated_at").notNull(),
+export const signals = pgTable("signals", {
+  id: text("id").primaryKey(),
+  source: text("source").notNull(),
+  origin: text("origin").$type<SignalOrigin>().notNull(),
+  detectedH: integer("detected_h").notNull(),
+  title: text("title").notNull(),
+  entityKeys: text("entity_keys").array().notNull(),
+  facts: jsonb("facts").$type<Partial<Facts>>().notNull(),
+  caseId: text("case_id").references(() => cases.id),
+  anonymous: boolean("anonymous").notNull().default(false),
 });
 
 export const recommendations = pgTable("recommendations", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  caseId: uuid("case_id")
-    .notNull()
+  caseId: text("case_id")
+    .primaryKey()
     .references(() => cases.id),
-  authorId: uuid("author_id")
-    .notNull()
-    .references(() => users.id),
-  proposedOutcome: text("proposed_outcome").$type<Outcome>().notNull(),
-  dataTaken: text("data_taken").$type<"yes" | "no" | "unknown">().notNull(),
-  treatAs: text("treat_as").$type<"incident" | "bug_bounty">().notNull(),
-  text: text("text").notNull(),
+  authorRole: text("author_role").$type<RoleKey>().notNull(),
+  action: text("action").$type<"limit" | "disclose">().notNull(),
+  claims: jsonb("claims")
+    .$type<{ noData: boolean; verified: boolean; routine: boolean }>()
+    .notNull(),
+  createdH: integer("created_h").notNull(),
 });
 
-export const decisions = pgTable(
-  "decisions",
+export const decisions = pgTable("decisions", {
+  caseId: text("case_id")
+    .primaryKey()
+    .references(() => cases.id),
+  type: text("type").notNull(),
+  need: integer("need").notNull(),
+  disclose: boolean("disclose").notNull(),
+  status: text("status")
+    .$type<"Pending" | "Approved" | "Rejected">()
+    .notNull()
+    .default("Pending"),
+  createdH: integer("created_h").notNull(),
+  resolvedH: integer("resolved_h"),
+});
+
+export const approvals = pgTable(
+  "approvals",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    caseId: uuid("case_id")
+    id: serial("id").primaryKey(),
+    caseId: text("case_id")
       .notNull()
-      .references(() => cases.id),
-    approverId: uuid("approver_id")
-      .notNull()
-      .references(() => users.id),
-    approverRole: text("approver_role").$type<Role>().notNull(),
-    outcome: text("outcome").$type<Outcome>().notNull(),
-    notifyBy: tstz("notify_by"),
-    reasonCode: text("reason_code").notNull(),
-    checklist: jsonb("checklist").$type<JsonValue>().notNull(),
+      .references(() => decisions.caseId),
+    role: text("role").$type<"gc" | "cpo">().notNull(),
+    vote: text("vote").$type<"approve" | "reject">().notNull(),
+    reason: text("reason").notNull(),
+    createdH: integer("created_h").notNull(),
   },
-  (t) => [unique("decisions_case_role_uq").on(t.caseId, t.approverRole)],
+  // One vote per person, enforced by the database.
+  (t) => [unique("approvals_case_role_uq").on(t.caseId, t.role)],
 );
 
-export const boardItems = pgTable(
-  "board_items",
+export const payments = pgTable("payments", {
+  id: text("id").primaryKey(),
+  caseId: text("case_id")
+    .notNull()
+    .references(() => cases.id),
+  payee: text("payee").notNull(),
+  amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
+  status: text("status").$type<PaymentStatus>().notNull(),
+  createdH: integer("created_h").notNull(),
+});
+
+export const challengeFlags = pgTable("challenge_flags", {
+  id: text("id").primaryKey(),
+  caseId: text("case_id")
+    .notNull()
+    .references(() => cases.id),
+  text: text("text").notNull(),
+  anonymous: boolean("anonymous").notNull(),
+  open: boolean("open").notNull().default(true),
+  createdH: integer("created_h").notNull(),
+});
+
+export const receipts = pgTable("receipts", {
+  code: text("code").primaryKey(),
+  kind: text("kind").$type<"report" | "challenge">().notNull(),
+  signalId: text("signal_id").references(() => signals.id),
+  caseId: text("case_id").references(() => cases.id),
+  flagId: text("flag_id").references(() => challengeFlags.id),
+});
+
+// No update/delete path for body: notices are generated text and only ack fields change.
+export const boardNotices = pgTable(
+  "board_notices",
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    caseId: uuid("case_id")
+    id: text("id").primaryKey(),
+    caseId: text("case_id")
       .notNull()
       .references(() => cases.id),
     tier: integer("tier").$type<1 | 2>().notNull(),
-    reasonKey: text("reason_key").notNull(),
+    kind: text("kind").notNull(),
     body: text("body").notNull(),
-    status: text("status")
-      .$type<"open" | "acknowledged">()
-      .notNull()
-      .default("open"),
-    ackNote: text("ack_note"),
-    ackBy: uuid("ack_by").references(() => users.id),
-    ackAt: tstz("ack_at"),
+    createdH: integer("created_h").notNull(),
+    ackH: integer("ack_h"),
+    allDirectors: boolean("all_directors").notNull().default(false),
   },
-  // Exactly-once escalation (US-19) is enforced by the database, not by callers.
-  (t) => [unique("board_items_case_reason_uq").on(t.caseId, t.reasonKey)],
+  // Each escalation fires once per case, enforced by the database.
+  (t) => [unique("board_notices_case_kind_uq").on(t.caseId, t.kind)],
 );
-
-export const challengeFlags = pgTable("challenge_flags", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  caseId: uuid("case_id")
-    .notNull()
-    .references(() => cases.id),
-  raisedBy: uuid("raised_by")
-    .notNull()
-    .references(() => users.id),
-  text: text("text").notNull(),
-  status: text("status").$type<"open" | "resolved">().notNull().default("open"),
-  resolvedBy: uuid("resolved_by").references(() => users.id),
-  resolution: text("resolution"),
-});
-
-export const rulePacks = pgTable("rule_packs", {
-  version: text("version").primaryKey(),
-  body: jsonb("body").$type<JsonValue>().notNull(),
-  publishedBy: uuid("published_by").references(() => users.id),
-  publishedAt: tstz("published_at").notNull(),
-});
 
 // ts_iso is text, not timestamptz: it is hashed byte for byte and a timestamptz
 // round trip would change microsecond precision (spec §5).
@@ -184,20 +172,11 @@ export const ledgerHead = pgTable(
   (t) => [check("ledger_head_single_row", sql`${t.id} = 1`)],
 );
 
-export const headExports = pgTable("head_exports", {
+/** Copies of (seq, head hash) held "outside" the app, compared by the integrity check. */
+export const externalAnchors = pgTable("external_anchors", {
   id: serial("id").primaryKey(),
   seq: bigint("seq", { mode: "number" }).notNull(),
-  hash: char("hash", { length: 64 }).notNull(),
-  entryCount: integer("entry_count").notNull(),
-  exportedAt: tstz("exported_at").notNull(),
-  destination: text("destination").notNull().default("simulated_auditor_inbox"),
+  headHash: char("head_hash", { length: 64 }).notNull(),
+  createdH: integer("created_h").notNull(),
+  reason: text("reason").notNull(),
 });
-
-export const demoSettings = pgTable(
-  "demo_settings",
-  {
-    id: integer("id").primaryKey().default(1),
-    offsetMs: bigint("offset_ms", { mode: "number" }).notNull().default(0),
-  },
-  (t) => [check("demo_settings_single_row", sql`${t.id} = 1`)],
-);

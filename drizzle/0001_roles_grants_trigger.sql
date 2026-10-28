@@ -1,6 +1,6 @@
 -- DRAFT for human review. Destination: drizzle/0001_roles_grants_trigger.sql
 -- (the protect-files hook blocks Claude from writing migrations by hand).
--- Roles, grants and the append-only trigger (spec §5). Idempotent. No passwords here.
+-- Roles, grants and the append-only trigger. Idempotent. No passwords here.
 -- Portable across Postgres 16 (local/CI) and 18 (Neon).
 DO $$
 BEGIN
@@ -19,33 +19,25 @@ GRANT USAGE ON SCHEMA public TO app_rw, demo_admin;
 --> statement-breakpoint
 GRANT SELECT, INSERT ON ALL TABLES IN SCHEMA public TO app_rw, demo_admin;
 --> statement-breakpoint
-GRANT UPDATE ON users, sessions, cases, decisions, board_items, challenge_flags, ledger_head, demo_settings TO app_rw, demo_admin;
---> statement-breakpoint
-GRANT DELETE ON sessions TO app_rw, demo_admin;
+-- Rows whose state moves on. Never ledger_entries, approvals, recommendations, receipts or anchors.
+GRANT UPDATE ON settings, cases, signals, decisions, payments, challenge_flags, board_notices, ledger_head TO app_rw, demo_admin;
 --> statement-breakpoint
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_rw, demo_admin;
 --> statement-breakpoint
--- demo_admin only: tamper (UPDATE ledger_entries) and reset (TRUNCATE everything).
-GRANT UPDATE ON ledger_entries TO demo_admin;
---> statement-breakpoint
-GRANT DELETE, TRUNCATE ON ALL TABLES IN SCHEMA public TO demo_admin;
+-- demo_admin only: reset (TRUNCATE everything). There is no tamper feature.
+GRANT TRUNCATE ON ALL TABLES IN SCHEMA public TO demo_admin;
 --> statement-breakpoint
 -- Tables added by later migrations get the same baseline (never UPDATE/DELETE/TRUNCATE).
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT ON TABLES TO app_rw, demo_admin;
 --> statement-breakpoint
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO app_rw, demo_admin;
 --> statement-breakpoint
+-- Row triggers do not fire on TRUNCATE, so reset still works; every UPDATE or DELETE is refused.
 CREATE OR REPLACE FUNCTION ledger_entries_append_only() RETURNS trigger
 LANGUAGE plpgsql
 AS $fn$
 BEGIN
-  IF current_user <> 'demo_admin' THEN
-    RAISE EXCEPTION 'ledger is append-only' USING ERRCODE = 'integrity_constraint_violation';
-  END IF;
-  IF TG_OP = 'DELETE' THEN
-    RETURN OLD;
-  END IF;
-  RETURN NEW;
+  RAISE EXCEPTION 'ledger is append-only' USING ERRCODE = 'integrity_constraint_violation';
 END
 $fn$;
 --> statement-breakpoint

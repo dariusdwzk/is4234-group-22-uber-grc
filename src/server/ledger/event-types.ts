@@ -1,29 +1,38 @@
 import "server-only";
 
+// The mockup's ledger actions, verbatim: the board's evidence log turns them into sentences.
 export const LEDGER_EVENT_TYPES = [
   "GENESIS",
-  "REFUSED",
-  "LOGIN_OK",
-  "LOGIN_FAILED",
-  "LOGOUT",
-  "INCIDENT_DECLARED",
-  "EVENT_INGESTED",
-  "CASE_CREATED",
-  "CASE_CLASSIFIED",
-  "CASE_REOPENED",
-  "TIER1_CREATED",
-  "TIER2_CREATED",
-  "TIER2_ACKNOWLEDGED",
-  "RECOMMENDATION_RECORDED",
-  "MATERIALITY_RECORDED",
-  "DECISION_SUBMITTED",
-  "CASE_CLOSED",
-  "FLAG_RAISED",
-  "FLAG_RESOLVED",
-  "HEAD_EXPORTED",
-  "RULE_PACK_PUBLISHED",
-  "CLOCK_ADVANCED",
-  "DEMO_RESET",
+  "Signal received",
+  "Signal merged",
+  "Case opened automatically",
+  "Classified HIGH",
+  "Classified LOW",
+  "Rules re-evaluated",
+  "Deadlines started",
+  "Board notice sent (Tier 1)",
+  "Board notice sent (Tier 2)",
+  "Notice acknowledged",
+  "Notice escalated to all directors",
+  "Finding recorded",
+  "Out-of-band contact attached",
+  "Incident declared",
+  "Incident reported",
+  "Challenge raised",
+  "Recommendation sent",
+  "Conflicts detected",
+  "Approved",
+  "Rejected",
+  "Approved by both approvers",
+  "Disclosure approved",
+  "Payment held",
+  "Payment hold lifted",
+  "Payment cancelled",
+  "Payment released",
 ] as const;
 
-export type LedgerEventType = (typeof LEDGER_EVENT_TYPES)[number];
+/** A refused action is itself evidence: "Blocked: <what was tried>". */
+export type BlockedEventType = `Blocked: ${string}`;
+
+export type LedgerEventType =
+  (typeof LEDGER_EVENT_TYPES)[number] | BlockedEventType;

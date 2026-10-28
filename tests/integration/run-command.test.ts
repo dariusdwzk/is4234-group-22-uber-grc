@@ -1,123 +1,118 @@
 import { z } from "zod";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
+import { hoursToIso } from "@/domain/demo-time";
 import type { Actor } from "@/domain/types";
 import { db } from "@/server/db/client";
-import { ledgerEntries, ledgerHead, rulePacks } from "@/server/db/schema";
+import { cases, ledgerEntries, ledgerHead } from "@/server/db/schema";
 import { Forbidden, ValidationError } from "@/server/errors";
 import { writeGenesis } from "@/server/ledger/genesis";
 import { verifyChain } from "@/server/ledger/verify";
 import { runCommand, type CommandDef } from "@/server/run-command";
+import { defaultFacts } from "@/domain/types";
 import { ownerPool, resetTestDb } from "./setup/db";
 
-const SA: Actor = { id: "sa-1", role: "SA", displayName: "SA" };
-const GC: Actor = { id: "gc-1", role: "GC", displayName: "GC" };
+const SECURITY: Actor = { role: "security", name: "Security team" };
+const CSO: Actor = { role: "cso", name: "CSO (also Deputy GC)" };
 const emptySchema = z.strictObject({});
 
 async function ledger() {
   return db.select().from(ledgerEntries).orderBy(ledgerEntries.seq);
 }
-async function stateRows() {
-  return db.select().from(rulePacks);
-}
 
-const writePack = (ctxTx: typeof db, version: string) =>
-  ctxTx
-    .insert(rulePacks)
-    .values({ version, body: {}, publishedAt: new Date() });
+const writeCase = (
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  id: string,
+) =>
+  tx.insert(cases).values({
+    id,
+    title: "t",
+    severity: "LOW",
+    status: "Logged",
+    detectedH: 0,
+    facts: defaultFacts(),
+  });
 
 describe("runCommand", () => {
   beforeEach(async () => {
     await resetTestDb();
-    await db.transaction((tx) =>
-      writeGenesis(tx, "2026-10-27T00:00:00.000Z", "v1"),
-    );
-  });
-  afterEach(() => {
-    delete process.env.DEMO_MODE;
+    await db.transaction((tx) => writeGenesis(tx, hoursToIso(0)));
   });
 
-  it("US-01: refused command writes REFUSED entry and throws Forbidden", async () => {
+  it("a refused command writes a Blocked entry with the reason and throws Forbidden", async () => {
     let ran = false;
     const def: CommandDef<object, void> = {
-      action: "submitDecision",
+      action: "vote",
+      blocked: "Blocked: Approve",
       schema: emptySchema,
       handler: async () => {
         ran = true;
       },
     };
-    await expect(runCommand(def, SA, {})).rejects.toThrow(Forbidden);
+    await expect(runCommand(def, CSO, {}, "C-104")).rejects.toThrow(Forbidden);
     expect(ran).toBe(false);
     const rows = await ledger();
     expect(rows).toHaveLength(2);
     expect(rows[1]).toMatchObject({
-      eventType: "REFUSED",
-      actorId: "sa-1",
+      eventType: "Blocked: Approve",
+      actorId: "CSO (also Deputy GC)",
       payload: {
-        action: "submitDecision",
-        reason: "role SA may not submitDecision",
-        actorRole: "SA",
+        caseId: "C-104",
+        detail: "CSO (also Deputy GC) may not vote.",
       },
     });
     expect((await verifyChain()).ok).toBe(true);
   });
 
-  it("a signed-out caller is refused and logged with a null actor", async () => {
+  it("a request with no role is refused and logged", async () => {
     const def: CommandDef<object, void> = {
-      action: "raiseFlag",
+      action: "reportIncident",
+      blocked: "Blocked: Report incident",
       schema: emptySchema,
       handler: async () => {},
     };
-    await expect(runCommand(def, null, {})).rejects.toThrow(/not signed in/);
+    await expect(runCommand(def, null, {})).rejects.toThrow(/Choose a role/);
     expect((await ledger())[1]).toMatchObject({
-      eventType: "REFUSED",
-      actorId: null,
-      payload: {
-        action: "raiseFlag",
-        reason: "not signed in",
-        actorRole: null,
-      },
+      eventType: "Blocked: Report incident",
+      actorId: "Unknown",
     });
   });
 
-  it("US-11: closeCase is refused for every actor, including the one who would be the case owner", async () => {
+  it("closeCase is refused for every role", async () => {
     const def: CommandDef<object, void> = {
       action: "closeCase",
+      blocked: "Blocked: Close case",
       schema: emptySchema,
       handler: async () => {},
     };
-    for (const actor of [SA, GC])
+    for (const actor of [SECURITY, CSO])
       await expect(runCommand(def, actor, {})).rejects.toThrow(Forbidden);
     expect((await ledger()).map((r) => r.eventType)).toEqual([
       "GENESIS",
-      "REFUSED",
-      "REFUSED",
+      "Blocked: Close case",
+      "Blocked: Close case",
     ]);
   });
 
-  it("Forbidden thrown inside handler rolls back state but persists REFUSED", async () => {
+  it("Forbidden thrown inside the handler rolls back state but persists the Blocked entry", async () => {
     const def: CommandDef<object, void> = {
-      action: "submitDecision",
+      action: "recommend",
+      blocked: "Blocked: Recommend",
       schema: emptySchema,
       handler: async ({ tx, log }) => {
-        await writePack(tx as unknown as typeof db, "v-leak");
-        await log("DECISION_SUBMITTED", { leaked: true });
-        throw new Forbidden("approver is not independent");
+        await writeCase(tx, "C-leak");
+        await log("Recommendation sent", "C-leak", "leaked");
+        throw new Forbidden("already recommended");
       },
     };
-    await expect(runCommand(def, GC, {})).rejects.toThrow(
-      "approver is not independent",
+    await expect(runCommand(def, CSO, {}, "C-leak")).rejects.toThrow(
+      "already recommended",
     );
-    expect(await stateRows()).toHaveLength(0);
+    expect(await db.select().from(cases)).toHaveLength(0);
     const rows = await ledger();
-    expect(rows.map((r) => r.eventType)).toEqual(["GENESIS", "REFUSED"]);
-    expect(rows[1]).toMatchObject({
-      actorId: "gc-1",
-      payload: {
-        action: "submitDecision",
-        reason: "approver is not independent",
-        actorRole: "GC",
-      },
-    });
+    expect(rows.map((r) => r.eventType)).toEqual([
+      "GENESIS",
+      "Blocked: Recommend",
+    ]);
     expect((await verifyChain()).ok).toBe(true);
   });
 
@@ -125,86 +120,79 @@ describe("runCommand", () => {
     const [headBefore] = await db.select().from(ledgerHead);
     const def: CommandDef<object, void> = {
       action: "declareIncident",
+      blocked: "Blocked: Declare incident",
       schema: emptySchema,
       handler: async ({ tx, log }) => {
-        await writePack(tx as unknown as typeof db, "v-leak");
-        await log("INCIDENT_DECLARED", { x: 1 });
+        await writeCase(tx, "C-leak");
+        await log("Incident declared", null, "SIG-1");
         throw new Error("boom");
       },
     };
-    await expect(runCommand(def, SA, {})).rejects.toThrow("boom");
-    expect(await stateRows()).toHaveLength(0);
+    await expect(runCommand(def, SECURITY, {})).rejects.toThrow("boom");
+    expect(await db.select().from(cases)).toHaveLength(0);
     expect(await ledger()).toHaveLength(1);
     expect((await db.select().from(ledgerHead))[0]).toEqual(headBefore);
   });
 
-  it("invalid input throws ValidationError and logs nothing", async () => {
+  it("invalid input throws ValidationError and logs nothing, even for a forbidden role", async () => {
     const def: CommandDef<{ n: number }, void> = {
       action: "declareIncident",
+      blocked: "Blocked: Declare incident",
       schema: z.strictObject({ n: z.number().int() }),
       handler: async () => {},
     };
-    await expect(runCommand(def, SA, { n: "x" })).rejects.toThrow(
+    await expect(runCommand(def, SECURITY, { n: "x" })).rejects.toThrow(
       ValidationError,
     );
-    // Even a forbidden role with bad input is a validation error first (spec §3 step 1).
     await expect(
-      runCommand(def, { ...SA, role: "ACC" }, { n: 1.5 }),
+      runCommand(
+        def,
+        { role: "board", name: "Board (Audit Committee)" },
+        { n: 1.5 },
+      ),
     ).rejects.toThrow(ValidationError);
     expect(await ledger()).toHaveLength(1);
   });
 
-  it("success: handler state and its ledger entries commit together, actor and time from ctx", async () => {
-    const def: CommandDef<{ v: string }, string> = {
+  it("success: state and ledger entries commit together; actor, time and overrides from ctx", async () => {
+    await ownerPool.query("UPDATE settings SET clock_h = 30 WHERE id = 1");
+    const def: CommandDef<{ id: string }, string> = {
       action: "declareIncident",
-      schema: z.strictObject({ v: z.string() }),
-      handler: async ({ tx, log, nowIso, actor }, { v }) => {
-        await writePack(tx as unknown as typeof db, v);
-        await log("INCIDENT_DECLARED", { v, by: actor.id });
-        await log("CASE_CREATED", { v }, { actorId: null });
-        expect(nowIso).toMatch(/^\d{4}-\d\d-\d\dT[\d:.]+Z$/);
+      blocked: "Blocked: Declare incident",
+      schema: z.strictObject({ id: z.string() }),
+      handler: async ({ tx, log, now }, { id }) => {
+        await writeCase(tx, id);
+        await log("Incident declared", null, "SIG-202");
+        await log("Case opened automatically", id, "From SIG-202.", {
+          actor: "System",
+          t: now - 2,
+        });
         return "done";
       },
     };
-    expect(await runCommand(def, SA, { v: "p1" })).toBe("done");
-    expect(await stateRows()).toHaveLength(1);
+    expect(await runCommand(def, SECURITY, { id: "C-104" })).toBe("done");
+    expect(await db.select().from(cases)).toHaveLength(1);
     const rows = await ledger();
-    expect(rows.map((r) => [r.eventType, r.actorId])).toEqual([
-      ["GENESIS", null],
-      ["INCIDENT_DECLARED", "sa-1"],
-      ["CASE_CREATED", null],
-    ]);
+    expect(rows.slice(1).map((r) => [r.eventType, r.actorId, r.tsIso])).toEqual(
+      [
+        ["Incident declared", "Security team", hoursToIso(30)],
+        ["Case opened automatically", "System", hoursToIso(28)],
+      ],
+    );
     expect((await verifyChain()).ok).toBe(true);
   });
 
   it("20 concurrent commands keep the chain intact", async () => {
     const def: CommandDef<{ i: number }, void> = {
       action: "declareIncident",
+      blocked: "Blocked: Declare incident",
       schema: z.strictObject({ i: z.number().int() }),
-      handler: async ({ log }, { i }) => log("INCIDENT_DECLARED", { i }),
+      handler: async ({ log }, { i }) =>
+        log("Incident declared", null, String(i)),
     };
     await Promise.all(
-      Array.from({ length: 20 }, (_, i) => runCommand(def, SA, { i })),
+      Array.from({ length: 20 }, (_, i) => runCommand(def, SECURITY, { i })),
     );
     expect(await verifyChain()).toMatchObject({ ok: true, count: 21 });
-  });
-
-  it("clock: demo offset applies only when DEMO_MODE=true", async () => {
-    await ownerPool.query(
-      "UPDATE demo_settings SET offset_ms = 3600000 WHERE id = 1",
-    );
-    const seen: number[] = [];
-    const def: CommandDef<object, void> = {
-      action: "declareIncident",
-      schema: emptySchema,
-      handler: async ({ now }) => {
-        seen.push(now.getTime() - Date.now());
-      },
-    };
-    await runCommand(def, SA, {});
-    process.env.DEMO_MODE = "true";
-    await runCommand(def, SA, {});
-    expect(Math.abs(seen[0]!)).toBeLessThan(5_000);
-    expect(Math.abs(seen[1]! - 3_600_000)).toBeLessThan(5_000);
   });
 });

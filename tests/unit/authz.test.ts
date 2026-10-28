@@ -1,117 +1,86 @@
 import { describe, expect, it } from "vitest";
-import type { Actor, Role } from "@/domain/types";
+import { ROLES, ROLE_KEYS } from "@/domain/roles";
+import type { Actor, RoleKey } from "@/domain/types";
 import { POLICY, authorize, type Action } from "@/server/authz";
 
-const ROLES: Role[] = [
-  "SA",
-  "CISO",
-  "GC",
-  "PCO",
-  "IA",
-  "ACC",
-  "EMP",
-  "EXEC",
-  "DEMO",
-];
 const ACTIONS = Object.keys(POLICY) as Action[];
-const actorOf = (role: Role): Actor => ({
-  id: `u-${role}`,
-  role,
-  displayName: role,
-});
+const DEMO: Action[] = ["advanceClock", "jumpToDay24", "resetDemo"];
+const actorOf = (role: RoleKey): Actor => ({ role, name: ROLES[role].name });
+const allowed = (a: Action) =>
+  ROLE_KEYS.filter((r) => authorize(actorOf(r), a).ok);
 
 describe("authorize", () => {
-  it("every spec §6 command and read action has a policy entry", () => {
-    const required = [
-      "login",
-      "logout",
-      "declareIncident",
-      "ingestEvent",
-      "recordRecommendation",
-      "closeCase",
-      "recordMateriality",
-      "submitDecision",
-      "raiseFlag",
-      "resolveFlag",
-      "acknowledgeTier2",
-      "exportHead",
-      "verifyLedger",
-      "publishRulePack",
-      "sweep",
-      "advanceClock",
-      "resetDemo",
-      "tamperEntry",
-      "viewCases",
-      "viewCase",
-      "viewBoard",
-      "viewLedger",
-      "viewDemo",
-    ];
-    expect(ACTIONS.sort()).toEqual([...required].sort());
-  });
-
   it("policy only names real roles", () => {
     for (const a of ACTIONS)
-      for (const r of POLICY[a]) expect(ROLES).toContain(r);
+      for (const r of POLICY[a]) expect(ROLE_KEYS).toContain(r);
   });
 
-  it("denies a null actor for every action except login", () => {
+  it("denies a request with no role for every non-demo action", () => {
     for (const a of ACTIONS) {
       const res = authorize(null, a);
-      if (a === "login") expect(res).toEqual({ ok: true });
-      else expect(res).toEqual({ ok: false, reason: "not signed in" });
+      if (DEMO.includes(a)) expect(res).toEqual({ ok: true });
+      else expect(res).toEqual({ ok: false, reason: "Choose a role first." });
     }
   });
 
-  it("US-11: closeCase is denied for every role", () => {
-    for (const r of ROLES)
-      expect(authorize(actorOf(r), "closeCase").ok).toBe(false);
+  it("the demo menu works for every role, as in the mockup", () => {
+    for (const a of DEMO) expect(allowed(a)).toEqual(ROLE_KEYS);
   });
 
-  it("US-01: SA and CISO cannot submit a decision; GC and PCO can", () => {
-    expect(authorize(actorOf("SA"), "submitDecision")).toEqual({
+  it("nobody can close a case or lower its severity", () => {
+    expect(allowed("closeCase")).toEqual([]);
+    expect(allowed("lowerSeverity")).toEqual([]);
+  });
+
+  it("only the General Counsel and the Chief Privacy Officer can approve or disclose", () => {
+    expect(allowed("vote")).toEqual(["gc", "cpo"]);
+    expect(allowed("disclose")).toEqual(["gc", "cpo"]);
+    expect(authorize(actorOf("cso"), "vote")).toEqual({
       ok: false,
-      reason: "role SA may not submitDecision",
+      reason: "CSO (also Deputy GC) may not vote.",
     });
-    expect(authorize(actorOf("CISO"), "submitDecision").ok).toBe(false);
-    expect(authorize(actorOf("GC"), "submitDecision").ok).toBe(true);
-    expect(authorize(actorOf("PCO"), "submitDecision").ok).toBe(true);
   });
 
-  it("every action except login/logout/raiseFlag has at least one forbidden role", () => {
-    for (const a of ACTIONS) {
-      if (["login", "logout", "raiseFlag"].includes(a)) continue;
-      expect(
-        ROLES.some((r) => !authorize(actorOf(r), a).ok),
-        a,
-      ).toBe(true);
-    }
+  it("Security and the CSO investigate and recommend; only the CSO attaches out-of-band contact", () => {
+    expect(allowed("recommend")).toEqual(["security", "cso"]);
+    expect(allowed("recordFinding")).toEqual(["security", "cso"]);
+    expect(allowed("attachContact")).toEqual(["cso"]);
   });
 
-  it("US-18: case-side roles cannot resolve flags; ACC and IA can", () => {
-    for (const r of ["SA", "CISO", "GC", "PCO", "EMP"] as Role[]) {
-      expect(authorize(actorOf(r), "resolveFlag").ok).toBe(false);
-    }
-    expect(authorize(actorOf("ACC"), "resolveFlag").ok).toBe(true);
-    expect(authorize(actorOf("IA"), "resolveFlag").ok).toBe(true);
+  it("the board's only action is acknowledging a notice", () => {
+    const boardActions = ACTIONS.filter(
+      (a) =>
+        !DEMO.includes(a) &&
+        !a.startsWith("view") &&
+        authorize(actorOf("board"), a).ok,
+    );
+    expect(boardActions).toEqual(["acknowledgeNotice"]);
+  });
+
+  it("the CEO can view but not change anything", () => {
+    const ceoActions = ACTIONS.filter(
+      (a) =>
+        !DEMO.includes(a) &&
+        !a.startsWith("view") &&
+        authorize(actorOf("ceo"), a).ok,
+    );
+    expect(ceoActions).toEqual([]);
+  });
+
+  it("employees report, challenge and check receipts but cannot see the case list", () => {
+    expect(allowed("reportIncident")).toEqual(["employee"]);
+    expect(allowed("raiseChallenge")).toEqual(["employee"]);
+    expect(authorize(actorOf("employee"), "viewCases").ok).toBe(false);
+  });
+
+  it("only Finance releases payments", () => {
+    expect(allowed("releasePayment")).toEqual(["finance"]);
   });
 
   it("denies an unknown action by default", () => {
-    expect(authorize(actorOf("GC"), "bogus" as Action)).toEqual({
+    expect(authorize(actorOf("gc"), "bogus" as Action)).toEqual({
       ok: false,
-      reason: "role GC may not bogus",
+      reason: "General Counsel may not bogus.",
     });
-  });
-
-  it("demo-only actions are DEMO only", () => {
-    for (const a of [
-      "advanceClock",
-      "resetDemo",
-      "tamperEntry",
-      "ingestEvent",
-    ] as Action[]) {
-      for (const r of ROLES)
-        expect(authorize(actorOf(r), a).ok).toBe(r === "DEMO");
-    }
   });
 });

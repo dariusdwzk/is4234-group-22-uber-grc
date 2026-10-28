@@ -1,22 +1,22 @@
 import "server-only";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Actor } from "@/domain/types";
-import { demoSettings } from "../db/schema";
+import { settings } from "../db/schema";
 import { assertDemoMode } from "../demo";
 import { runCommand, type CommandDef } from "../run-command";
 
-const schema = z.strictObject({ hours: z.number().int().min(1).max(168) });
+const schema = z.strictObject({ hours: z.literal(24) }); // the mockup's only step: "+1 day"
 
 export const advanceClockCommand: CommandDef<z.infer<typeof schema>, void> = {
   action: "advanceClock",
+  blocked: "Blocked: Move time",
   schema,
-  handler: async ({ tx, log }, { hours }) => {
+  handler: async ({ tx }, { hours }) => {
     await tx
-      .update(demoSettings)
-      .set({ offsetMs: sql`${demoSettings.offsetMs} + ${hours * 3_600_000}` })
-      .where(sql`${demoSettings.id} = 1`);
-    await log("CLOCK_ADVANCED", { hours });
+      .update(settings)
+      .set({ clockH: sql`${settings.clockH} + ${hours}` })
+      .where(eq(settings.id, 1));
   },
 };
 

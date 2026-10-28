@@ -157,7 +157,7 @@ The server enforces every permission. The browser only says which role you picke
 
 | Role | Can | Cannot |
 |---|---|---|
-| Employee | Report an incident (7 questions, optionally anonymous), challenge a decision, check a receipt code | See the case list or choose a severity |
+| Employee | Report an incident (7 questions, optionally anonymous), check a receipt code | See the case list or choose a severity |
 | Security team | View cases, add findings, declare an incident, add facts on triage cases, review LOW staff reports | Close, downgrade, approve or rate a triage case. Cannot see independent cases. |
 | CSO (also Deputy GC) | Attach the out-of-band email, send a recommendation | Close, downgrade or approve (reports to Security despite the legal title). Cannot see independent cases. |
 | Finance | View payments, release payments not frozen on a high-risk case | Release a frozen payment |

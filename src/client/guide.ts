@@ -151,7 +151,7 @@ export function guideCard(): string {
     return (
       '<aside class="guidecard" aria-label="Guide">' +
       dots +
-      '<h3>Demo complete</h3><p>Reset and choose Approve as the Chief Privacy Officer to see the other ending. You can also try the Employee role to raise an anonymous challenge.</p><div class="row"><button class="btn primary" data-a="reset">Reset and replay</button><button class="link" data-a="hideGuide">Close</button></div></aside>'
+      '<h3>Demo complete</h3><p>Reset and choose Approve as the Chief Privacy Officer to see the other ending. You can also try the Employee role to send an anonymous report.</p><div class="row"><button class="btn primary" data-a="reset">Reset and replay</button><button class="link" data-a="hideGuide">Close</button></div></aside>'
     );
   const s = STEPS[i]!,
     here = atStep(s);

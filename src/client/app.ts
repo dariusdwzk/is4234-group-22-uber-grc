@@ -421,21 +421,6 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
     S.empMsg = "Report sent. Receipt code: " + r.data.code;
     render();
   },
-  challenge: async () => {
-    const r = await send<{ code: string; caseId: string }>("challenge", {
-      caseId: val("cRef"),
-      text: val("cTxt"),
-      anonymous: ck("cAnon"),
-    });
-    if (!r.ok) return fail(r);
-    S.empMsg =
-      "Challenge sent on " +
-      r.data.caseId +
-      ". Receipt code: " +
-      r.data.code +
-      ". If unresolved for 24 hours, the board is told.";
-    render();
-  },
   status: async () => {
     const r = await send<{ message: string }>("receipt", {
       code: val("sCode"),

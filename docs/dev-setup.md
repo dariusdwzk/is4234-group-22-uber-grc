@@ -1,6 +1,6 @@
 # Dev setup
 
-See the README's "Local setup" section for the full steps and the `.env.local` contents.
+See the README's "Run it locally (from nothing)" section for the full steps and the `.env.local` contents.
 
 Prerequisites: Node 24 (`.nvmrc`), Docker, gitleaks (`brew install gitleaks`).
 

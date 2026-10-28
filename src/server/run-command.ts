@@ -105,7 +105,18 @@ export async function runCommand<I, O>(
   } catch (err) {
     // Business-rule refusal inside the handler: state has rolled back, the refusal must persist.
     if (err instanceof Forbidden)
-      await logRefusal(actor, def.blocked, caseId, err.reason);
+      await logRefusal(
+        actor,
+        err.opts.blocked ?? def.blocked,
+        err.opts.caseId ?? caseId,
+        err.opts.detail ?? err.reason,
+      );
     throw err;
   }
+}
+
+/** The case a request names, so a refusal is logged against it. */
+export function caseIdOf(raw: unknown): string | null {
+  const id = (raw as { caseId?: unknown } | null)?.caseId;
+  return typeof id === "string" ? id : null;
 }

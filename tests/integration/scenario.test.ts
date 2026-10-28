@@ -1,0 +1,305 @@
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { ROLES } from "@/domain/roles";
+import type { Actor, RoleKey } from "@/domain/types";
+import { db } from "@/server/db/client";
+import { boardNotices, cases, payments } from "@/server/db/schema";
+import { acknowledgeNotice } from "@/server/commands/acknowledge-notice";
+import { advanceClock } from "@/server/commands/advance-clock";
+import { attachContact } from "@/server/commands/attach-contact";
+import { attemptAction } from "@/server/commands/attempt-action";
+import { disclose } from "@/server/commands/disclose";
+import {
+  checkReceipt,
+  raiseChallenge,
+  reportIncident,
+} from "@/server/commands/employee";
+import { declareIncident } from "@/server/commands/declare-incident";
+import { jumpToDay24 } from "@/server/commands/jump-to-day24";
+import { recommend } from "@/server/commands/recommend";
+import { recordFinding } from "@/server/commands/record-finding";
+import { releasePayment } from "@/server/commands/release-payment";
+import { resetDemo } from "@/server/commands/reset-demo";
+import { castVote } from "@/server/commands/vote";
+import { Forbidden, ValidationError } from "@/server/errors";
+import { verifyChain } from "@/server/ledger/verify";
+import { getViewState } from "@/server/queries/state";
+
+const as = (role: RoleKey): Actor => ({ role, name: ROLES[role].name });
+const CLAIMS = { noData: true, verified: true, routine: true };
+const vote = (role: "gc" | "cpo", v: "approve" | "reject") =>
+  castVote(as(role), {
+    caseId: "C-104",
+    vote: v,
+    reason: v === "approve" ? "Facts support it" : "Facts contradict it",
+    checklist: true,
+  });
+
+async function caseC104() {
+  return (await db.select().from(cases)).find((c) => c.id === "C-104")!;
+}
+async function pay2() {
+  return (await db.select().from(payments)).find((p) => p.id === "PAY-2");
+}
+async function ledgerActions(): Promise<string[]> {
+  return (await getViewState(as("board"))).ledger.map((e) => e.action);
+}
+
+/** Guided tour steps 1-4: finding, email, recommendation, blocked close, Day 24, blocked release. */
+async function playUntilApprovals(): Promise<void> {
+  await recordFinding(as("security"), {
+    caseId: "C-104",
+    text: "Confirmed: 16 objects copied.",
+  });
+  await attachContact(as("cso"), {
+    caseId: "C-104",
+    text: "We have your rider data.",
+  });
+  await recommend(as("cso"), {
+    caseId: "C-104",
+    action: "limit",
+    claims: CLAIMS,
+  });
+  await expect(
+    attemptAction(as("cso"), { caseId: "C-104", action: "close" }),
+  ).rejects.toThrow("Security cannot close cases.");
+  await jumpToDay24(null, {});
+  await expect(
+    releasePayment(as("finance"), { paymentId: "PAY-2" }),
+  ).rejects.toThrow(/Needs approval from the General Counsel/);
+}
+
+describe("the guided tour, end to end on the server", () => {
+  beforeEach(async () => {
+    process.env.DEMO_MODE = "true";
+    await resetDemo();
+  });
+  afterEach(() => {
+    delete process.env.DEMO_MODE;
+  });
+
+  it("Day 0: the mass download opens C-104 by itself, HIGH, clocks running, board told", async () => {
+    const c = await caseC104();
+    expect(c).toMatchObject({
+      title: "Mass download of rider and driver data",
+      severity: "HIGH",
+      status: "Open",
+      clocksStartH: 0,
+    });
+    const notices = await db.select().from(boardNotices);
+    expect(notices).toMatchObject([{ id: "N-1", caseId: "C-104", tier: 1 }]);
+    expect(notices[0]!.body).toBe(
+      "New high-risk incident C-104: mass download of rider and driver data. About 57 million records affected. FTC inquiry still open. GDPR deadline Thu 19 Nov, 09:00.",
+    );
+    expect((await ledgerActions()).slice(-6)).toEqual([
+      "Classified LOW",
+      "Signal received",
+      "Case opened automatically",
+      "Classified HIGH",
+      "Deadlines started",
+      "Board notice sent (Tier 1)",
+    ]);
+  });
+
+  it("Day 24: the report and the payment request merge into C-104; the payment is held", async () => {
+    await jumpToDay24(null, {});
+    const s = await getViewState(as("security"));
+    expect(s.clockH).toBe(576);
+    const c = s.cases.find((x) => x.id === "C-104")!;
+    expect(c.signals).toEqual(["SIG-201", "SIG-202", "SIG-203"]);
+    expect(c.rules.filter((r) => r.fired).map((r) => r.id)).toEqual([
+      "R1",
+      "R2",
+      "R3",
+      "R4",
+      "R5",
+      "R6",
+      "R8",
+    ]);
+    expect(await pay2()).toMatchObject({
+      status: "Held",
+      amountCents: 10_000_000,
+    });
+    // The GDPR window passed during the jump: the board is told before the signals land.
+    const notices = await db.select().from(boardNotices);
+    expect(notices.map((n) => [n.id, n.kind])).toEqual([
+      ["N-1", "t1"],
+      ["N-2", "deadline"],
+    ]);
+    await expect(jumpToDay24(null, {})).rejects.toThrow(/already arrived/);
+  });
+
+  it("Ending A: the CPO rejects; disclosure required, PAY-2 cancelled, Tier 2 notice", async () => {
+    await playUntilApprovals();
+    await vote("gc", "approve");
+    expect((await caseC104()).status).toBe("Awaiting Chief Privacy Officer");
+    await vote("cpo", "reject");
+
+    expect((await caseC104()).status).toBe("Disclosure required");
+    expect((await pay2())!.status).toBe("Cancelled");
+    const rejected = (await db.select().from(boardNotices)).find(
+      (n) => n.kind === "rejected",
+    )!;
+    expect(rejected).toMatchObject({ tier: 2 });
+    expect(rejected.body).toBe(
+      "Chief Privacy Officer rejected the recommendation to limit disclosure on C-104. Payment cancelled. Disclosure is required.",
+    );
+
+    await disclose(as("gc"), { caseId: "C-104" });
+    expect((await caseC104()).status).toBe("Disclosed");
+    expect(await verifyChain()).toMatchObject({ ok: true, anchorsOk: true });
+  });
+
+  it("Ending B: both approve; disclosure limited, PAY-2 approved for release, Tier 2 notice", async () => {
+    await playUntilApprovals();
+    await vote("gc", "approve");
+    await vote("cpo", "approve");
+
+    expect((await caseC104()).status).toBe("Disclosure limited");
+    expect((await pay2())!.status).toBe("Approved for release");
+    expect(
+      (await db.select().from(boardNotices)).find((n) => n.kind === "limited"),
+    ).toMatchObject({ tier: 2 });
+    await releasePayment(as("finance"), { paymentId: "PAY-2" });
+    expect((await pay2())!.status).toBe("Released");
+    expect(await verifyChain()).toMatchObject({ ok: true, anchorsOk: true });
+  });
+
+  it("refusals are 403s and each writes a Blocked entry with the reason", async () => {
+    await playUntilApprovals();
+    const board = await getViewState(as("board"));
+    const blocked = board.ledger.filter((e) => e.action.startsWith("Blocked"));
+    expect(blocked.map((e) => [e.actor, e.action, e.detail])).toEqual([
+      [
+        "CSO (also Deputy GC)",
+        "Blocked: Close case",
+        "Security cannot close cases.",
+      ],
+      [
+        "Finance",
+        "Blocked: Release payment",
+        "US$100,000 to jdough (unverified). Linked to C-104, an open high-risk case. Needs approval from the General Counsel and the Chief Privacy Officer.",
+      ],
+    ]);
+    await expect(
+      attemptAction(as("cso"), { caseId: "C-104", action: "approve" }),
+    ).rejects.toThrow(/reporting line is Security/);
+    await expect(castVote(as("cso"), {})).rejects.toThrow(ValidationError);
+    await expect(
+      castVote(as("cso"), {
+        caseId: "C-104",
+        vote: "approve",
+        reason: "Facts support it",
+        checklist: true,
+      }),
+    ).rejects.toThrow(Forbidden);
+    expect(await verifyChain()).toMatchObject({ ok: true });
+  });
+
+  it("an unticked checklist is refused, and one person cannot vote twice", async () => {
+    await playUntilApprovals();
+    await expect(
+      castVote(as("gc"), {
+        caseId: "C-104",
+        vote: "approve",
+        reason: "Facts support it",
+        checklist: false,
+      }),
+    ).rejects.toThrow(ValidationError);
+    await vote("gc", "approve");
+    await expect(vote("gc", "approve")).rejects.toThrow(/already voted/);
+  });
+
+  it("the board can only acknowledge; every other action is refused and logged", async () => {
+    const board = as("board");
+    await acknowledgeNotice(board, { noticeId: "N-1" });
+    const attempts = [
+      () => recordFinding(board, { caseId: "C-104", text: "x" }),
+      () =>
+        recommend(board, {
+          caseId: "C-104",
+          action: "disclose",
+          claims: CLAIMS,
+        }),
+      () =>
+        castVote(board, {
+          caseId: "C-104",
+          vote: "approve",
+          reason: "Facts support it",
+          checklist: true,
+        }),
+      () => disclose(board, { caseId: "C-104" }),
+      () => releasePayment(board, { paymentId: "PAY-1" }),
+      () => declareIncident(board, { text: "x" }),
+      () => reportIncident(board, { text: "x", anonymous: true }),
+    ];
+    for (const attempt of attempts)
+      await expect(attempt()).rejects.toThrow(Forbidden);
+    const actions = await ledgerActions();
+    expect(actions.filter((a) => a.startsWith("Blocked")).length).toBe(
+      attempts.length,
+    );
+    expect(actions).toContain("Notice acknowledged");
+  });
+
+  it("employees report and challenge anonymously and follow up by receipt code", async () => {
+    const emp = as("employee");
+    const { code } = (await reportIncident(emp, {
+      text: "Odd login",
+      anonymous: true,
+    })) as { code: string };
+    expect(code).toMatch(/^RC-[0-9A-Z]{4}$/);
+    expect(await checkReceipt(emp, { code })).toEqual({
+      message: "Received by Security. Waiting for triage.",
+    });
+    const ch = (await raiseChallenge(emp, {
+      caseId: "c-104",
+      text: "This is not a bug bounty.",
+      anonymous: true,
+    })) as { code: string; caseId: string };
+    expect(ch.caseId).toBe("C-104");
+    expect(await checkReceipt(emp, { code: ch.code })).toEqual({
+      message: "Case C-104: Open.",
+    });
+    const board = await getViewState(as("board"));
+    expect(
+      board.ledger.filter((e) => e.action === "Challenge raised")[0]!.actor,
+    ).toBe("Anonymous employee");
+    expect(board.openFlags).toBe(1);
+    // Unresolved for 24 hours: the board is told.
+    await advanceClock(null, { hours: 24 });
+    expect(
+      (await db.select().from(boardNotices)).some((n) => n.kind === "flag:F-1"),
+    ).toBe(true);
+    // Employees cannot see the case list.
+    expect((await getViewState(emp)).cases).toEqual([]);
+  });
+
+  it("a declared incident opens its own case and is logged as LOW", async () => {
+    const { caseId } = await declareIncident(as("security"), {
+      text: "Laptop lost",
+    });
+    expect(caseId).toBe("C-105");
+    const c = (await db.select().from(cases)).find((x) => x.id === caseId)!;
+    expect(c).toMatchObject({
+      severity: "LOW",
+      status: "Logged",
+      title: "Laptop lost",
+    });
+  });
+
+  it("state is filtered by role on the server", async () => {
+    const fin = await getViewState(as("finance"));
+    expect(fin.cases).toEqual([]);
+    expect(fin.payments.map((p) => p.id)).toEqual(["PAY-1"]);
+    expect(fin.ledger).toEqual([]);
+    const none = await getViewState(null);
+    expect([none.cases, none.payments, none.notices, none.ledger]).toEqual([
+      [],
+      [],
+      [],
+      [],
+    ]);
+    expect((await getViewState(as("board"))).intact).toBe(true);
+    expect((await getViewState(as("ceo"))).intact).toBeNull();
+  });
+});

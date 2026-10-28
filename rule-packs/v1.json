@@ -1,0 +1,75 @@
+{
+  "version": "v1",
+  "owner": "Legal (General Counsel)",
+  "programMaxCents": 1000000,
+  "rules": [
+    {
+      "id": "R1",
+      "name": "Personal data downloaded",
+      "effect": "high",
+      "when": [{ "fact": "dataAccessed", "op": "isTrue" }],
+      "evidence": "{objects} objects, about {records} records"
+    },
+    {
+      "id": "R2",
+      "name": "Payment to an outsider on a data case",
+      "effect": "high",
+      "when": [
+        { "fact": "paymentCents", "op": "positive" },
+        { "fact": "dataAccessed", "op": "isTrue" }
+      ],
+      "evidence": "{payment} requested"
+    },
+    {
+      "id": "R3",
+      "name": "Payee not verified",
+      "effect": "high",
+      "when": [
+        { "fact": "paymentCents", "op": "positive" },
+        { "fact": "payeeVerified", "op": "isFalse" }
+      ],
+      "evidence": "Pseudonymous payee"
+    },
+    {
+      "id": "R4",
+      "name": "Payout above US$10,000 cap",
+      "effect": "high",
+      "when": [{ "fact": "paymentCents", "op": "aboveCap" }],
+      "evidence": "{capMultiple}× the cap"
+    },
+    {
+      "id": "R5",
+      "name": "Payment demand from the attacker",
+      "effect": "high",
+      "when": [{ "fact": "extortion", "op": "isTrue" }],
+      "evidence": "Demand for a six-figure payment"
+    },
+    {
+      "id": "R6",
+      "name": "Regulator inquiry open",
+      "effect": "modifier",
+      "when": [
+        { "fact": "regulatorInquiryOpen", "op": "isTrue" },
+        { "fact": "anyHigh", "op": "isTrue" }
+      ],
+      "evidence": "FTC inquiry into the 2014 breach"
+    },
+    {
+      "id": "R7",
+      "name": "Open challenge flag",
+      "effect": "high",
+      "when": [{ "fact": "flags", "op": "positive" }],
+      "evidence": "{flags} raised by staff"
+    },
+    {
+      "id": "R8",
+      "name": "Legal deadline triggered",
+      "effect": "clocks",
+      "when": [
+        { "fact": "dataAccessed", "op": "isTrue" },
+        { "fact": "jurisdictions", "op": "nonEmpty" }
+      ],
+      "evidence": "Residents of {jurisdictions}"
+    }
+  ]
+}

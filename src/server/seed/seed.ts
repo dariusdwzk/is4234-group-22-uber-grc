@@ -1,11 +1,12 @@
 import "server-only";
 import { hoursToIso } from "@/domain/demo-time";
-import { defaultFacts, type Facts } from "@/domain/types";
+import { SYSTEM_ACTOR, defaultFacts, type Facts } from "@/domain/types";
+import { ingest, insertSignal } from "../cases/engine";
 import type { Tx } from "../db/client";
 import { cases, payments, settings, signals } from "../db/schema";
 import { anchorHead } from "../ledger/anchor";
 import { writeGenesis } from "../ledger/genesis";
-import { logFor } from "../run-command";
+import { logFor, type CommandCtx } from "../run-command";
 
 // Copied from seed() in docs/mockup/disclosure-gate-flow.html. Synthetic data only.
 const LOW_CASES: {
@@ -59,7 +60,7 @@ const SIGNALS = [
   },
 ];
 
-/** Low-risk history before Day 0, its ledger entries and the first daily anchor. */
+/** Low-risk history before Day 0, the daily anchor, then Day 0: the mass download opens C-104. */
 export async function seed(tx: Tx): Promise<void> {
   await tx
     .insert(settings)
@@ -124,4 +125,25 @@ export async function seed(tx: Tx): Promise<void> {
   });
   await low("C-103", -20);
   await anchorHead(tx, 0, "Daily export");
+
+  // Day 0: cloud monitoring flags the mass download. The case opens by itself.
+  const ctx: CommandCtx = { tx, actor: SYSTEM_ACTOR, now: 0, log };
+  const sig = await insertSignal(tx, {
+    source: "Cloud monitoring",
+    origin: "system",
+    detectedH: 0,
+    title: "16 objects downloaded from rider-backup by an unknown IP",
+    entityKeys: ["rider-backup"],
+    facts: {
+      dataAccessed: true,
+      objects: 16,
+      records: "57 million",
+      licences: "600,000",
+      jurisdictions: ["EU", "California", "Singapore"],
+    },
+  });
+  await log("Signal received", null, sig + ": mass download", {
+    actor: "Cloud monitoring",
+  });
+  await ingest(ctx, sig, "Mass download of rider and driver data");
 }

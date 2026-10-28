@@ -1,27 +1,27 @@
 @import "tailwindcss";
 
 @theme {
-  --color-canvas: #F8FAFC;
-  --color-surface: #FFFFFF;
-  --color-line: #E2E8F0;
-  --color-field: #64748B;
-  --color-ink: #0F172A;
+  --color-canvas: #f8fafc;
+  --color-surface: #ffffff;
+  --color-line: #e2e8f0;
+  --color-field: #64748b;
+  --color-ink: #0f172a;
   --color-muted: #475569;
-  --color-sidebar: #0F172A;
-  --color-sidebar-ink: #E2E8F0;
-  --color-brand: #1D4ED8;
-  --color-brand-hover: #1E40AF;
-  --color-ring: #2563EB;
-  --color-danger-ink: #B91C1C;
-  --color-danger-soft: #FEF2F2;
-  --color-warn-ink: #92400E;
-  --color-warn-soft: #FFFBEB;
+  --color-sidebar: #0f172a;
+  --color-sidebar-ink: #e2e8f0;
+  --color-brand: #1d4ed8;
+  --color-brand-hover: #1e40af;
+  --color-ring: #2563eb;
+  --color-danger-ink: #b91c1c;
+  --color-danger-soft: #fef2f2;
+  --color-warn-ink: #92400e;
+  --color-warn-soft: #fffbeb;
   --color-ok-ink: #166534;
-  --color-ok-soft: #F0FDF4;
-  --color-info-ink: #1E40AF;
-  --color-info-soft: #EFF6FF;
+  --color-ok-soft: #f0fdf4;
+  --color-info-ink: #1e40af;
+  --color-info-soft: #eff6ff;
   --color-neutral-ink: #334155;
-  --color-neutral-soft: #F1F5F9;
+  --color-neutral-soft: #f1f5f9;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }

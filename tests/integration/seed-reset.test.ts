@@ -27,19 +27,21 @@ describe("seed, reset and the demo clock", () => {
     delete process.env.DEMO_MODE;
   });
 
-  it("seeds the mockup's low-risk history at Day 0 with an intact, anchored ledger", async () => {
+  it("seeds the mockup's low-risk history, then Day 0 opens C-104; the ledger is intact and anchored", async () => {
     expect(await getNow()).toBe(0);
     const cs = await db.select().from(cases).orderBy(cases.id);
     expect(cs.map((c) => [c.id, c.severity, c.status])).toEqual([
       ["C-101", "LOW", "Logged"],
       ["C-102", "LOW", "Logged"],
       ["C-103", "LOW", "Logged"],
+      ["C-104", "HIGH", "Open"],
     ]);
     expect((await db.select().from(signals)).map((s) => s.id).sort()).toEqual([
       "SIG-101",
       "SIG-102",
       "SIG-103",
       "SIG-104",
+      "SIG-201",
     ]);
     expect(await db.select().from(payments)).toMatchObject([
       {
@@ -54,7 +56,9 @@ describe("seed, reset and the demo clock", () => {
       .select()
       .from(ledgerEntries)
       .orderBy(ledgerEntries.seq);
-    expect(rows.map((r) => [r.eventType, r.actorId, r.payload])).toEqual([
+    expect(
+      rows.slice(0, 9).map((r) => [r.eventType, r.actorId, r.payload]),
+    ).toEqual([
       ["GENESIS", null, {}],
       [
         "Signal received",
@@ -102,12 +106,46 @@ describe("seed, reset and the demo clock", () => {
       ],
     ]);
     expect(rows[1]!.tsIso).toBe(hoursToIso(-50));
+    expect(
+      rows.slice(9).map((r) => [r.eventType, r.actorId, r.payload]),
+    ).toEqual([
+      [
+        "Signal received",
+        "Cloud monitoring",
+        { caseId: "", detail: "SIG-201: mass download" },
+      ],
+      [
+        "Case opened automatically",
+        "System",
+        { caseId: "C-104", detail: "From SIG-201. No one had to declare it." },
+      ],
+      [
+        "Classified HIGH",
+        "System",
+        { caseId: "C-104", detail: "Rules fired: R1, R6, R8." },
+      ],
+      [
+        "Deadlines started",
+        "System",
+        { caseId: "C-104", detail: "GDPR and internal clocks running." },
+      ],
+      [
+        "Board notice sent (Tier 1)",
+        "System",
+        {
+          caseId: "C-104",
+          detail:
+            "New high-risk incident C-104: mass download of rider and driver data. About 57 million records affected. FTC inquiry still open. GDPR deadline Thu 19 Nov, 09:00.",
+        },
+      ],
+    ]);
     expect(await db.select().from(externalAnchors)).toMatchObject([
       { seq: 9, reason: "Daily export", createdH: 0 },
+      { seq: 14, reason: "After board notice", createdH: 0 },
     ]);
     expect(await verifyChain()).toMatchObject({
       ok: true,
-      count: 9,
+      count: 14,
       anchorsOk: true,
     });
   });
@@ -120,8 +158,8 @@ describe("seed, reset and the demo clock", () => {
     );
     await resetDemo();
     expect(await getNow()).toBe(0);
-    expect(await db.select().from(signals)).toHaveLength(4);
-    expect(await verifyChain()).toMatchObject({ ok: true, count: 9 });
+    expect(await db.select().from(signals)).toHaveLength(5);
+    expect(await verifyChain()).toMatchObject({ ok: true, count: 14 });
   });
 
   it("+1 day moves the clock by 24 hours for any role, or none; other steps are rejected", async () => {
@@ -144,6 +182,7 @@ describe("seed, reset and the demo clock", () => {
       .orderBy(externalAnchors.id);
     expect(anchors.map((a) => [a.reason, a.createdH])).toEqual([
       ["Daily export", 0],
+      ["After board notice", 0],
       ["Daily export", 24],
     ]);
     expect(await verifyChain()).toMatchObject({ ok: true, anchorsOk: true });
@@ -151,7 +190,7 @@ describe("seed, reset and the demo clock", () => {
 
   it("listLedger shapes entries like the mockup's ledger, without GENESIS", async () => {
     const view = await listLedger();
-    expect(view).toHaveLength(8);
+    expect(view).toHaveLength(13);
     expect(view[0]).toMatchObject({
       seq: 2,
       t: -50,

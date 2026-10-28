@@ -41,9 +41,9 @@ describe("authorize", () => {
     });
   });
 
-  it("Security and the CSO investigate and recommend; only the CSO attaches out-of-band contact", () => {
+  it("Security investigates; Security and the CSO recommend; only the CSO attaches out-of-band contact", () => {
     expect(allowed("recommend")).toEqual(["security", "cso"]);
-    expect(allowed("recordFinding")).toEqual(["security", "cso"]);
+    expect(allowed("recordFinding")).toEqual(["security"]);
     expect(allowed("attachContact")).toEqual(["cso"]);
   });
 
@@ -75,6 +75,18 @@ describe("authorize", () => {
 
   it("only Finance releases payments", () => {
     expect(allowed("releasePayment")).toEqual(["finance"]);
+  });
+
+  it("employees and Finance cannot see cases; employees see no payments or notices", () => {
+    expect(authorize(actorOf("finance"), "viewCases").ok).toBe(false);
+    for (const a of [
+      "viewCases",
+      "viewPayments",
+      "viewNotices",
+      "viewBoard",
+    ] as Action[])
+      expect(authorize(actorOf("employee"), a).ok).toBe(false);
+    expect(allowed("viewBoard")).toEqual(["board"]);
   });
 
   it("denies an unknown action by default", () => {

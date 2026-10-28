@@ -38,7 +38,6 @@ export const emptyState = (): ViewState => ({
   payments: [],
   notices: [],
   ledger: [],
-  openFlags: 0,
   progress: {
     finding: false,
     recommended: false,

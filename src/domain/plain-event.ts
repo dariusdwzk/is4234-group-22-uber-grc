@@ -125,11 +125,6 @@ export function plainEvent(e: LedgerView): PlainEvent | null {
       cat: "money",
       text: "Finance released a payment: " + d.split(". ")[0] + ".",
     };
-  if (a === "Challenge raised")
-    return {
-      cat: "work",
-      text: staff(who) + " raised a concern about this case.",
-    };
   if (a === "Staff report received")
     return { cat: "work", text: staff(who) + " sent a report." };
   if (

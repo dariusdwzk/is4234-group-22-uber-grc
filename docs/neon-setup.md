@@ -1,6 +1,6 @@
 # Hosting the Disclosure Gate (Neon + Vercel, human steps)
 
-The `disclosure-gate-ui` branch uses a new schema that cannot share a database with the old app.
+The `viviana-dashboard1` branch uses a new schema that cannot share a database with the old app.
 It gets its **own empty database**, `disclosure_gate`, in the existing Neon project `is4234-uber-grc`.
 The old `grc` database is not touched, so the current deployment keeps working until the PR is merged.
 
@@ -13,7 +13,7 @@ Never paste connection strings into chat or commit them.
    name `disclosure_gate`, owner = the project's owner role.
 2. Copy the **direct** (unpooled) owner connection string for `disclosure_gate`. On your machine, put it in
    `.env.local` as `DATABASE_URL_OWNER` (git-ignored; never deployed to Vercel).
-3. From the repo, on branch `disclosure-gate-ui`:
+3. From the repo, on branch `viviana-dashboard1`:
    ```bash
    npm run db:migrate   # tables, app_rw and demo_admin roles, grants, append-only trigger
    ```
@@ -32,7 +32,7 @@ Never paste connection strings into chat or commit them.
 
 ## 2. Vercel (project owner)
 
-Settings → Environment Variables. Scope them to **Preview, branch `disclosure-gate-ui`** for now,
+Settings → Environment Variables. Scope them to **Preview, branch `viviana-dashboard1`** for now,
 so the old production deployment is unchanged:
 
 | Name | Value |

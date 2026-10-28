@@ -12,7 +12,7 @@ const MASS_DOWNLOAD = f({
 });
 
 describe("rules (rule-packs/v1.json)", () => {
-  it("the pack is data owned by Legal: R1–R8 from the mockup, R9–R13 for staff reports", () => {
+  it("the pack is data owned by Legal: R1–R8 from the mockup (R7 retired), R9–R13 for staff reports", () => {
     expect(RULE_PACK.owner).toMatch(/Legal/);
     expect(RULE_PACK.rules.map((r) => r.id)).toEqual([
       "R1",
@@ -21,7 +21,6 @@ describe("rules (rule-packs/v1.json)", () => {
       "R4",
       "R5",
       "R6",
-      "R7",
       "R8",
       "R9",
       "R10",
@@ -74,12 +73,6 @@ describe("rules (rule-packs/v1.json)", () => {
       evaluate(f({ paymentCents: 300_000, payeeVerified: true }), true)
         .severity,
     ).toBe("LOW");
-  });
-
-  it("an open challenge flag alone makes a case HIGH (R7)", () => {
-    const e = evaluate(f({ flags: 1 }), true);
-    expect(firedIds(e)).toBe("R6, R7");
-    expect(e.rules.find((r) => r.id === "R7")!.ev).toBe("1 raised by staff");
   });
 
   it("clocks start only for accessed data with affected residents", () => {

@@ -75,7 +75,6 @@ function evidence(
     records: f.records,
     payment: money(f.paymentCents),
     capMultiple: (f.paymentCents / capCents).toFixed(0),
-    flags: String(f.flags),
     jurisdictions: f.jurisdictions.join(", "),
   };
   const used = [...r.evidence.matchAll(/\{(\w+)\}/g)].map((m) => values[m[1]!]);

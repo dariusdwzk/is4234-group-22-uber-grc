@@ -4,7 +4,6 @@ import type { Actor, RoleKey } from "@/domain/types";
 // Empty lists are deliberate: the attempt exists so it can be refused and logged.
 export const POLICY = {
   reportIncident: ["employee"],
-  raiseChallenge: ["employee"],
   checkReceipt: ["employee"],
   declareIncident: ["security", "cso"],
   // GC / CPO only on INDEPENDENT cases; the route check is in getCaseFor().

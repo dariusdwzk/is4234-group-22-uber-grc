@@ -18,7 +18,6 @@ const TABLES = [
   "decisions",
   "recommendations",
   "payments",
-  "challenge_flags",
   "board_notices",
   "evidence",
   "signals",

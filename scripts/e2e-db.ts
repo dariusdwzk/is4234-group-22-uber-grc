@@ -9,7 +9,7 @@ import * as schema from "@/server/db/schema";
 import { OWNER_URL, TEST_ROLE_PASSWORD } from "../tests/integration/setup/urls";
 
 const TABLES =
-  "receipts, approvals, decisions, recommendations, payments, challenge_flags, board_notices, evidence, signals, cases, external_anchors, ledger_entries, ledger_head, settings";
+  "receipts, approvals, decisions, recommendations, payments, board_notices, evidence, signals, cases, external_anchors, ledger_entries, ledger_head, settings";
 
 async function main(): Promise<void> {
   const pool = new Pool({ connectionString: OWNER_URL, max: 1 });

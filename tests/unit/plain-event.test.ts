@@ -66,9 +66,9 @@ describe("plainEvent (the board's evidence log wording)", () => {
   });
 
   it("anonymous staff stay anonymous", () => {
-    expect(plainEvent(e("Anonymous employee", "Challenge raised"))!.text).toBe(
-      "A staff member (anonymous) raised a concern about this case.",
-    );
+    expect(
+      plainEvent(e("Anonymous employee", "Staff report received"))!.text,
+    ).toBe("A staff member (anonymous) sent a report.");
     expect(plainEvent(e("Employee", "Staff report received"))!.text).toBe(
       "A staff member sent a report.",
     );

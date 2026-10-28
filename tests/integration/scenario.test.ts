@@ -4,15 +4,10 @@ import type { Actor, RoleKey } from "@/domain/types";
 import { db } from "@/server/db/client";
 import { boardNotices, cases, payments } from "@/server/db/schema";
 import { acknowledgeNotice } from "@/server/commands/acknowledge-notice";
-import { advanceClock } from "@/server/commands/advance-clock";
 import { attachContact } from "@/server/commands/attach-contact";
 import { attemptAction } from "@/server/commands/attempt-action";
 import { disclose } from "@/server/commands/disclose";
-import {
-  checkReceipt,
-  raiseChallenge,
-  reportIncident,
-} from "@/server/commands/employee";
+import { checkReceipt, reportIncident } from "@/server/commands/employee";
 import { declareIncident } from "@/server/commands/declare-incident";
 import { jumpToDay24 } from "@/server/commands/jump-to-day24";
 import { recommend } from "@/server/commands/recommend";
@@ -265,7 +260,7 @@ describe("the guided tour, end to end on the server", () => {
     expect(actions).toContain("Notice acknowledged");
   });
 
-  it("employees report and challenge anonymously and follow up by receipt code", async () => {
+  it("employees report anonymously and follow up by receipt code", async () => {
     const emp = as("employee");
     const { code } = (await reportIncident(emp, {
       text: "Odd login",
@@ -276,25 +271,11 @@ describe("the guided tour, end to end on the server", () => {
     expect(await checkReceipt(emp, { code })).toEqual({
       message: "Case C-105: Awaiting review.",
     });
-    const ch = (await raiseChallenge(emp, {
-      caseId: "c-104",
-      text: "This is not a bug bounty.",
-      anonymous: true,
-    })) as { code: string; caseId: string };
-    expect(ch.caseId).toBe("C-104");
-    expect(await checkReceipt(emp, { code: ch.code })).toEqual({
-      message: "Case C-104: Open.",
-    });
     const board = await getViewState(as("board"));
     expect(
-      board.ledger.filter((e) => e.action === "Challenge raised")[0]!.actor,
+      board.ledger.filter((e) => e.action === "Staff report received")[0]!
+        .actor,
     ).toBe("Anonymous employee");
-    expect(board.openFlags).toBe(1);
-    // Unresolved for 24 hours: the board is told.
-    await advanceClock(null, { hours: 24 });
-    expect(
-      (await db.select().from(boardNotices)).some((n) => n.kind === "flag:F-1"),
-    ).toBe(true);
     // Employees cannot see the case list.
     expect((await getViewState(emp)).cases).toEqual([]);
   });

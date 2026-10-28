@@ -43,6 +43,13 @@
       "when": 1793200652803,
       "tag": "0005_overjoyed_blade",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793202281105,
+      "tag": "0006_sweet_warbird",
+      "breakpoints": true
     }
   ]
 }

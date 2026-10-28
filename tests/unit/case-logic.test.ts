@@ -179,7 +179,6 @@ describe("escalations", () => {
         finding: null,
       },
     ],
-    flags: [],
   };
   it("nothing is due on Day 0", () => {
     expect(dueEscalations(base)).toEqual({
@@ -222,21 +221,6 @@ describe("escalations", () => {
         cases: [{ ...base.cases[0]!, status: "Disclosed" }],
       }).notices,
     ).toEqual([]);
-  });
-  it("a challenge flag open for 24 hours tells the board", () => {
-    const s = {
-      ...base,
-      now: 24,
-      cases: [],
-      flags: [{ id: "F-1", caseId: "C-104", open: true, t: 0 }],
-    };
-    expect(dueEscalations(s).notices).toEqual([
-      {
-        caseId: "C-104",
-        kind: "flag:F-1",
-        body: "Staff challenge on C-104 unresolved for 24 hours.",
-      },
-    ]);
   });
   it("a Tier 2 notice unread for 24 hours goes to all directors; Tier 1 never does", () => {
     const n = (id: string, tier: 1 | 2, ack: number | null) => ({

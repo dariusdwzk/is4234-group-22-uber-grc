@@ -89,18 +89,6 @@
       "evidence": "FTC inquiry into the 2014 breach"
     },
     {
-      "id": "R7",
-      "name": "Open challenge flag",
-      "effect": "high",
-      "when": [
-        {
-          "fact": "flags",
-          "op": "positive"
-        }
-      ],
-      "evidence": "{flags} raised by staff"
-    },
-    {
       "id": "R8",
       "name": "Legal deadline triggered",
       "effect": "clocks",

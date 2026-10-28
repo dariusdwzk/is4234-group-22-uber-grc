@@ -27,7 +27,6 @@ export type Facts = {
   paymentCents: number;
   payeeVerified: boolean;
   extortion: boolean;
-  flags: number;
   jurisdictions: string[];
   // From the staff report questionnaire (src/domain/questionnaire.ts).
   moneyConcern: boolean;
@@ -46,7 +45,6 @@ export const defaultFacts = (): Facts => ({
   paymentCents: 0,
   payeeVerified: true,
   extortion: false,
-  flags: 0,
   jurisdictions: [],
   moneyConcern: false,
   harmConcern: false,

@@ -33,7 +33,7 @@ export type StaffReport = {
 export async function openStaffReport(
   ctx: CommandCtx,
   r: StaffReport,
-): Promise<{ caseId: string; signalId: string }> {
+): Promise<{ caseId: string }> {
   const { tx, now, log } = ctx;
   const reported = answersToFacts(r.answers);
   const facts: Facts = { ...defaultFacts(), ...reported };
@@ -80,7 +80,7 @@ export async function openStaffReport(
         " hours, or it becomes HIGH automatically.",
       sys,
     );
-    return { caseId, signalId };
+    return { caseId };
   }
 
   if (route === "INDEPENDENT")
@@ -114,5 +114,5 @@ export async function openStaffReport(
       sys,
     );
   }
-  return { caseId, signalId };
+  return { caseId };
 }

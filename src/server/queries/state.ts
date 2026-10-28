@@ -11,7 +11,6 @@ import {
   approvals,
   boardNotices,
   cases,
-  challengeFlags,
   decisions,
   evidence,
   payments,
@@ -25,27 +24,17 @@ import { listLedger } from "./ledger";
 export async function getViewState(actor: Actor | null): Promise<ViewState> {
   const can = (a: Parameters<typeof authorize>[1]) => authorize(actor, a).ok;
   const [s] = await db.select().from(settings);
-  const [
-    allCases,
-    allSignals,
-    recs,
-    decs,
-    votes,
-    pays,
-    notices,
-    flags,
-    ledger,
-  ] = await Promise.all([
-    db.select().from(cases).orderBy(asc(cases.id)),
-    db.select().from(signals).orderBy(asc(signals.id)),
-    db.select().from(recommendations),
-    db.select().from(decisions),
-    db.select().from(approvals),
-    db.select().from(payments).orderBy(asc(payments.id)),
-    db.select().from(boardNotices),
-    db.select().from(challengeFlags),
-    listLedger(),
-  ]);
+  const [allCases, allSignals, recs, decs, votes, pays, notices, ledger] =
+    await Promise.all([
+      db.select().from(cases).orderBy(asc(cases.id)),
+      db.select().from(signals).orderBy(asc(signals.id)),
+      db.select().from(recommendations),
+      db.select().from(decisions),
+      db.select().from(approvals),
+      db.select().from(payments).orderBy(asc(payments.id)),
+      db.select().from(boardNotices),
+      listLedger(),
+    ]);
   // Without file_data: bytes are only sent by the download route.
   const evidenceRows = await db
     .select({
@@ -197,7 +186,6 @@ export async function getViewState(actor: Actor | null): Promise<ViewState> {
           }))
       : [],
     ledger: board ? ledger : ledger.filter((e) => visibleIds.has(e.caseId)),
-    openFlags: board ? flags.filter((f) => f.open).length : 0,
     progress: {
       finding: !!replay?.finding,
       recommended: !!replay?.rec,

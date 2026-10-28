@@ -7,7 +7,7 @@ export const ROLES: Record<RoleKey, RoleInfo> = {
   employee: {
     name: "Employee",
     home: "employee",
-    short: "Reports or challenges, anonymously",
+    short: "Reports incidents, anonymously",
   },
   security: {
     name: "Security team",

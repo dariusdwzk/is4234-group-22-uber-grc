@@ -21,7 +21,6 @@ export type EscalationInput = {
     reviewDueH: number | null;
     finding: string | null;
   }[];
-  flags: { id: string; caseId: string; open: boolean; t: number }[];
 };
 
 export type Escalations = {
@@ -81,15 +80,6 @@ export function dueEscalations(s: EscalationInput): Escalations {
         caseId: c.id,
         kind: "review",
         body: REVIEW_LATE_BODY + ".",
-      });
-  }
-  for (const f of s.flags) {
-    const kind = "flag:" + f.id;
-    if (f.open && s.now - f.t >= 24 && !sent.has(f.caseId + "|" + kind))
-      notices.push({
-        caseId: f.caseId,
-        kind,
-        body: "Staff challenge on " + f.caseId + " unresolved for 24 hours.",
       });
   }
   return { toAllDirectors, notices, triageTimeouts };

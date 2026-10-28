@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 
-// Spec §9. unsafe-inline stays for Next's inline bootstrap scripts and Tailwind; recorded as a limitation.
+// Spec §9. unsafe-inline stays for Next's inline bootstrap scripts and the views' inline styles; recorded as a limitation.
 // unsafe-eval only in `next dev`: React's dev-mode debugging needs eval(); production never does.
 const DEV_EVAL = process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
 const SECURITY_HEADERS = [
@@ -15,17 +15,8 @@ const SECURITY_HEADERS = [
 
 const nextConfig: NextConfig = {
   headers: async () => [{ source: "/:path*", headers: SECURITY_HEADERS }],
-  /* config options here */
   cacheComponents: true,
   partialPrefetching: true,
-  turbopack: {
-    rules: {
-      "*.css": {
-        loaders: ["@tailwindcss/turbopack"],
-        as: "*.css",
-      },
-    },
-  },
 };
 
 export default nextConfig;

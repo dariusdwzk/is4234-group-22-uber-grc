@@ -8,11 +8,7 @@ import { attemptAction } from "../commands/attempt-action";
 import { confirmTriage } from "../commands/confirm-triage";
 import { declareIncident } from "../commands/declare-incident";
 import { disclose } from "../commands/disclose";
-import {
-  checkReceipt,
-  raiseChallenge,
-  reportIncident,
-} from "../commands/employee";
+import { checkReceipt, reportIncident } from "../commands/employee";
 import { jumpToDay24 } from "../commands/jump-to-day24";
 import { recommend } from "../commands/recommend";
 import { recordFinding } from "../commands/record-finding";
@@ -37,7 +33,6 @@ export const ACTIONS: Record<string, Handler> = {
   release: releasePayment,
   ack: acknowledgeNotice,
   report: reportIncident,
-  challenge: raiseChallenge,
   receipt: checkReceipt,
   clock: advanceClock,
   jump: jumpToDay24,

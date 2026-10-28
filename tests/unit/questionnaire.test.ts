@@ -194,7 +194,6 @@ describe("triage and review escalations", () => {
     now,
     notices: [],
     cases: [c],
-    flags: [],
   });
 
   it("an unrated triage case times out at 24 hours, not before", () => {

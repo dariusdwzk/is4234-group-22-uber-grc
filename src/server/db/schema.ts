@@ -120,23 +120,12 @@ export const payments = pgTable("payments", {
   createdH: integer("created_h").notNull(),
 });
 
-export const challengeFlags = pgTable("challenge_flags", {
-  id: text("id").primaryKey(),
+/** A staff report's receipt code: the employee's only way back to their case. */
+export const receipts = pgTable("receipts", {
+  code: text("code").primaryKey(),
   caseId: text("case_id")
     .notNull()
     .references(() => cases.id),
-  text: text("text").notNull(),
-  anonymous: boolean("anonymous").notNull(),
-  open: boolean("open").notNull().default(true),
-  createdH: integer("created_h").notNull(),
-});
-
-export const receipts = pgTable("receipts", {
-  code: text("code").primaryKey(),
-  kind: text("kind").$type<"report" | "challenge">().notNull(),
-  signalId: text("signal_id").references(() => signals.id),
-  caseId: text("case_id").references(() => cases.id),
-  flagId: text("flag_id").references(() => challengeFlags.id),
 });
 
 // No update/delete path for body: notices are generated text and only ack fields change.

@@ -169,7 +169,6 @@ export function vBoard(): string {
     return !!g && g.start !== null && g.dur !== null && g.start + g.dur < now;
   }).length;
   const p = S.d.payments.find((x) => x.id === "PAY-2");
-  const flags = S.d.openFlags;
 
   // plain-language summary
   const lines: string[] = [];
@@ -224,7 +223,7 @@ export function vBoard(): string {
     fmtT(now) +
     "</span></section>";
 
-  // four numbers
+  // three numbers
   const k = (l: string, label: string, v: string | number, sub: string) =>
     '<div class="kpi ' +
     l +
@@ -258,12 +257,6 @@ export function vBoard(): string {
           ? "To the attacker"
           : "Payment " + p.status.toLowerCase()
         : "Nothing requested",
-    ) +
-    k(
-      flags ? "a" : "g",
-      "Staff concerns raised",
-      flags,
-      flags ? "Not yet resolved" : "None open",
     ) +
     "</div>";
 

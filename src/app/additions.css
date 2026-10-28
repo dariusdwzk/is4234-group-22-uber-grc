@@ -15,3 +15,7 @@
 
 /* Header Home button: sits where the mockup's brand did, pushing the rest to the right. */
 header.top .home{margin-right:auto}
+
+/* Board: three number tiles since staff challenges were removed (the mockup had four). */
+.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:900px){.kpis{grid-template-columns:1fr}}

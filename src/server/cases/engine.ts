@@ -15,13 +15,7 @@ import { QUESTIONNAIRE } from "@/domain/questionnaire";
 import { evaluate, firedIds, startsClocks } from "@/domain/rules";
 import { defaultFacts, type Facts, type SignalOrigin } from "@/domain/types";
 import type { DbClient, Tx } from "../db/client";
-import {
-  boardNotices,
-  cases,
-  challengeFlags,
-  settings,
-  signals,
-} from "../db/schema";
+import { boardNotices, cases, settings, signals } from "../db/schema";
 import { Forbidden, NotFound } from "../errors";
 import { anchorHead } from "../ledger/anchor";
 import type { CommandCtx } from "../run-command";
@@ -31,8 +25,7 @@ export type CaseRow = typeof cases.$inferSelect;
 /** Next "PREFIX-n" id: one more than the highest number in use (ids are never reused). */
 export async function nextId(
   tx: Tx,
-  table:
-    typeof cases | typeof signals | typeof boardNotices | typeof challengeFlags,
+  table: typeof cases | typeof signals | typeof boardNotices,
   prefix: string,
   floor: number,
 ): Promise<string> {
@@ -319,7 +312,6 @@ export async function runEscalations(ctx: CommandCtx): Promise<void> {
   // One connection per transaction: queries run one after another, never in parallel.
   const notices = await tx.select().from(boardNotices);
   const allCases = await tx.select().from(cases);
-  const flags = await tx.select().from(challengeFlags);
   const due = dueEscalations({
     now,
     notices: notices.map((n) => ({
@@ -340,12 +332,6 @@ export async function runEscalations(ctx: CommandCtx): Promise<void> {
       triageDueH: c.triageDueH,
       reviewDueH: c.reviewDueH,
       finding: c.finding,
-    })),
-    flags: flags.map((f) => ({
-      id: f.id,
-      caseId: f.caseId,
-      open: f.open,
-      t: f.createdH,
     })),
   });
   for (const id of due.toAllDirectors) {

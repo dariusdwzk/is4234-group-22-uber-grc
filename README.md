@@ -62,7 +62,7 @@ The repo is private, so ask Darius to add you on GitHub first. Then:
 ```bash
 git clone https://github.com/dariusdwzk/is4234-group-22-uber-grc.git
 cd is4234-group-22-uber-grc
-git checkout disclosure-gate-ui   # until this branch is merged into main
+git checkout viviana-dashboard1   # until this branch is merged into main
 nvm install                       # installs Node 24 from .nvmrc
 nvm use
 node -v                           # should print v24.x

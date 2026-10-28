@@ -113,6 +113,5 @@ export type ViewState = {
   notices: NoticeView[];
   /** Board: the whole ledger. Case viewers: entries on cases they can see. */
   ledger: LedgerView[];
-  openFlags: number;
   progress: Progress;
 };

@@ -69,9 +69,9 @@ describe("authorize", () => {
     expect(ceoActions).toEqual([]);
   });
 
-  it("employees report, challenge and check receipts but cannot see the case list", () => {
+  it("employees report and check receipts but cannot see the case list", () => {
     expect(allowed("reportIncident")).toEqual(["employee"]);
-    expect(allowed("raiseChallenge")).toEqual(["employee"]);
+    expect(allowed("checkReceipt")).toEqual(["employee"]);
     expect(authorize(actorOf("employee"), "viewCases").ok).toBe(false);
   });
 

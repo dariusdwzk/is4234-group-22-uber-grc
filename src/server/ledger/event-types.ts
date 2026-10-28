@@ -26,7 +26,6 @@ export const LEDGER_EVENT_TYPES = [
   "Triage rating confirmed by Chief Privacy Officer: HIGH",
   "Triage rating confirmed by Chief Privacy Officer: LOW",
   "Triage timed out: rated HIGH automatically",
-  "Challenge raised",
   "Recommendation sent",
   "Approved",
   "Rejected",

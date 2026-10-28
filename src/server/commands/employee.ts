@@ -2,34 +2,20 @@ import "server-only";
 import { randomInt } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { evaluate } from "@/domain/rules";
-import type { Actor } from "@/domain/types";
 import { AnswersSchema } from "@/domain/questionnaire";
-import {
-  getCase,
-  nextId,
-  raised,
-  regulatorInquiryOpen,
-  sendNotice,
-} from "../cases/engine";
-import { openStaffReport } from "../cases/staff-report";
+import type { Actor } from "@/domain/types";
 import { authorize } from "../authz";
+import { getCase } from "../cases/engine";
+import { openStaffReport } from "../cases/staff-report";
 import { db, type Tx } from "../db/client";
-import { cases, challengeFlags, receipts, signals } from "../db/schema";
-import { Forbidden, NotFound } from "../errors";
+import { receipts } from "../db/schema";
+import { Forbidden } from "../errors";
 import { logRefusal, runCommand, type CommandDef } from "../run-command";
-
-// Employees can stay anonymous: the ledger then names "Anonymous employee", nothing more.
-const who = (anonymous: boolean) =>
-  anonymous ? "Anonymous employee" : "Employee";
 
 const ALPHABET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 /** RC-XXXX: lets an anonymous employee follow up without revealing who they are. */
-async function newReceipt(
-  tx: Tx,
-  r: Omit<typeof receipts.$inferInsert, "code">,
-): Promise<string> {
+async function newReceipt(tx: Tx, caseId: string): Promise<string> {
   for (;;) {
     const code =
       "RC-" + Array.from({ length: 4 }, () => ALPHABET[randomInt(36)]).join("");
@@ -38,7 +24,7 @@ async function newReceipt(
       .from(receipts)
       .where(eq(receipts.code, code));
     if (taken) continue;
-    await tx.insert(receipts).values({ code, ...r });
+    await tx.insert(receipts).values({ code, caseId });
     return code;
   }
 }
@@ -61,67 +47,15 @@ export const reportIncidentCommand: CommandDef<
   blocked: "Blocked: Report incident",
   schema: reportSchema,
   handler: async (ctx, report) => {
-    const { caseId, signalId } = await openStaffReport(ctx, report);
-    return {
-      code: await newReceipt(ctx.tx, { kind: "report", signalId, caseId }),
-    };
-  },
-};
-
-const challengeSchema = z.strictObject({
-  caseId: z.string().trim().toUpperCase(),
-  text: z.string().trim().max(2000),
-  anonymous: z.boolean(),
-});
-
-/** A challenge flag on a case; unresolved for 24 hours, the board is told (mockup: A.challenge). */
-export const raiseChallengeCommand: CommandDef<
-  z.infer<typeof challengeSchema>,
-  { code: string; caseId: string }
-> = {
-  action: "raiseChallenge",
-  blocked: "Blocked: Raise challenge",
-  schema: challengeSchema,
-  handler: async (ctx, { caseId, text, anonymous }) => {
-    const { tx, now, log } = ctx;
-    const c = await getCase(tx, caseId).catch(() => {
-      throw new NotFound("No case “" + caseId + "”. Check the reference.");
-    });
-    const flagId = await nextId(tx, challengeFlags, "F", 0);
-    await tx
-      .insert(challengeFlags)
-      .values({ id: flagId, caseId: c.id, text, anonymous, createdH: now });
-    const facts = { ...c.facts, flags: c.facts.flags + 1 };
-    const e = evaluate(facts, await regulatorInquiryOpen(tx));
-    const becameHigh = c.severity === "LOW" && e.severity === "HIGH";
-    await tx
-      .update(cases)
-      .set({
-        facts,
-        severity: raised(c.severity, e.severity),
-        ...(becameHigh ? { status: "Open" } : {}),
-      })
-      .where(eq(cases.id, c.id));
-    await log("Challenge raised", c.id, flagId + ": " + text.slice(0, 80), {
-      actor: who(anonymous),
-    });
-    if (becameHigh) await sendNotice(ctx, c.id, 1, "t1");
-    const code = await newReceipt(tx, {
-      kind: "challenge",
-      caseId: c.id,
-      flagId,
-    });
-    return { code, caseId: c.id };
+    const { caseId } = await openStaffReport(ctx, report);
+    return { code: await newReceipt(ctx.tx, caseId) };
   },
 };
 
 export const reportIncident = (actor: Actor | null, raw: unknown) =>
   runCommand(reportIncidentCommand, actor, raw);
 
-export const raiseChallenge = (actor: Actor | null, raw: unknown) =>
-  runCommand(raiseChallengeCommand, actor, raw);
-
-/** Read-only: what happened to a submission, by receipt code (mockup: A.status). */
+/** Read-only: what happened to a report, by receipt code (mockup: A.status). */
 export async function checkReceipt(
   actor: Actor | null,
   raw: unknown,
@@ -139,18 +73,6 @@ export async function checkReceipt(
     .parse((raw as { code?: unknown } | null)?.code);
   const [r] = await db.select().from(receipts).where(eq(receipts.code, code));
   if (!r) return { message: "No submission matches that code." };
-  if (r.kind === "report") {
-    const [s] = await db
-      .select()
-      .from(signals)
-      .where(eq(signals.id, r.signalId!));
-    const linked = s?.caseId ? await getCase(db, s.caseId) : null;
-    return {
-      message: linked
-        ? "Case " + linked.id + ": " + linked.status + "."
-        : "Received by Security. Waiting for triage.",
-    };
-  }
-  const c = await getCase(db, r.caseId!);
+  const c = await getCase(db, r.caseId);
   return { message: "Case " + c.id + ": " + c.status + "." };
 }

@@ -114,7 +114,5 @@ export type ViewState = {
   /** Board: the whole ledger. Case viewers: entries on cases they can see. */
   ledger: LedgerView[];
   openFlags: number;
-  /** Board only: chain and anchors intact. */
-  intact: boolean | null;
   progress: Progress;
 };

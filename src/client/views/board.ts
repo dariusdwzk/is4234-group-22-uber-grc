@@ -1,12 +1,11 @@
 // Ported from the mockup's vBoard() and logBody().
-import { DAY0_ISO, dayOf, fmtDur, fmtT } from "@/domain/demo-time";
+import { DAY0_ISO, dayOf, fmtT } from "@/domain/demo-time";
 import { knownScale } from "@/domain/board-text";
 import { ESCALATED_STATUS } from "@/domain/gate";
 import { CATS, plainEvent, type EventCat } from "@/domain/plain-event";
-import { ROLES } from "@/domain/roles";
 import { CHK, esc } from "../html";
 import { S, rep } from "../store";
-import { discStatus, ico, noticeRow, remText, stat } from "./components";
+import { discStatus, noticeRow, remText } from "./components";
 import { miniTrack, waitingOn } from "./case/timeline";
 
 const BASE = Date.parse(DAY0_ISO);
@@ -363,114 +362,5 @@ export function vBoard(): string {
       : '<p class="muted">No serious incidents.</p>') +
     "</section>";
 
-  // legal duties + safeguards
-  if (c) {
-    const d = c.decision,
-      told = c.status === "Disclosed",
-      g = gdprOf(c),
-      gRem =
-        g && g.start !== null && g.dur !== null ? g.start + g.dur - now : 0;
-    const item = (l: string, t: string, desc: string, st: string) =>
-      "<li>" +
-      ico(l) +
-      '<span class="grow"><b>' +
-      t +
-      '</b><div class="muted small">' +
-      desc +
-      "</div></span>" +
-      st +
-      "</li>";
-    const since = now - c.detectedH;
-    const reg =
-      '<ul class="list chk">' +
-      item(
-        told ? "g" : "r",
-        "FTC",
-        "Open inquiry. Uber must tell the FTC about " + c.id + ".",
-        stat(told ? "g" : "r", told ? "Told" : "Not told"),
-      ) +
-      item(
-        told ? "g" : gRem < 0 ? "r" : "a",
-        "EU regulator (GDPR)",
-        "Must be told within 72 hours.",
-        stat(
-          told ? "g" : gRem < 0 ? "r" : "a",
-          told
-            ? "Told"
-            : gRem < 0
-              ? "Late by " + fmtDur(-gRem)
-              : fmtDur(gRem) + " left",
-        ),
-      ) +
-      item(
-        told ? "g" : since > 72 ? "r" : "a",
-        "California residents",
-        "Must be told without unreasonable delay.",
-        stat(
-          told ? "g" : since > 72 ? "r" : "a",
-          told ? "Told" : fmtDur(since) + " so far",
-        ),
-      ) +
-      item(
-        "a",
-        "SEC (investors)",
-        "Management must decide if the breach is material.",
-        stat("a", "Not decided"),
-      ) +
-      "</ul>";
-    const sb = S.d.ledger.filter(
-      (e) =>
-        e.action.startsWith("Blocked") &&
-        (e.actor === ROLES.security.name || e.actor === ROLES.cso.name),
-    ).length;
-    const escalated = !!d && d.status === "Approved" && !d.disclose;
-    const ok = S.d.intact !== false;
-    const ctl =
-      '<ul class="list chk">' +
-      item(
-        "g",
-        "Cases open on their own",
-        "Security cannot keep an incident off the record.",
-        stat("g", "Working"),
-      ) +
-      item(
-        "g",
-        "Security cannot close cases",
-        sb
-          ? sb + " attempt" + (sb > 1 ? "s" : "") + " stopped"
-          : "No attempts so far",
-        stat("g", "Working"),
-      ) +
-      item(
-        escalated ? "a" : "g",
-        "Two people needed to hold back disclosure",
-        escalated
-          ? "Both approvers chose to investigate internally first."
-          : "General Counsel and Chief Privacy Officer.",
-        stat(escalated ? "a" : "g", escalated ? "Used to delay" : "Working"),
-      ) +
-      item(
-        "g",
-        "Payments frozen on serious cases",
-        p
-          ? "US$100,000 payment " + p.status.toLowerCase() + "."
-          : "No payment requested yet.",
-        stat("g", "Working"),
-      ) +
-      item(
-        ok ? "g" : "r",
-        "Records cannot be altered",
-        S.d.ledger.length +
-          " entries, checked automatically against copies held by the external auditor.",
-        stat(ok ? "g" : "r", ok ? "Intact" : "Altered"),
-      ) +
-      "</ul>";
-    o +=
-      '<div class="cols2"><section class="panel"><h2>Legal duties</h2><p class="muted small">Who must be told, and are we on time?</p>' +
-      reg +
-      '</section><section class="panel"><h2>Safeguards</h2><p class="muted small">Reported automatically and tested by internal audit.</p>' +
-      ctl +
-      "</section></div>";
-  }
   return o;
 }

@@ -1,7 +1,7 @@
 // Ported from the mockup's "small components" and "progress tracker" sections.
 import { dayOf, fmtDur, fmtT } from "@/domain/demo-time";
 import type { CaseView, NoticeView, PaymentView } from "@/domain/view-state";
-import { CHK, CRS, esc } from "../html";
+import { CHK, esc } from "../html";
 import { ESCALATED_STATUS } from "@/domain/gate";
 import { S } from "../store";
 import { waitingOn } from "./case/timeline";
@@ -142,13 +142,3 @@ export function discStatus(c: CaseView): string {
     return rag("a", "Required, not yet done");
   return rag("n", "Not decided");
 }
-
-export const ico = (l: string): string =>
-  '<span class="ico ' +
-  l +
-  '">' +
-  (l === "g" ? CHK : l === "r" ? CRS : l === "a" ? "!" : "–") +
-  "</span>";
-
-export const stat = (l: string, t: string): string =>
-  '<span class="stat ' + l + '">' + t + "</span>";

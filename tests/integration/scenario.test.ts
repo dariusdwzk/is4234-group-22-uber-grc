@@ -324,7 +324,5 @@ describe("the guided tour, end to end on the server", () => {
       [],
       [],
     ]);
-    expect((await getViewState(as("board"))).intact).toBe(true);
-    expect((await getViewState(as("ceo"))).intact).toBeNull();
   });
 });

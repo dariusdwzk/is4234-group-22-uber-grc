@@ -90,10 +90,6 @@ test("Ending A: the CPO rejects; payment cancelled, disclosure required, board t
     page.getByText("Finance tried to release payment. Not allowed."),
   ).toBeVisible();
   await expect(page.locator(".guidecard h3")).toHaveText("Demo complete");
-  await page.getByRole("button", { name: "Overview" }).click();
-  await expect(
-    page.locator("li", { hasText: "Records cannot be altered" }),
-  ).toContainText("Intact");
 });
 
 test("Ending B: both approve escalating internally; payment stays frozen, board told", async ({
@@ -115,12 +111,11 @@ test("Ending B: both approve escalating internally; payment stays frozen, board 
   await expect(page.locator(".brief")).toContainText(
     "Management chose to investigate internally before disclosing.",
   );
+  await expect(page.getByText("Legal duties")).toHaveCount(0);
+  await expect(page.getByText("Safeguards")).toHaveCount(0);
   await expect(page.locator(".inc2").first()).toContainText(
     "Waiting on General Counsel or Chief Privacy Officer (to disclose)",
   );
-  await expect(
-    page.locator("li", { hasText: "Records cannot be altered" }),
-  ).toContainText("Intact");
 });
 
 async function answer(

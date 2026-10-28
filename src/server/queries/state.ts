@@ -19,7 +19,6 @@ import {
   settings,
   signals,
 } from "../db/schema";
-import { verifyChain } from "../ledger/verify";
 import { listLedger } from "./ledger";
 
 /** Everything the current role may see (GET /api/state). Filtering happens here, never in the browser. */
@@ -148,7 +147,6 @@ export async function getViewState(actor: Actor | null): Promise<ViewState> {
   const shown = (caseId: string | null) => !caseId || !hidden.has(caseId);
   const visibleIds = new Set(visibleCases.map((c) => c.id));
   const board = can("viewBoard");
-  const integrity = board ? await verifyChain() : null;
 
   return {
     role: actor?.role ?? null,
@@ -200,7 +198,6 @@ export async function getViewState(actor: Actor | null): Promise<ViewState> {
       : [],
     ledger: board ? ledger : ledger.filter((e) => visibleIds.has(e.caseId)),
     openFlags: board ? flags.filter((f) => f.open).length : 0,
-    intact: integrity ? integrity.ok && integrity.anchorsOk : null,
     progress: {
       finding: !!replay?.finding,
       recommended: !!replay?.rec,

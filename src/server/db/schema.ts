@@ -3,6 +3,7 @@ import {
   boolean,
   char,
   check,
+  customType,
   integer,
   jsonb,
   pgTable,
@@ -157,6 +158,27 @@ export const boardNotices = pgTable(
   // Each escalation fires once per case, enforced by the database.
   (t) => [unique("board_notices_case_kind_uq").on(t.caseId, t.kind)],
 );
+
+const bytea = customType<{ data: Buffer }>({ dataType: () => "bytea" });
+
+/**
+ * Evidence added while investigating. Append-only: the app may insert and read, never edit.
+ * A note is required; a file is optional, and its SHA-256 goes into the ledger entry.
+ */
+export const evidence = pgTable("evidence", {
+  id: serial("id").primaryKey(),
+  caseId: text("case_id")
+    .notNull()
+    .references(() => cases.id),
+  authorRole: text("author_role").$type<RoleKey>().notNull(),
+  note: text("note").notNull(),
+  fileName: text("file_name"),
+  fileType: text("file_type"),
+  fileSize: integer("file_size"),
+  fileSha256: char("file_sha256", { length: 64 }),
+  fileData: bytea("file_data"),
+  createdH: integer("created_h").notNull(),
+});
 
 // ts_iso is text, not timestamptz: it is hashed byte for byte and a timestamptz
 // round trip would change microsecond precision (spec §5).

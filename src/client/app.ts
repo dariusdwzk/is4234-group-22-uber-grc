@@ -1,6 +1,7 @@
 // The mockup's render() and action map (A), with every state change sent to the server.
 // The browser keeps only view state; rules, permissions and the ledger live on the server.
 import { ATTEMPT_LABELS, type Attempt } from "@/domain/blocked-reasons";
+import { fileProblem } from "@/domain/evidence";
 import {
   QUESTIONNAIRE,
   type Answer,
@@ -219,6 +220,66 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
     render();
     toast("Sent to the General Counsel and the Chief Privacy Officer.");
   },
+  /** Independent path: the GC or CPO recommends, and the other one decides. */
+  irec: async () => {
+    const r = await send("recommend", {
+      caseId: S.caseId,
+      action: val("iAct"),
+      claims: { noData: false, verified: false, routine: false },
+      reason: val("iReason"),
+    });
+    if (!r.ok) return fail(r);
+    render();
+    const other = ROLES[S.role === "gc" ? "cpo" : "gc"].name;
+    toast("Sent to the " + other + ".");
+  },
+  evidence: async () => {
+    const note = val("evNote");
+    if (!note) {
+      toast("Describe the evidence first.");
+      return;
+    }
+    const input = document.getElementById("evFile") as HTMLInputElement | null;
+    const f = input?.files?.[0];
+    let file: { name: string; type: string; base64: string } | undefined;
+    if (f) {
+      const problem = fileProblem({ name: f.name, type: f.type, size: f.size });
+      if (problem) {
+        toast(problem);
+        return;
+      }
+      file = { name: f.name, type: f.type, base64: await toBase64(f) };
+    }
+    const r = await send("evidence", {
+      caseId: S.caseId,
+      note,
+      ...(file ? { file } : {}),
+    });
+    if (!r.ok) return fail(r);
+    render();
+    toast(file ? "Evidence and file added." : "Evidence added.");
+  },
+  download: async (x) => {
+    // A plain link cannot send X-Role, so fetch the file and hand it to the browser.
+    const res = await fetch("/api/evidence/" + x, {
+      headers: S.role ? { "x-role": S.role } : {},
+    });
+    if (!res.ok) {
+      const j = (await res.json().catch(() => ({}))) as { error?: string };
+      toast(j.error ?? "Could not download the file.");
+      return;
+    }
+    const name =
+      /filename="([^"]+)"/.exec(
+        res.headers.get("content-disposition") ?? "",
+      )?.[1] ?? "evidence";
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
   blocked: async (x) => {
     const what = ATTEMPT_LABELS[x as Attempt];
     const r = await send("attempt", { caseId: S.caseId, action: x });
@@ -429,6 +490,15 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
     toast("Demo reset.");
   },
 };
+
+/** A file's bytes as base64, for the JSON request body. */
+async function toBase64(f: File): Promise<string> {
+  const bytes = new Uint8Array(await f.arrayBuffer());
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000)
+    bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
 
 /** Every question's chosen answer, or null if any is unanswered. */
 function readAnswers(): Answers | null {

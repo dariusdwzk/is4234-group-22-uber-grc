@@ -1,7 +1,12 @@
 import "server-only";
 import { eq, isNotNull, like } from "drizzle-orm";
 import { tier1Body } from "@/domain/board-text";
-import { INDEPENDENT_REASON, canAccessCase } from "@/domain/case-access";
+import {
+  INDEPENDENT_REASON,
+  NOT_ON_NORMAL_PATH,
+  canAccessCase,
+  mayInvestigate,
+} from "@/domain/case-access";
 import { clocksFrom } from "@/domain/clocks";
 import { matchCase } from "@/domain/correlation";
 import { addBusinessDays } from "@/domain/demo-time";
@@ -48,14 +53,20 @@ export async function getCase(tx: DbClient, id: string): Promise<CaseRow> {
   return c;
 }
 
-/** getCase for a command: Security never acts on a case routed away from it. */
+/**
+ * getCase for a command: Security never acts on a case routed away from it, and with
+ * `investigate` only the route's investigators may (Security, or GC / CPO if INDEPENDENT).
+ */
 export async function getCaseFor(
   ctx: CommandCtx,
   id: string,
+  opts: { investigate?: boolean } = {},
 ): Promise<CaseRow> {
   const c = await getCase(ctx.tx, id);
   if (!canAccessCase(ctx.actor.role, c.route))
     throw new Forbidden(INDEPENDENT_REASON, { caseId: id });
+  if (opts.investigate && !mayInvestigate(ctx.actor.role, c.route))
+    throw new Forbidden(NOT_ON_NORMAL_PATH, { caseId: id });
   return c;
 }
 

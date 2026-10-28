@@ -70,12 +70,21 @@ export function plainEvent(e: LedgerView): PlainEvent | null {
       cat: "work",
       text: "Security team recorded a finding: " + d,
     };
+  if (a === "Evidence added")
+    return {
+      cat: "work",
+      text: who + " added evidence: " + d.split(" File: ")[0],
+    };
   if (a === "Out-of-band contact attached")
     return { cat: "work", text: "CSO added the hacker’s email to the case." };
   if (a === "Incident declared")
     return { cat: "work", text: who + " reported an incident." };
   if (a === "Recommendation sent")
-    return { cat: "decision", text: "CSO recommended: " + d + "." };
+    return {
+      cat: "decision",
+      // The CSO line is the mockup's; on the independent path the GC or CPO recommends.
+      text: (who.startsWith("CSO") ? "CSO" : who) + " recommended: " + d + ".",
+    };
   if (a === "Conflicts detected")
     return {
       cat: "blocked",

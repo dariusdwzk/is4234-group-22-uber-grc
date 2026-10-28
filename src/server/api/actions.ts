@@ -1,6 +1,7 @@
 import "server-only";
 import type { Actor } from "@/domain/types";
 import { acknowledgeNotice } from "../commands/acknowledge-notice";
+import { addEvidence } from "../commands/add-evidence";
 import { advanceClock } from "../commands/advance-clock";
 import { attachContact } from "../commands/attach-contact";
 import { attemptAction } from "../commands/attempt-action";
@@ -26,6 +27,7 @@ type Handler = (actor: Actor | null, body: unknown) => Promise<unknown>;
 export const ACTIONS: Record<string, Handler> = {
   declare: declareIncident,
   finding: recordFinding,
+  evidence: addEvidence,
   attach: attachContact,
   recommend,
   attempt: attemptAction,
@@ -49,7 +51,10 @@ export function errorResponse(err: unknown): Response {
   if (err instanceof NotFound)
     return Response.json({ error: err.message }, { status: 404 });
   if (err instanceof ValidationError)
-    return Response.json({ error: "Invalid input." }, { status: 400 });
+    return Response.json(
+      { error: err.userMessage ?? "Invalid input." },
+      { status: 400 },
+    );
   if (err instanceof Conflict)
     return Response.json({ error: err.message }, { status: 409 });
   console.error(err);

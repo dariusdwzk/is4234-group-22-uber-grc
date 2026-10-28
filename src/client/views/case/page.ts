@@ -7,6 +7,7 @@ import type { CaseView } from "@/domain/view-state";
 import { esc } from "../../html";
 import { S } from "../../store";
 import { TRIAGE, payBadge, remText, sev, statusBadge } from "../components";
+import { evidencePanel, independentBox } from "./independent";
 import { normalBox } from "./normal";
 import { reviewBox } from "./review";
 import { tracker } from "./timeline";
@@ -43,6 +44,7 @@ function actionBox(c: CaseView): string {
     return reviewBox(c);
   if (c.severity === "LOW")
     return '<section class="panel" id="actionbox"><h2>No action needed</h2><p class="muted" style="margin:0">Low risk. Logged without approval. Sampled periodically.</p></section>';
+  if (c.route === "INDEPENDENT") return independentBox(c);
   return normalBox(c);
 }
 
@@ -172,7 +174,7 @@ export function vCase(): string {
   if (c.status === "Disclosure limited")
     o +=
       '<div class="alert warn"><b>Disclosure limited by both approvers</b>The decision and every step before it are permanently on record.</div>';
-  o += caseSummary(c) + actionBox(c);
+  o += caseSummary(c) + actionBox(c) + evidencePanel(c);
   const tabs = (
     [
       ["deadlines", "Deadlines"],

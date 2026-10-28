@@ -214,3 +214,61 @@ test("a concern about how Security handles a case never reaches Security", async
     page.locator("section", { hasText: "Handled independently of Security" }),
   ).toContainText("C-105");
 });
+
+test("independent path: the GC investigates with evidence and recommends; the CPO decides", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await reset(page);
+  await asRole(page, "employee");
+  await page.locator("#eTxt").fill("The CSO is calling a breach a bug bounty.");
+  await answer(page, { handling: "YES" });
+  await page.getByRole("button", { name: "Send report" }).click();
+  await expect(page.locator(".alert.ok")).toBeVisible();
+
+  await asRole(page, "gc");
+  await page.locator('[data-a="openCase"][data-x="C-105"]').first().click();
+  const tracker = page.locator(".tracker");
+  await expect(tracker).toContainText("Report received");
+  await expect(tracker).not.toContainText("Security team");
+  await expect(tracker).toContainText("The other one must approve");
+
+  await page.locator("#fTxt").fill("The CSO asked staff to keep it quiet.");
+  await page.getByRole("button", { name: "Add finding" }).click();
+  await expect(page.locator("#toast")).toHaveText("Finding added to the case.");
+  await page.locator("#evNote").fill("Message the CSO sent to the team.");
+  await page.locator("#evFile").setInputFiles({
+    name: "message.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("Call it a bug bounty. Keep it quiet."),
+  });
+  await page.getByRole("button", { name: "Add evidence" }).click();
+  await expect(page.locator("#toast")).toHaveText("Evidence and file added.");
+  await expect(
+    page.locator("section", { hasText: "Evidence (1)" }),
+  ).toContainText("message.txt");
+  await expect(tracker).toContainText("General Counsel");
+
+  await page.selectOption("#iAct", "limit");
+  await page.locator("#iReason").fill("No customer data involved.");
+  await page
+    .getByRole("button", { name: "Send to the Chief Privacy Officer" })
+    .click();
+  await expect(
+    page.getByText(
+      "You recommended this, so the Chief Privacy Officer decides.",
+    ),
+  ).toBeVisible();
+
+  await asRole(page, "cpo");
+  await page.locator('[data-a="openCase"][data-x="C-105"]').first().click();
+  await expect(
+    page.getByRole("heading", { name: "Your decision" }),
+  ).toBeVisible();
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download" }).click();
+  expect((await download).suggestedFilename()).toBe("message.txt");
+  await page.locator("#v1").check();
+  await page.getByRole("button", { name: "Reject" }).click();
+  await expect(page.locator(".case-head")).toContainText("Disclosure required");
+});

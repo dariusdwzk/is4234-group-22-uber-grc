@@ -55,6 +55,23 @@ describe("correlation", () => {
 });
 
 describe("tier 1 board notice text", () => {
+  it("keeps acronyms and never doubles the full stop", () => {
+    expect(
+      tier1Body(
+        {
+          id: "C-105",
+          title: "The CSO is calling a breach a bug bounty.",
+          facts: defaultFacts(),
+          detectedH: 0,
+        },
+        false,
+        false,
+      ),
+    ).toBe(
+      "New high-risk incident C-105: the CSO is calling a breach a bug bounty.",
+    );
+  });
+
   it("is generated from the case, in the mockup's words", () => {
     expect(
       tier1Body(

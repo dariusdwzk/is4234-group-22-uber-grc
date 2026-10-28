@@ -7,9 +7,11 @@ export const POLICY = {
   raiseChallenge: ["employee"],
   checkReceipt: ["employee"],
   declareIncident: ["security", "cso"],
-  recordFinding: ["security"],
+  // GC / CPO only on INDEPENDENT cases; the route check is in getCaseFor().
+  recordFinding: ["security", "gc", "cpo"],
+  addEvidence: ["gc", "cpo"],
   attachContact: ["cso"],
-  recommend: ["security", "cso"],
+  recommend: ["security", "cso", "gc", "cpo"],
   vote: ["gc", "cpo"],
   disclose: ["gc", "cpo"],
   confirmTriage: ["cpo"],

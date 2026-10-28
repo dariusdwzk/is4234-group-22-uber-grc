@@ -15,6 +15,7 @@ export const LEDGER_EVENT_TYPES = [
   "Notice acknowledged",
   "Notice escalated to all directors",
   "Finding recorded",
+  "Evidence added",
   "Out-of-band contact attached",
   "Incident declared",
   "Staff report received",

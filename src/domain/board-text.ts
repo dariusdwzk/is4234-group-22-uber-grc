@@ -11,7 +11,7 @@ export function tier1Body(
     "New high-risk incident " +
     c.id +
     ": " +
-    c.title.toLowerCase() +
+    inSentence(c.title) +
     "." +
     (c.facts.dataAccessed && knownScale(c.facts)
       ? " About " + c.facts.records + " records affected."
@@ -24,3 +24,9 @@ export function tier1Body(
 /** Staff reports say data was involved but not how much; never print "0 records". */
 export const knownScale = (f: Facts): boolean =>
   !!f.records && f.records !== "0";
+
+/** A title in mid-sentence: first letter lowered (keeps "CSO"), no trailing full stop. */
+const inSentence = (t: string): string => {
+  const s = t.trim().replace(/[.!?]+$/, "");
+  return s.charAt(0).toLowerCase() + s.slice(1);
+};

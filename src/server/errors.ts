@@ -27,7 +27,11 @@ export class NotFound extends Error {
 }
 
 export class ValidationError extends Error {
-  constructor(public readonly issues: unknown) {
+  /** @param userMessage shown to the user when the problem is theirs to fix (e.g. file too big). */
+  constructor(
+    public readonly issues: unknown,
+    public readonly userMessage?: string,
+  ) {
     super("invalid input");
     this.name = "ValidationError";
   }

@@ -12,6 +12,29 @@ export type NewDecision = {
   caseStatus: string;
 };
 
+/** The approver who is not `role`. */
+export const otherApprover = (role: Approver): Approver =>
+  role === "gc" ? "cpo" : "gc";
+
+/**
+ * Independent path: one of GC / CPO recommends, and the recommendation is their key.
+ * The other one must decide, so no one approves their own recommendation.
+ */
+export function independentDecisionFor(
+  action: RecAction,
+  author: Approver,
+): NewDecision {
+  return {
+    type:
+      action === "limit"
+        ? "Limit disclosure"
+        : "Notify regulators and affected people",
+    need: 1,
+    disclose: action === "disclose",
+    caseStatus: "Awaiting " + ROLES[otherApprover(author)].name,
+  };
+}
+
 /** Limiting disclosure needs both keys; disclosing needs one (mockup: A.rec). */
 export function decisionFor(action: RecAction): NewDecision {
   return action === "limit"

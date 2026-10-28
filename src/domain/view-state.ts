@@ -55,6 +55,16 @@ export type CaseView = {
   /** LOW staff reports: hour Security's review is due. */
   reviewDueH: number | null;
   answers: Answers | null;
+  evidence: EvidenceView[];
+};
+
+/** File bytes never travel in the state; they download from GET /api/evidence/:id. */
+export type EvidenceView = {
+  id: number;
+  author: RoleKey;
+  note: string;
+  file: { name: string; type: string; size: number; sha256: string } | null;
+  t: number;
 };
 
 export type PaymentView = {

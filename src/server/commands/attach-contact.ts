@@ -19,7 +19,7 @@ export const attachContactCommand: CommandDef<z.infer<typeof schema>, void> = {
   schema,
   handler: async (ctx, { caseId, text }) => {
     const { tx, now, actor, log } = ctx;
-    const c = await getCaseFor(ctx, caseId);
+    const c = await getCaseFor(ctx, caseId, { investigate: true });
     if (c.severity !== "HIGH")
       throw new Conflict("Low-risk cases need no action.");
     const [already] = await tx

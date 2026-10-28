@@ -14,6 +14,7 @@ import {
   cases,
   challengeFlags,
   decisions,
+  evidence,
   payments,
   recommendations,
   settings,
@@ -47,6 +48,21 @@ export async function getViewState(actor: Actor | null): Promise<ViewState> {
     db.select().from(challengeFlags),
     listLedger(),
   ]);
+  // Without file_data: bytes are only sent by the download route.
+  const evidenceRows = await db
+    .select({
+      id: evidence.id,
+      caseId: evidence.caseId,
+      authorRole: evidence.authorRole,
+      note: evidence.note,
+      fileName: evidence.fileName,
+      fileType: evidence.fileType,
+      fileSize: evidence.fileSize,
+      fileSha256: evidence.fileSha256,
+      createdH: evidence.createdH,
+    })
+    .from(evidence)
+    .orderBy(asc(evidence.id));
   const regulatorOpen = s?.regulatorInquiryOpen ?? true;
   const notifyOrder = (id: string) => Number(id.slice(2));
 
@@ -94,6 +110,23 @@ export async function getViewState(actor: Actor | null): Promise<ViewState> {
       triageDueH: c.triageDueH,
       reviewDueH: c.reviewDueH,
       answers: c.questionnaireAnswers,
+      evidence: evidenceRows
+        .filter((e) => e.caseId === c.id)
+        .map((e) => ({
+          id: e.id,
+          author: e.authorRole,
+          note: e.note,
+          file:
+            e.fileName && e.fileType && e.fileSize !== null && e.fileSha256
+              ? {
+                  name: e.fileName,
+                  type: e.fileType,
+                  size: e.fileSize,
+                  sha256: e.fileSha256,
+                }
+              : null,
+          t: e.createdH,
+        })),
     };
   });
 

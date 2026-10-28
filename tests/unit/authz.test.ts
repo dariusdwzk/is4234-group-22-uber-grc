@@ -42,8 +42,10 @@ describe("authorize", () => {
   });
 
   it("Security investigates; Security and the CSO recommend; only the CSO attaches out-of-band contact", () => {
-    expect(allowed("recommend")).toEqual(["security", "cso"]);
-    expect(allowed("recordFinding")).toEqual(["security"]);
+    // GC / CPO appear only for INDEPENDENT cases; getCaseFor() enforces the route.
+    expect(allowed("recommend")).toEqual(["security", "cso", "gc", "cpo"]);
+    expect(allowed("recordFinding")).toEqual(["security", "gc", "cpo"]);
+    expect(allowed("addEvidence")).toEqual(["gc", "cpo"]);
     expect(allowed("attachContact")).toEqual(["cso"]);
   });
 

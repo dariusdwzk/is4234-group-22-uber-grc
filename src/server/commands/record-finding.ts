@@ -31,7 +31,7 @@ export const recordFindingCommand: CommandDef<z.infer<typeof schema>, void> = {
   schema,
   handler: async (ctx, { caseId, text, facts }) => {
     const { tx, log } = ctx;
-    const c = await getCaseFor(ctx, caseId);
+    const c = await getCaseFor(ctx, caseId, { investigate: true });
     const triage = c.status === TRIAGE_STATUS;
     const review = c.route === "SECURITY_TRIAGE" && c.severity === "LOW";
     if (c.severity !== "HIGH" && !triage && !review)

@@ -20,6 +20,7 @@ const TABLES = [
   "payments",
   "challenge_flags",
   "board_notices",
+  "evidence",
   "signals",
   "cases",
   "external_anchors",

@@ -12,16 +12,14 @@ import { STEPS, atStep, guideCard, stepIdx } from "./guide";
 import { ck, toast, val } from "./html";
 import { S, cur } from "./store";
 import { vBoard } from "./views/board";
-import { vCase } from "./views/case";
-import {
-  header,
-  vApprovals,
-  vCeo,
-  vEmployee,
-  vFinance,
-  vLanding,
-  vSecurity,
-} from "./views/pages";
+import { vCase } from "./views/case/page";
+import { vCeo } from "./views/ceo";
+import { vApprovals } from "./views/decisions";
+import { vEmployee } from "./views/employee";
+import { vFinance } from "./views/finance";
+import { header } from "./views/header";
+import { vLanding } from "./views/landing";
+import { vSecurity } from "./views/security";
 
 let root: HTMLElement | null = null;
 /** The action in flight, if any. Clicks during it are dropped (no double submits). */

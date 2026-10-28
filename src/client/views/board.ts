@@ -5,15 +5,8 @@ import { CATS, plainEvent, type EventCat } from "@/domain/plain-event";
 import { ROLES } from "@/domain/roles";
 import { CHK, esc } from "../html";
 import { S, rep } from "../store";
-import {
-  discStatus,
-  ico,
-  miniTrack,
-  noticeRow,
-  remText,
-  stat,
-  waitingOn,
-} from "./components";
+import { discStatus, ico, noticeRow, remText, stat } from "./components";
+import { miniTrack, waitingOn } from "./case/timeline";
 
 const BASE = Date.parse(DAY0_ISO);
 const at = (h: number) => new Date(BASE + h * 3_600_000);

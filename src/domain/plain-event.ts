@@ -1,0 +1,137 @@
+/** A ledger entry as the board's evidence log shows it (mockup: S.ledger items). */
+export type LedgerView = {
+  seq: number;
+  /** Hours since Day 0. */
+  t: number;
+  actor: string;
+  action: string;
+  caseId: string;
+  detail: string;
+  hash: string;
+};
+
+export type EventCat =
+  "detect" | "notice" | "work" | "decision" | "blocked" | "money";
+
+export type PlainEvent = { cat: EventCat; text: string };
+
+/** Label and colour class of each category chip, copied from the mockup's CATS. */
+export const CATS: Record<EventCat, [label: string, cls: string]> = {
+  detect: ["Detected", "sys"],
+  notice: ["Board", "g"],
+  work: ["Investigation", ""],
+  decision: ["Decision", "a"],
+  blocked: ["Blocked", "r"],
+  money: ["Payment", "a"],
+};
+
+const staff = (who: string) =>
+  who.startsWith("Anonymous") ? "A staff member (anonymous)" : "A staff member";
+
+/** The mockup's plainEvent(): one plain sentence per entry, or null for low-level system entries. */
+export function plainEvent(e: LedgerView): PlainEvent | null {
+  const a = e.action,
+    who = e.actor,
+    d = e.detail;
+  if (a === "Signal received") {
+    const t = d.split(": ")[1] || d;
+    if (who === "Finance")
+      return {
+        cat: "detect",
+        text:
+          "Finance system received a " +
+          t.replace("payment request ", "payment request of ") +
+          ".",
+      };
+    if (who === "HackerOne")
+      return { cat: "detect", text: "HackerOne received a " + t + "." };
+    return { cat: "detect", text: who + " detected a " + t + "." };
+  }
+  if (a === "Case opened automatically")
+    return {
+      cat: "detect",
+      text: "Case opened automatically. No one had to report it.",
+    };
+  if (a === "Classified HIGH")
+    return { cat: "detect", text: "Rated high risk by the rules." };
+  if (a === "Deadlines started")
+    return { cat: "detect", text: "Legal notification deadlines started." };
+  if (a.startsWith("Board notice sent"))
+    return { cat: "notice", text: "Board notified: " + d };
+  if (a === "Notice acknowledged")
+    return { cat: "notice", text: "Board acknowledged a notice." };
+  if (a === "Notice escalated to all directors")
+    return {
+      cat: "notice",
+      text: "Notice not read within 24 hours. Sent to all directors.",
+    };
+  if (a === "Finding recorded")
+    return {
+      cat: "work",
+      text: "Security team recorded a finding: " + d,
+    };
+  if (a === "Out-of-band contact attached")
+    return { cat: "work", text: "CSO added the hacker’s email to the case." };
+  if (a === "Incident declared")
+    return { cat: "work", text: who + " reported an incident." };
+  if (a === "Recommendation sent")
+    return { cat: "decision", text: "CSO recommended: " + d + "." };
+  if (a === "Conflicts detected")
+    return {
+      cat: "blocked",
+      text: "The system flagged that the recommendation contradicts the evidence.",
+    };
+  if (a.startsWith("Blocked: ")) {
+    const what = a.slice(9).toLowerCase();
+    return {
+      cat: "blocked",
+      text: who + " tried to " + what + ". Not allowed.",
+    };
+  }
+  if (a === "Approved" || a === "Rejected")
+    return {
+      cat: "decision",
+      text:
+        who +
+        " " +
+        a.toLowerCase() +
+        ": " +
+        d.split(". ")[0]!.toLowerCase() +
+        ".",
+    };
+  if (a === "Approved by both approvers")
+    return {
+      cat: "decision",
+      text: "Both approvers agreed to limit disclosure.",
+    };
+  if (a === "Disclosure approved")
+    return {
+      cat: "decision",
+      text: who + " approved notifying regulators and affected people.",
+    };
+  if (a === "Payment held")
+    return {
+      cat: "money",
+      text: "US$100,000 payment to the attacker frozen automatically.",
+    };
+  if (a === "Payment cancelled")
+    return { cat: "money", text: "US$100,000 payment cancelled." };
+  if (a === "Payment hold lifted")
+    return {
+      cat: "money",
+      text: "Payment freeze lifted after both approvals.",
+    };
+  if (a === "Payment released")
+    return {
+      cat: "money",
+      text: "Finance released a payment: " + d.split(". ")[0] + ".",
+    };
+  if (a === "Challenge raised")
+    return {
+      cat: "work",
+      text: staff(who) + " raised a concern about this case.",
+    };
+  if (a === "Incident reported")
+    return { cat: "work", text: staff(who) + " reported an incident." };
+  return null;
+}

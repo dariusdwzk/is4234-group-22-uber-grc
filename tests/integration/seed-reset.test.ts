@@ -13,6 +13,7 @@ import { resetDemo } from "@/server/commands/reset-demo";
 import { getNow } from "@/server/clock";
 import { NotFound, ValidationError } from "@/server/errors";
 import { verifyChain } from "@/server/ledger/verify";
+import { listLedger } from "@/server/queries/ledger";
 import { ownerPool } from "./setup/db";
 
 const demoGlobal = globalThis as unknown as { __grcDemoDb?: unknown };
@@ -133,6 +134,33 @@ describe("seed, reset and the demo clock", () => {
     await expect(advanceClock(null, { hours: 5 })).rejects.toThrow(
       ValidationError,
     );
+  });
+
+  it("each clock move writes a daily anchor that the integrity check compares", async () => {
+    await advanceClock(null, { hours: 24 });
+    const anchors = await db
+      .select()
+      .from(externalAnchors)
+      .orderBy(externalAnchors.id);
+    expect(anchors.map((a) => [a.reason, a.createdH])).toEqual([
+      ["Daily export", 0],
+      ["Daily export", 24],
+    ]);
+    expect(await verifyChain()).toMatchObject({ ok: true, anchorsOk: true });
+  });
+
+  it("listLedger shapes entries like the mockup's ledger, without GENESIS", async () => {
+    const view = await listLedger();
+    expect(view).toHaveLength(8);
+    expect(view[0]).toMatchObject({
+      seq: 2,
+      t: -50,
+      actor: "Cloud monitoring",
+      action: "Signal received",
+      caseId: "C-101",
+      detail: "SIG-101",
+    });
+    expect(view[0]!.hash).toMatch(/^[0-9a-f]{64}$/);
   });
 
   it("DEMO_MODE off: reset and clock 404, and the demo connection is never opened", async () => {

@@ -2,7 +2,12 @@
 // The GC or CPO investigates and recommends; the other one decides.
 import { EVIDENCE_TYPES } from "@/domain/evidence";
 import { fmtT } from "@/domain/demo-time";
-import { otherApprover, type Approver } from "@/domain/gate";
+import {
+  DISCLOSE_TYPE,
+  ESCALATE_TYPE,
+  otherApprover,
+  type Approver,
+} from "@/domain/gate";
 import { ROLES } from "@/domain/roles";
 import type { CaseView } from "@/domain/view-state";
 import { esc } from "../../html";
@@ -34,8 +39,12 @@ export function independentBox(c: CaseView): string {
       " decides.</p>" +
       findingPart(c) +
       evidenceForm() +
-      '<h3 style="margin-top:14px">Recommend</h3><div class="form"><label>Recommended action<select id="iAct"><option value="disclose">Notify regulators and affected people</option><option value="limit">Limit disclosure</option></select></label>' +
-      '<label>Reason<textarea id="iReason" rows="2"></textarea></label>' +
+      '<h3 style="margin-top:14px">Recommend</h3><div class="form"><label>Recommended action<select id="iAct"><option value="disclose">' +
+      DISCLOSE_TYPE +
+      '</option><option value="escalate">' +
+      ESCALATE_TYPE +
+      "</option></select></label>" +
+      '<label>Reason (required to escalate)<textarea id="iReason" rows="2"></textarea></label>' +
       '<div><button class="btn primary" data-a="irec">Send to the ' +
       ROLES[otherApprover(me)].name +
       "</button></div></div>";
@@ -54,6 +63,11 @@ export function independentBox(c: CaseView): string {
       '</b></p><p class="muted small" style="margin:6px 0 10px">Recommended by the ' +
       ROLES[author!].name +
       ". You are the second key.</p>" +
+      (c.rec?.reason
+        ? '<p class="muted" style="margin:0 0 10px">Reason: ' +
+          esc(c.rec.reason) +
+          "</p>"
+        : "") +
       '<div class="form"><label class="chk"><input type="checkbox" id="v1"> I have read the findings and the evidence</label><label>Reason<select id="vReason"><option>Facts support it</option><option>Facts contradict it</option><option>Regulator must be told</option></select></label><div class="row"><button class="btn primary" data-a="vote" data-x="approve">Approve</button><button class="btn danger" data-a="vote" data-x="reject">Reject</button></div></div>';
   } else {
     h =

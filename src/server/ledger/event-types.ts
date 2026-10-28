@@ -28,13 +28,11 @@ export const LEDGER_EVENT_TYPES = [
   "Triage timed out: rated HIGH automatically",
   "Challenge raised",
   "Recommendation sent",
-  "Conflicts detected",
   "Approved",
   "Rejected",
   "Approved by both approvers",
   "Disclosure approved",
   "Payment held",
-  "Payment hold lifted",
   "Payment cancelled",
   "Payment released",
 ] as const;

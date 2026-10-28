@@ -56,12 +56,12 @@ describe("plainEvent (the board's evidence log wording)", () => {
         e(
           "Chief Privacy Officer",
           "Rejected",
-          "Pay as a bug bounty and limit disclosure. Legal advice.",
+          "Escalate internally for further investigation. Legal advice.",
         ),
       ),
     ).toEqual({
       cat: "decision",
-      text: "Chief Privacy Officer rejected: pay as a bug bounty and limit disclosure.",
+      text: "Chief Privacy Officer rejected: escalate internally for further investigation.",
     });
   });
 

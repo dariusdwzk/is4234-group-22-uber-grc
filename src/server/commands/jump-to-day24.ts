@@ -5,7 +5,7 @@ import { JUMP_H } from "@/domain/demo-time";
 import { initialPaymentStatus } from "@/domain/payments";
 import type { Actor } from "@/domain/types";
 import { getCase, ingest, insertSignal, runEscalations } from "../cases/engine";
-import { decisions, payments, settings, signals } from "../db/schema";
+import { payments, settings, signals } from "../db/schema";
 import { assertDemoMode } from "../demo";
 import { Conflict } from "../errors";
 import {
@@ -77,12 +77,7 @@ export const jumpToDay24Command: CommandDef<
     const caseId = await ingest(at, request);
 
     const c = await getCase(tx, caseId);
-    const [d] = await tx
-      .select()
-      .from(decisions)
-      .where(eq(decisions.caseId, caseId));
-    const limitApproved = !!d && !d.disclose && d.status === "Approved";
-    const status = initialPaymentStatus(c.severity, limitApproved);
+    const status = initialPaymentStatus(c.severity);
     const count = (await tx.select({ id: payments.id }).from(payments)).length;
     await tx.insert(payments).values({
       id: "PAY-" + (count + 1),
@@ -96,7 +91,7 @@ export const jumpToDay24Command: CommandDef<
       await at.log(
         "Payment held",
         caseId,
-        "US$100,000 to jdough. Linked to an open HIGH case: needs approval from the General Counsel and the Chief Privacy Officer.",
+        "US$100,000 to jdough. Linked to an open HIGH case: frozen while the case is open.",
         { actor: "System" },
       );
     return { caseId };

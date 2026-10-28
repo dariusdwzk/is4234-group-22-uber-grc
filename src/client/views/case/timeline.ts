@@ -1,7 +1,7 @@
 // The case timeline (mockup: stages(), waitingOn(), tracker()). Each route has its own steps;
 // tracker() draws whichever list the case's route produces, in the mockup's style.
 import { dayOf } from "@/domain/demo-time";
-import { otherApprover, type Approver } from "@/domain/gate";
+import { ESCALATED_STATUS, otherApprover, type Approver } from "@/domain/gate";
 import { ROLES } from "@/domain/roles";
 import type { RoleKey } from "@/domain/types";
 import type { CaseView } from "@/domain/view-state";
@@ -23,7 +23,7 @@ type Stage = {
   roles?: RoleKey[];
 };
 
-const OUTCOMES = ["Disclosed", "Disclosure limited", "Disclosure required"];
+const OUTCOMES = ["Disclosed", ESCALATED_STATUS, "Disclosure required"];
 const short = (r: Approver) => (r === "gc" ? "GC" : "CPO");
 const entry = (c: CaseView, action: string) =>
   S.d.ledger.find((e) => e.caseId === c.id && e.action === action);
@@ -74,7 +74,7 @@ function outcome(c: CaseView, who: string): Stage {
       c.status === "Disclosure required"
         ? "todo"
         : out
-          ? c.status === "Disclosure limited"
+          ? c.status === ESCALATED_STATUS
             ? "warn"
             : "done"
           : "todo",
@@ -194,6 +194,9 @@ export function stages(c: CaseView): Stage[] {
 export function waitingOn(c: CaseView): string {
   if (c.status === TRIAGE) return "Chief Privacy Officer (rating)";
   if (c.status === "Awaiting review") return "Security team (review)";
+  // Escalating is a pause, not an outcome: either approver can still disclose.
+  if (c.status === ESCALATED_STATUS)
+    return "General Counsel or Chief Privacy Officer (to disclose)";
   if (c.severity !== "HIGH")
     return '<span class="muted">Nothing pending</span>';
   const n = stages(c).find((x) => x.state === "now");

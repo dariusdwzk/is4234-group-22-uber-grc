@@ -72,10 +72,9 @@ export const recommendations = pgTable("recommendations", {
     .primaryKey()
     .references(() => cases.id),
   authorRole: text("author_role").$type<RoleKey>().notNull(),
-  action: text("action").$type<"limit" | "disclose">().notNull(),
-  claims: jsonb("claims")
-    .$type<{ noData: boolean; verified: boolean; routine: boolean }>()
-    .notNull(),
+  action: text("action").$type<"escalate" | "disclose">().notNull(),
+  /** Why: required to escalate internally, optional to disclose. */
+  reason: text("reason"),
   createdH: integer("created_h").notNull(),
 });
 

@@ -2,7 +2,6 @@ import "server-only";
 import { asc } from "drizzle-orm";
 import { clocksFrom } from "@/domain/clocks";
 import { canAccessCase } from "@/domain/case-access";
-import { conflicts } from "@/domain/conflicts";
 import { evaluate } from "@/domain/rules";
 import type { Actor } from "@/domain/types";
 import type { CaseView, ViewState } from "@/domain/view-state";
@@ -85,7 +84,7 @@ export async function getViewState(actor: Actor | null): Promise<ViewState> {
         ? {
             author: rec.authorRole,
             act: rec.action,
-            claims: rec.claims,
+            reason: rec.reason,
             t: rec.createdH,
           }
         : null,
@@ -105,7 +104,6 @@ export async function getViewState(actor: Actor | null): Promise<ViewState> {
             ),
           }
         : null,
-      conflicts: rec ? conflicts(rec.claims, c.facts) : [],
       route: c.route,
       triageDueH: c.triageDueH,
       reviewDueH: c.reviewDueH,

@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { blockedReason } from "@/domain/blocked-reasons";
 import { tier1Body } from "@/domain/board-text";
 import { clocksFrom, gdprRemaining } from "@/domain/clocks";
-import { conflicts } from "@/domain/conflicts";
 import { matchCase } from "@/domain/correlation";
 import { dueEscalations, type EscalationInput } from "@/domain/escalations";
 import { decisionFor, voteOutcome } from "@/domain/gate";
@@ -90,41 +89,10 @@ describe("tier 1 board notice text", () => {
   });
 });
 
-describe("conflict detection", () => {
-  it("flags each claim the evidence contradicts", () => {
-    expect(
-      conflicts(
-        { noData: true, verified: true, routine: true },
-        {
-          ...facts,
-          paymentCents: 10_000_000,
-          payeeVerified: false,
-          extortion: true,
-        },
-      ),
-    ).toEqual([
-      "Says the data was deleted. Monitoring shows 16 objects downloaded.",
-      "Says the reporter is verified. The payee on the payment request is not.",
-      "Says this is a routine bounty. The payout is 10× the cap.",
-      "Says this is a routine bounty. The attacker demanded payment.",
-    ]);
-  });
-  it("claims that are not made, or are true, raise nothing", () => {
-    expect(
-      conflicts({ noData: false, verified: false, routine: false }, facts),
-    ).toEqual([]);
-    expect(
-      conflicts(
-        { noData: false, verified: true, routine: true },
-        defaultFacts(),
-      ),
-    ).toEqual([]);
-  });
-});
-
 describe("decision gate", () => {
-  it("limiting disclosure needs 2 approvals; disclosing needs 1", () => {
-    expect(decisionFor("limit")).toMatchObject({
+  it("escalating internally needs 2 approvals; disclosing needs 1", () => {
+    expect(decisionFor("escalate")).toMatchObject({
+      type: "Escalate internally for further investigation",
       need: 2,
       disclose: false,
       caseStatus: "Awaiting 2 approvals",
@@ -135,16 +103,16 @@ describe("decision gate", () => {
       caseStatus: "Awaiting decision",
     });
   });
-  it("one approval of a limit decision waits for the other key", () => {
+  it("one approval of an escalation waits for the other key", () => {
     expect(voteOutcome({ disclose: false }, "gc", "approve", null)).toEqual({
       kind: "waiting",
       caseStatus: "Awaiting Chief Privacy Officer",
     });
   });
-  it("both keys approving limits disclosure; any rejection requires disclosure", () => {
+  it("both keys approving escalates internally; any rejection requires disclosure", () => {
     expect(
       voteOutcome({ disclose: false }, "cpo", "approve", "approve"),
-    ).toEqual({ kind: "limited" });
+    ).toEqual({ kind: "escalated" });
     expect(
       voteOutcome({ disclose: false }, "cpo", "reject", "approve"),
     ).toEqual({ kind: "rejected" });
@@ -173,15 +141,14 @@ describe("blocked attempts", () => {
 
 describe("payment hold", () => {
   it("payments on open HIGH cases start Held", () => {
-    expect(initialPaymentStatus("HIGH", false)).toBe("Held");
-    expect(initialPaymentStatus("HIGH", true)).toBe("Approved for release");
-    expect(initialPaymentStatus("LOW", false)).toBe("Approved for release");
+    expect(initialPaymentStatus("HIGH")).toBe("Held");
+    expect(initialPaymentStatus("LOW")).toBe("Approved for release");
   });
   it("a held payment cannot be released; an approved one can", () => {
     expect(canRelease({ status: "Held", caseId: "C-104" })).toEqual({
       ok: false,
       reason:
-        "Linked to C-104, an open high-risk case. Needs approval from the General Counsel and the Chief Privacy Officer.",
+        "Linked to C-104, an open high-risk case. Payments on high-risk cases stay frozen; no decision on the case releases them.",
     });
     expect(
       canRelease({ status: "Approved for release", caseId: "C-104" }),

@@ -1,7 +1,6 @@
 import "server-only";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { conflicts } from "@/domain/conflicts";
 import {
   decisionFor,
   independentDecisionFor,
@@ -13,28 +12,27 @@ import { cases, decisions, recommendations } from "../db/schema";
 import { Conflict } from "../errors";
 import { caseIdOf, runCommand, type CommandDef } from "../run-command";
 
-const schema = z.strictObject({
-  caseId: z.string(),
-  action: z.enum(["limit", "disclose"]),
-  claims: z.strictObject({
-    noData: z.boolean(),
-    verified: z.boolean(),
-    routine: z.boolean(),
-  }),
-  /** Independent path: why the GC or CPO recommends this. */
-  reason: z.string().trim().max(1000).optional(),
-});
+const schema = z
+  .strictObject({
+    caseId: z.string(),
+    action: z.enum(["escalate", "disclose"]),
+    reason: z.string().trim().max(1000).optional(),
+  })
+  // Holding back disclosure always needs a stated reason; it goes on the record.
+  .refine((r) => r.action !== "escalate" || !!r.reason, {
+    message: "Give a reason for escalating internally.",
+    path: ["reason"],
+  });
 
 /**
- * Security or the CSO recommends; that opens the decision the approvers must take.
- * Its claims are checked against the system evidence (mockup: A.rec). On an INDEPENDENT
- * case the GC or CPO recommends, and the other one decides.
+ * Security or the CSO recommends; that opens the decision the approvers must take
+ * (mockup: A.rec). On an INDEPENDENT case the GC or CPO recommends, and the other one decides.
  */
 export const recommendCommand: CommandDef<z.infer<typeof schema>, void> = {
   action: "recommend",
   blocked: "Blocked: Send recommendation",
   schema,
-  handler: async (ctx, { caseId, action, claims, reason }) => {
+  handler: async (ctx, { caseId, action, reason }) => {
     const { tx, now, actor, log } = ctx;
     const c = await getCaseFor(ctx, caseId, { investigate: true });
     if (c.severity !== "HIGH")
@@ -53,7 +51,7 @@ export const recommendCommand: CommandDef<z.infer<typeof schema>, void> = {
       caseId,
       authorRole: actor.role as RoleKey,
       action,
-      claims,
+      reason: reason || null,
       createdH: now,
     });
     await tx.insert(decisions).values({
@@ -72,14 +70,6 @@ export const recommendCommand: CommandDef<z.infer<typeof schema>, void> = {
       caseId,
       d.type + (reason ? ". " + reason : ""),
     );
-    const cf = conflicts(claims, c.facts);
-    if (cf.length)
-      await log(
-        "Conflicts detected",
-        caseId,
-        cf.length + " claims contradict system evidence.",
-        { actor: "System" },
-      );
   },
 };
 

@@ -1,5 +1,6 @@
 // The case page: header, timeline, alerts, summary, action panel, Deadlines / Activity.
 import { knownScale } from "@/domain/board-text";
+import { ESCALATED_STATUS } from "@/domain/gate";
 import { dayOf, fmtDur } from "@/domain/demo-time";
 import { money } from "@/domain/money";
 import { QUESTIONNAIRE } from "@/domain/questionnaire";
@@ -146,7 +147,6 @@ export function vCase(): string {
   const c = S.d.cases.find((x) => x.id === S.caseId);
   if (S.role === "employee") return "<p>Employees cannot open cases.</p>";
   if (!c) return "<p>Case not found.</p>";
-  const cf = c.conflicts;
   let o =
     '<button class="link" data-a="home">← Back</button>' +
     '<div class="case-head"><span class="cid">' +
@@ -166,14 +166,9 @@ export function vCase(): string {
       "</b>" +
       esc(S.lastBlock.why) +
       " This attempt has been logged.</div>";
-  if (cf.length)
+  if (c.status === ESCALATED_STATUS)
     o +=
-      '<div class="alert high"><b>Recommendation contradicts the evidence</b><ul>' +
-      cf.map((x) => "<li>" + esc(x) + "</li>").join("") +
-      "</ul></div>";
-  if (c.status === "Disclosure limited")
-    o +=
-      '<div class="alert warn"><b>Disclosure limited by both approvers</b>The decision and every step before it are permanently on record.</div>';
+      '<div class="alert warn"><b>Escalated internally by both approvers</b>Disclosure has not been made and the deadlines keep running. The decision and every step before it are permanently on record.</div>';
   o += caseSummary(c) + actionBox(c) + evidencePanel(c);
   const tabs = (
     [

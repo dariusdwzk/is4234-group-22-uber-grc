@@ -85,11 +85,6 @@ export function plainEvent(e: LedgerView): PlainEvent | null {
       // The CSO line is the mockup's; on the independent path the GC or CPO recommends.
       text: (who.startsWith("CSO") ? "CSO" : who) + " recommended: " + d + ".",
     };
-  if (a === "Conflicts detected")
-    return {
-      cat: "blocked",
-      text: "The system flagged that the recommendation contradicts the evidence.",
-    };
   if (a.startsWith("Blocked: ")) {
     const what = a.slice(9).toLowerCase();
     return {
@@ -111,7 +106,7 @@ export function plainEvent(e: LedgerView): PlainEvent | null {
   if (a === "Approved by both approvers")
     return {
       cat: "decision",
-      text: "Both approvers agreed to limit disclosure.",
+      text: "Both approvers agreed to escalate internally before disclosing.",
     };
   if (a === "Disclosure approved")
     return {
@@ -125,11 +120,6 @@ export function plainEvent(e: LedgerView): PlainEvent | null {
     };
   if (a === "Payment cancelled")
     return { cat: "money", text: "US$100,000 payment cancelled." };
-  if (a === "Payment hold lifted")
-    return {
-      cat: "money",
-      text: "Payment freeze lifted after both approvals.",
-    };
   if (a === "Payment released")
     return {
       cat: "money",

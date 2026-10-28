@@ -45,13 +45,13 @@ export const STEPS: Step[] = [
       !S.d.emailAttached
         ? "Attach the hacker’s email"
         : !P().recommended
-          ? "Recommend a bug bounty"
+          ? "Recommend keeping it internal"
           : "Try to close the case",
     text: () =>
       !S.d.emailAttached
         ? "The hacker emailed the CSO directly, so no system saw it. Click “Attach to case”."
         : !P().recommended
-          ? "Send the prefilled “bug bounty” recommendation, as the CSO did in 2016. Its claims will be checked against the evidence."
+          ? "Send the prefilled recommendation to escalate internally, as the CSO kept it in-house in 2016. The reason goes on the record."
           : "Now try to make the case go away. Click “Close case” under Case actions. The CSO is not allowed to, and the attempt is logged.",
     target: () =>
       !S.d.emailAttached
@@ -79,7 +79,7 @@ export const STEPS: Step[] = [
     role: "gc",
     onCase: true,
     title: "Approve as General Counsel",
-    text: "This is the first of two approvals. Read the red conflicts box first. Then tick the checkbox and click Approve.",
+    text: "This is the first of two approvals. Read the CSO’s reason first. Then tick the checkbox and click Approve.",
     target: () => "#actionbox",
     done: () => P().gcDone,
   },
@@ -87,7 +87,7 @@ export const STEPS: Step[] = [
     role: "cpo",
     onCase: true,
     title: "Decide as Chief Privacy Officer",
-    text: "This is the second of two approvals. Reject: the payment is cancelled and disclosure is required. Approve: see what happens when both approvers agree to stay silent.",
+    text: "This is the second of two approvals. Reject: the payment is cancelled and disclosure is required. Approve: the case stays internal, the payment stays frozen and the board is told.",
     target: () => "#actionbox",
     done: () => P().cpoDone,
   },

@@ -2,6 +2,7 @@
 import { dayOf, fmtDur, fmtT } from "@/domain/demo-time";
 import type { CaseView, NoticeView, PaymentView } from "@/domain/view-state";
 import { CHK, CRS, esc } from "../html";
+import { ESCALATED_STATUS } from "@/domain/gate";
 import { S } from "../store";
 import { waitingOn } from "./case/timeline";
 
@@ -135,8 +136,8 @@ export const rag = (level: string, label: string): string =>
 export function discStatus(c: CaseView): string {
   if (c.status === "Disclosed")
     return rag("g", "Disclosed " + dayOf(c.disclosedH ?? 0));
-  if (c.status === "Disclosure limited")
-    return rag("r", "Withheld by approvers");
+  if (c.status === ESCALATED_STATUS)
+    return rag("a", "Investigating internally");
   if (c.status === "Disclosure required")
     return rag("a", "Required, not yet done");
   return rag("n", "Not decided");

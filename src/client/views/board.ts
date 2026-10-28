@@ -1,6 +1,7 @@
 // Ported from the mockup's vBoard() and logBody().
 import { DAY0_ISO, dayOf, fmtDur, fmtT } from "@/domain/demo-time";
 import { knownScale } from "@/domain/board-text";
+import { ESCALATED_STATUS } from "@/domain/gate";
 import { CATS, plainEvent, type EventCat } from "@/domain/plain-event";
 import { ROLES } from "@/domain/roles";
 import { CHK, esc } from "../html";
@@ -191,9 +192,11 @@ export function vBoard(): string {
     lines.push("A legal deadline to notify regulators has passed.");
   }
   if (c) {
-    if (c.status === "Disclosure limited") {
-      lvl = "r";
-      lines.push("Management decided to withhold disclosure.");
+    if (c.status === ESCALATED_STATUS) {
+      lvl = "a";
+      lines.push(
+        "Management chose to investigate internally before disclosing. The deadlines keep running.",
+      );
     } else if (c.status === "Disclosure required")
       lines.push("Disclosure has been required, but not yet made.");
     else if (c.status === "Disclosed")
@@ -206,10 +209,7 @@ export function vBoard(): string {
   if (p) {
     if (p.status === "Held")
       lines.push("A US$100,000 payment to the attacker is frozen.");
-    else if (p.status === "Approved for release" || p.status === "Released") {
-      lvl = "r";
-      lines.push("A US$100,000 payment to the attacker has been approved.");
-    } else if (p.status === "Cancelled")
+    else if (p.status === "Cancelled")
       lines.push("A US$100,000 payment to the attacker was cancelled.");
   }
   o +=
@@ -251,11 +251,7 @@ export function vBoard(): string {
       missed ? "Regulators not yet told" : "All on time",
     ) +
     k(
-      p && p.status === "Held"
-        ? "a"
-        : p && (p.status === "Approved for release" || p.status === "Released")
-          ? "r"
-          : "g",
+      p && p.status === "Held" ? "a" : "g",
       "Payments frozen",
       p && p.status === "Held" ? "US$100,000" : "None",
       p
@@ -427,9 +423,7 @@ export function vBoard(): string {
         e.action.startsWith("Blocked") &&
         (e.actor === ROLES.security.name || e.actor === ROLES.cso.name),
     ).length;
-    const withheld = !!d && d.status === "Approved" && !d.disclose,
-      lifted =
-        !!p && (p.status === "Approved for release" || p.status === "Released");
+    const escalated = !!d && d.status === "Approved" && !d.disclose;
     const ok = S.d.intact !== false;
     const ctl =
       '<ul class="list chk">' +
@@ -448,22 +442,20 @@ export function vBoard(): string {
         stat("g", "Working"),
       ) +
       item(
-        withheld ? "r" : "g",
-        "Two people needed to withhold disclosure",
-        withheld
-          ? "Both approvers chose to withhold."
+        escalated ? "a" : "g",
+        "Two people needed to hold back disclosure",
+        escalated
+          ? "Both approvers chose to investigate internally first."
           : "General Counsel and Chief Privacy Officer.",
-        stat(withheld ? "r" : "g", withheld ? "Used to withhold" : "Working"),
+        stat(escalated ? "a" : "g", escalated ? "Used to delay" : "Working"),
       ) +
       item(
-        lifted ? "r" : "g",
+        "g",
         "Payments frozen on serious cases",
-        lifted
-          ? "The freeze was lifted by both approvers."
-          : p
-            ? "US$100,000 payment " + p.status.toLowerCase() + "."
-            : "No payment requested yet.",
-        stat(lifted ? "r" : "g", lifted ? "Freeze lifted" : "Working"),
+        p
+          ? "US$100,000 payment " + p.status.toLowerCase() + "."
+          : "No payment requested yet.",
+        stat("g", "Working"),
       ) +
       item(
         ok ? "g" : "r",

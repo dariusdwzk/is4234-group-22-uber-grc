@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { IBM_Plex_Mono, Inter } from "next/font/google";
 import "./globals.css";
-import "./report-form.css";
+import "./additions.css";
 
 // The mockup's fonts, self-hosted by next/font so the CSP needs no external origins.
 const inter = Inter({

@@ -28,9 +28,9 @@ async function playToCpo(page: Page): Promise<void> {
     .click();
   await page.getByRole("button", { name: "Attach to case" }).click();
   await page.getByRole("button", { name: "Send for decision" }).click();
-  await expect(
-    page.getByText("Recommendation contradicts the evidence"),
-  ).toBeVisible();
+  await expect(page.locator("#toast")).toHaveText(
+    "Sent to the General Counsel and the Chief Privacy Officer.",
+  );
   await page.getByRole("button", { name: "Close case" }).click();
   await expect(page.getByText("Not allowed: Close case")).toBeVisible();
   await expect(page.getByText("Security cannot close cases.")).toBeVisible();
@@ -73,7 +73,7 @@ test("Ending A: the CPO rejects; payment cancelled, disclosure required, board t
   );
   await page.locator('[data-a="expand"][data-x="C-104"]').click();
   await expect(
-    page.getByText(/rejected the recommendation to limit disclosure on C-104/),
+    page.getByText(/rejected the recommendation on C-104/),
   ).toBeVisible();
   const ack = page.getByRole("button", { name: "Acknowledge" });
   for (let left = await ack.count(); left > 0; left--) {
@@ -96,24 +96,27 @@ test("Ending A: the CPO rejects; payment cancelled, disclosure required, board t
   ).toContainText("Intact");
 });
 
-test("Ending B: both approve; disclosure limited, payment approved for release, board told", async ({
+test("Ending B: both approve escalating internally; payment stays frozen, board told", async ({
   page,
 }) => {
   await playToCpo(page);
+  await expect(
+    page.getByText("Reason: Treat it as a bug bounty and keep it in-house"),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Approve", exact: true }).click();
   await expect(
-    page.getByText("Disclosure limited by both approvers"),
+    page.getByText("Escalated internally by both approvers"),
   ).toBeVisible();
 
   await asRole(page, "finance");
-  await expect(page.locator("tbody tr").first()).toContainText(
-    "Approved for release",
-  );
+  await expect(page.locator("tbody tr").first()).toContainText("Held");
 
   await asRole(page, "board");
-  await expect(page.locator(".brief")).toContainText("Act now");
   await expect(page.locator(".brief")).toContainText(
-    "Management decided to withhold disclosure.",
+    "Management chose to investigate internally before disclosing.",
+  );
+  await expect(page.locator(".inc2").first()).toContainText(
+    "Waiting on General Counsel or Chief Privacy Officer (to disclose)",
   );
   await expect(
     page.locator("li", { hasText: "Records cannot be altered" }),
@@ -249,7 +252,7 @@ test("independent path: the GC investigates with evidence and recommends; the CP
   ).toContainText("message.txt");
   await expect(tracker).toContainText("General Counsel");
 
-  await page.selectOption("#iAct", "limit");
+  await page.selectOption("#iAct", "escalate");
   await page.locator("#iReason").fill("No customer data involved.");
   await page
     .getByRole("button", { name: "Send to the Chief Privacy Officer" })

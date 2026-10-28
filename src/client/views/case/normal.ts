@@ -1,5 +1,6 @@
 // The mockup's actionBox() for the demo flow.
 import { fmtT } from "@/domain/demo-time";
+import { DISCLOSE_TYPE, ESCALATE_TYPE } from "@/domain/gate";
 import { ROLES } from "@/domain/roles";
 import type { CaseView } from "@/domain/view-state";
 import { esc } from "../../html";
@@ -37,8 +38,13 @@ export function normalBox(c: CaseView): string {
         '<h2>Attach out-of-band contact</h2><div class="form"><label>Message received outside monitored systems<textarea id="aTxt" rows="2">Email to the CSO from an anonymous sender: “We have your rider data. We expect a six-figure payment.”</textarea></label><div><button class="btn primary" data-a="attach">Attach to case</button></div></div>';
     else if (!c.rec)
       h =
-        '<h2>Recommendation</h2><div class="form"><label>Recommended action<select id="rAct"><option value="limit">Pay as a bug bounty and limit disclosure</option><option value="disclose">Notify regulators and affected people</option></select></label>' +
-        '<details><summary>Claims included</summary><div class="form"><label class="chk"><input type="checkbox" id="rC1" checked> Reporter deleted the data</label><label class="chk"><input type="checkbox" id="rC2" checked> Reporter identity verified</label><label class="chk"><input type="checkbox" id="rC3" checked> Routine bug bounty</label></div></details>' +
+        '<h2>Recommendation</h2><div class="form"><label>Recommended action<select id="rAct"><option value="escalate">' +
+        ESCALATE_TYPE +
+        '</option><option value="disclose">' +
+        DISCLOSE_TYPE +
+        "</option></select></label>" +
+        // Prefilled for the replay: in 2016 the CSO kept it in-house as a "bug bounty".
+        '<label>Reason (required to escalate)<textarea id="rReason" rows="2">Treat it as a bug bounty and keep it in-house while we confirm the data was deleted.</textarea></label>' +
         '<div><button class="btn primary" data-a="rec">Send for decision</button></div></div>';
     else
       h =
@@ -81,13 +87,19 @@ export function normalBox(c: CaseView): string {
           : "Decision: " + d.status) +
         '</h2><p style="margin:0"><b>' +
         esc(d.type) +
-        '</b></p><div class="approvers">' +
+        "</b></p>" +
+        (c.rec?.reason
+          ? '<p class="muted" style="margin:4px 0 0">Reason: ' +
+            esc(c.rec.reason) +
+            "</p>"
+          : "") +
+        '<div class="approvers">' +
         v("gc") +
         v("cpo") +
         "</div>";
       if (d.status === "Pending" && !d.votes[me])
         h +=
-          '<div class="form"><label class="chk"><input type="checkbox" id="v1"> I have read the conflicts, the open FTC inquiry and the held payment</label><label>Reason<select id="vReason"><option>Facts support it</option><option>Facts contradict it</option><option>Regulator must be told</option></select></label><div class="row"><button class="btn primary" data-a="vote" data-x="approve">Approve</button><button class="btn danger" data-a="vote" data-x="reject">Reject</button></div></div>';
+          '<div class="form"><label class="chk"><input type="checkbox" id="v1"> I have read the reason, the open FTC inquiry and any held payment</label><label>Reason<select id="vReason"><option>Facts support it</option><option>Facts contradict it</option><option>Regulator must be told</option></select></label><div class="row"><button class="btn primary" data-a="vote" data-x="approve">Approve</button><button class="btn danger" data-a="vote" data-x="reject">Reject</button></div></div>';
       else if (c.status === "Disclosed")
         h +=
           '<p class="t-ok" style="margin:0">Disclosure approved ' +

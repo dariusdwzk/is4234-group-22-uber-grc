@@ -25,7 +25,6 @@ const NO: Answers = {
   outsiders: "NO",
   ongoing: "NO",
 };
-const NO_CLAIMS = { noData: false, verified: false, routine: false };
 const TEXT = Buffer.from(
   "CSO to Security: call it a bug bounty, keep it quiet.",
 );
@@ -136,11 +135,10 @@ describe("independent path: GC and CPO investigate, the other one decides", () =
     expect(await db.select().from(evidence)).toHaveLength(0);
   });
 
-  it("the GC recommends limiting; the GC cannot approve it; the CPO approves → disclosure limited, board told", async () => {
+  it("the GC recommends escalating; the GC cannot approve it; the CPO approves → escalated, board told", async () => {
     await recommend(as("gc"), {
       caseId: "C-105",
-      action: "limit",
-      claims: NO_CLAIMS,
+      action: "escalate",
       reason: "No customer data involved.",
     });
     expect(await status()).toBe("Awaiting Chief Privacy Officer");
@@ -152,13 +150,13 @@ describe("independent path: GC and CPO investigate, the other one decides", () =
     );
 
     await vote("cpo", "approve");
-    expect(await status()).toBe("Disclosure limited");
-    const limited = (await db.select().from(boardNotices)).find(
-      (n) => n.caseId === "C-105" && n.kind === "limited",
+    expect(await status()).toBe("Under internal investigation");
+    const escalated = (await db.select().from(boardNotices)).find(
+      (n) => n.caseId === "C-105" && n.kind === "escalated",
     )!;
-    expect(limited).toMatchObject({ tier: 2 });
-    expect(limited.body).toBe(
-      "General Counsel and Chief Privacy Officer agreed to limit disclosure on C-105. The decision is permanently on record.",
+    expect(escalated).toMatchObject({ tier: 2 });
+    expect(escalated.body).toBe(
+      "General Counsel and Chief Privacy Officer agreed to escalate C-105 internally for further investigation. Disclosure has not been made.",
     );
     expect(await verifyChain()).toMatchObject({ ok: true, anchorsOk: true });
   });
@@ -167,7 +165,6 @@ describe("independent path: GC and CPO investigate, the other one decides", () =
     await recommend(as("cpo"), {
       caseId: "C-105",
       action: "disclose",
-      claims: NO_CLAIMS,
     });
     expect(await status()).toBe("Awaiting General Counsel");
     await vote("gc", "reject");
@@ -184,7 +181,6 @@ describe("independent path: GC and CPO investigate, the other one decides", () =
     await recommend(as("gc"), {
       caseId: "C-105",
       action: "disclose",
-      claims: NO_CLAIMS,
     });
     await vote("cpo", "approve");
     expect(await status()).toBe("Disclosed");
@@ -200,7 +196,6 @@ describe("independent path: GC and CPO investigate, the other one decides", () =
       recommend(as("cpo"), {
         caseId: "C-104",
         action: "disclose",
-        claims: NO_CLAIMS,
       }),
     ).rejects.toThrow(Forbidden);
     await expect(

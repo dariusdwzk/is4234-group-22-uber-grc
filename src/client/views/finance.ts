@@ -7,7 +7,7 @@ import { payBadge } from "./components";
 
 export function vFinance(): string {
   return (
-    '<div class="pagehead"><div><h1>Payments</h1><p class="lede">Payments linked to an open high-risk case are held until the General Counsel and the Chief Privacy Officer both approve.</p></div></div>' +
+    '<div class="pagehead"><div><h1>Payments</h1><p class="lede">Payments linked to an open high-risk case are frozen. No decision on the case releases them.</p></div></div>' +
     (S.finMsg
       ? '<div class="alert ' +
         S.finMsg.kind +

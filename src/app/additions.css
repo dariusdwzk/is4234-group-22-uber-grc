@@ -1,5 +1,7 @@
-/* Staff report questionnaire: Yes / No / Not sure as the mockup's filter-chip pills.
-   Uses the mockup's tokens only; globals.css stays byte-for-byte the mockup. */
+/* Styles the mockup does not have, written with its tokens and in its compact style.
+   globals.css stays byte-for-byte the mockup. */
+
+/* Staff report questionnaire: Yes / No / Not sure as the mockup's filter-chip pills. */
 .qlist{display:flex;flex-direction:column;gap:14px;margin:0;padding:0;list-style:none}
 .qlist li{display:flex;flex-direction:column;gap:6px}
 .qlist .qtext{font-size:.88rem;font-weight:500}
@@ -10,3 +12,6 @@
 .seg label:has(input:checked){background:#000;color:#fff;border-color:#000}
 .seg label:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
 .qanswers{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:.88rem}
+
+/* Header Home button: sits where the mockup's brand did, pushing the rest to the right. */
+header.top .home{margin-right:auto}

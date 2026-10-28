@@ -2,6 +2,7 @@
 // The browser keeps only view state; rules, permissions and the ledger live on the server.
 import { ATTEMPT_LABELS, type Attempt } from "@/domain/blocked-reasons";
 import { fileProblem } from "@/domain/evidence";
+import { ESCALATED_STATUS } from "@/domain/gate";
 import {
   QUESTIONNAIRE,
   type Answer,
@@ -211,23 +212,26 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
     toast("Email attached. R5 fired: payment demand.");
   },
   rec: async () => {
-    const r = await send("recommend", {
-      caseId: S.caseId,
-      action: val("rAct"),
-      claims: { noData: ck("rC1"), verified: ck("rC2"), routine: ck("rC3") },
-    });
+    const action = val("rAct"),
+      reason = val("rReason");
+    if (action === "escalate" && !reason) {
+      toast("Give a reason for escalating internally.");
+      return;
+    }
+    const r = await send("recommend", { caseId: S.caseId, action, reason });
     if (!r.ok) return fail(r);
     render();
     toast("Sent to the General Counsel and the Chief Privacy Officer.");
   },
   /** Independent path: the GC or CPO recommends, and the other one decides. */
   irec: async () => {
-    const r = await send("recommend", {
-      caseId: S.caseId,
-      action: val("iAct"),
-      claims: { noData: false, verified: false, routine: false },
-      reason: val("iReason"),
-    });
+    const action = val("iAct"),
+      reason = val("iReason");
+    if (action === "escalate" && !reason) {
+      toast("Give a reason for escalating internally.");
+      return;
+    }
+    const r = await send("recommend", { caseId: S.caseId, action, reason });
     if (!r.ok) return fail(r);
     render();
     const other = ROLES[S.role === "gc" ? "cpo" : "gc"].name;
@@ -294,7 +298,7 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
       S.finMsg = {
         kind: "warn",
         title: "Payment released",
-        text: "Both approvers signed, so the hold lifted. The board already holds the notices and the approvals are in the log.",
+        text: "It was not linked to a high-risk case, so it was not frozen. The release is in the log.",
       };
     else if (r.status === 403)
       S.finMsg = {
@@ -321,10 +325,10 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
     render();
     const c = cur();
     if (c?.status === "Disclosure required")
-      toast("Rejected. Payment cancelled. Disclosure required.");
+      toast("Rejected. Disclosure required.");
     else if (c?.status === "Disclosed") toast("Disclosure approved.");
-    else if (c?.status === "Disclosure limited")
-      toast("Both approved. The decision is permanently on record.");
+    else if (c?.status === ESCALATED_STATUS)
+      toast("Both approved: escalated internally. The board has been told.");
     else
       toast(
         "Approved. Waiting for " +

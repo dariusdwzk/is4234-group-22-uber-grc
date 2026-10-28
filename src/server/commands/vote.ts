@@ -1,7 +1,12 @@
 import "server-only";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import { otherApprover, voteOutcome, type Approver } from "@/domain/gate";
+import {
+  ESCALATED_STATUS,
+  otherApprover,
+  voteOutcome,
+  type Approver,
+} from "@/domain/gate";
 import { ROLES } from "@/domain/roles";
 import type { Actor } from "@/domain/types";
 import { getCase, runEscalations, sendNotice } from "../cases/engine";
@@ -106,57 +111,40 @@ export const voteCommand: CommandDef<z.infer<typeof schema>, void> = {
         caseId,
         2,
         "rejected",
-        independent
-          ? actor.name +
-              " rejected the recommendation on " +
-              c.id +
-              ". Disclosure is required."
-          : actor.name +
-              " rejected the recommendation to limit disclosure on " +
-              c.id +
-              ". Payment cancelled. Disclosure is required.",
+        actor.name +
+          " rejected the recommendation on " +
+          c.id +
+          "." +
+          (held ? " Payment cancelled." : "") +
+          " Disclosure is required.",
       );
     } else if (outcome.kind === "disclosed") {
       await resolve("Approved");
       await markDisclosed(ctx, caseId);
-    } else if (outcome.kind === "limited") {
+    } else if (outcome.kind === "escalated") {
+      // Both keys agreed to investigate further. No payment is approved, the clocks keep
+      // running and the board is told; GC or CPO can still approve disclosure later.
       await resolve("Approved");
       await tx
         .update(cases)
-        .set({ status: "Disclosure limited" })
+        .set({ status: ESCALATED_STATUS })
         .where(eq(cases.id, caseId));
       await sendNotice(
         ctx,
         caseId,
         2,
-        "limited",
-        independent
-          ? "General Counsel and Chief Privacy Officer agreed to limit disclosure on " +
-              c.id +
-              ". The decision is permanently on record."
-          : "General Counsel and Chief Privacy Officer approved limiting disclosure on " +
-              c.id +
-              ". Payment of US$100,000 approved for release.",
+        "escalated",
+        "General Counsel and Chief Privacy Officer agreed to escalate " +
+          c.id +
+          " internally for further investigation. Disclosure has not been made.",
       );
-      if (held) {
-        await tx
-          .update(payments)
-          .set({ status: "Approved for release" })
-          .where(eq(payments.id, held.id));
-        await log(
-          "Payment hold lifted",
-          caseId,
-          "General Counsel and Chief Privacy Officer both approved.",
-          sys,
-        );
-      }
       await log(
         "Approved by both approvers",
         caseId,
-        "Disclosure limited. Decision recorded permanently.",
+        "Escalated internally. Decision recorded permanently.",
         sys,
       );
-      await anchorHead(tx, now, "After limiting decision");
+      await anchorHead(tx, now, "After escalation decision");
     } else {
       await tx
         .update(cases)

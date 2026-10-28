@@ -25,7 +25,6 @@ import { verifyChain } from "@/server/ledger/verify";
 import { getViewState } from "@/server/queries/state";
 
 const as = (role: RoleKey): Actor => ({ role, name: ROLES[role].name });
-const CLAIMS = { noData: true, verified: true, routine: true };
 const ALL_NO = {
   data: "NO",
   money: "NO",
@@ -65,8 +64,8 @@ async function playUntilApprovals(): Promise<void> {
   });
   await recommend(as("cso"), {
     caseId: "C-104",
-    action: "limit",
-    claims: CLAIMS,
+    action: "escalate",
+    reason: "Treat it as a bug bounty and keep it in-house.",
   });
   await expect(
     attemptAction(as("cso"), { caseId: "C-104", action: "close" }),
@@ -74,7 +73,7 @@ async function playUntilApprovals(): Promise<void> {
   await jumpToDay24(null, {});
   await expect(
     releasePayment(as("finance"), { paymentId: "PAY-2" }),
-  ).rejects.toThrow(/Needs approval from the General Counsel/);
+  ).rejects.toThrow(/stay frozen/);
 }
 
 describe("the guided tour, end to end on the server", () => {
@@ -150,7 +149,7 @@ describe("the guided tour, end to end on the server", () => {
     )!;
     expect(rejected).toMatchObject({ tier: 2 });
     expect(rejected.body).toBe(
-      "Chief Privacy Officer rejected the recommendation to limit disclosure on C-104. Payment cancelled. Disclosure is required.",
+      "Chief Privacy Officer rejected the recommendation on C-104. Payment cancelled. Disclosure is required.",
     );
 
     await disclose(as("gc"), { caseId: "C-104" });
@@ -158,19 +157,35 @@ describe("the guided tour, end to end on the server", () => {
     expect(await verifyChain()).toMatchObject({ ok: true, anchorsOk: true });
   });
 
-  it("Ending B: both approve; disclosure limited, PAY-2 approved for release, Tier 2 notice", async () => {
+  it("Ending B: both approve escalating internally; PAY-2 stays held, Tier 2 notice, disclosure still possible", async () => {
     await playUntilApprovals();
     await vote("gc", "approve");
     await vote("cpo", "approve");
 
-    expect((await caseC104()).status).toBe("Disclosure limited");
-    expect((await pay2())!.status).toBe("Approved for release");
-    expect(
-      (await db.select().from(boardNotices)).find((n) => n.kind === "limited"),
-    ).toMatchObject({ tier: 2 });
-    await releasePayment(as("finance"), { paymentId: "PAY-2" });
-    expect((await pay2())!.status).toBe("Released");
+    expect((await caseC104()).status).toBe("Under internal investigation");
+    expect((await pay2())!.status).toBe("Held");
+    const notice = (await db.select().from(boardNotices)).find(
+      (n) => n.kind === "escalated",
+    )!;
+    expect(notice).toMatchObject({ tier: 2 });
+    expect(notice.body).toBe(
+      "General Counsel and Chief Privacy Officer agreed to escalate C-104 internally for further investigation. Disclosure has not been made.",
+    );
+    // Escalating never approves a payment.
+    await expect(
+      releasePayment(as("finance"), { paymentId: "PAY-2" }),
+    ).rejects.toThrow(Forbidden);
+    await disclose(as("cpo"), { caseId: "C-104" });
+    expect((await caseC104()).status).toBe("Disclosed");
     expect(await verifyChain()).toMatchObject({ ok: true, anchorsOk: true });
+  });
+
+  it("escalating needs a reason; disclosing does not", async () => {
+    await expect(
+      recommend(as("cso"), { caseId: "C-104", action: "escalate" }),
+    ).rejects.toThrow(ValidationError);
+    await recommend(as("cso"), { caseId: "C-104", action: "disclose" });
+    expect((await caseC104()).status).toBe("Awaiting decision");
   });
 
   it("refusals are 403s and each writes a Blocked entry with the reason", async () => {
@@ -186,7 +201,7 @@ describe("the guided tour, end to end on the server", () => {
       [
         "Finance",
         "Blocked: Release payment",
-        "US$100,000 to jdough (unverified). Linked to C-104, an open high-risk case. Needs approval from the General Counsel and the Chief Privacy Officer.",
+        "US$100,000 to jdough (unverified). Linked to C-104, an open high-risk case. Payments on high-risk cases stay frozen; no decision on the case releases them.",
       ],
     ]);
     await expect(
@@ -227,7 +242,6 @@ describe("the guided tour, end to end on the server", () => {
         recommend(board, {
           caseId: "C-104",
           action: "disclose",
-          claims: CLAIMS,
         }),
       () =>
         castVote(board, {

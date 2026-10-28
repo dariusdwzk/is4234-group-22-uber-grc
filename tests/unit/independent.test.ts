@@ -22,8 +22,8 @@ describe("independent path: who investigates", () => {
 describe("independent path: the other one decides", () => {
   it("the decision waits for the other approver", () => {
     expect(otherApprover("gc")).toBe("cpo");
-    expect(independentDecisionFor("limit", "gc")).toEqual({
-      type: "Limit disclosure",
+    expect(independentDecisionFor("escalate", "gc")).toEqual({
+      type: "Escalate internally for further investigation",
       need: 1,
       disclose: false,
       caseStatus: "Awaiting Chief Privacy Officer",
@@ -39,7 +39,7 @@ describe("independent path: the other one decides", () => {
     expect(
       voteOutcome({ disclose: false }, "cpo", "approve", "approve"),
     ).toEqual({
-      kind: "limited",
+      kind: "escalated",
     });
     expect(
       voteOutcome({ disclose: false }, "cpo", "reject", "approve"),
@@ -98,11 +98,11 @@ describe("evidence files", () => {
       plainEvent({
         ...e,
         action: "Recommendation sent",
-        detail: "Limit disclosure. No harm",
+        detail: "Escalate internally for further investigation. No harm",
       }),
     ).toEqual({
       cat: "decision",
-      text: "General Counsel recommended: Limit disclosure. No harm.",
+      text: "General Counsel recommended: Escalate internally for further investigation. No harm.",
     });
   });
 });

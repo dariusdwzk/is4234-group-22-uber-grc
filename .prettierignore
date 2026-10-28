@@ -1,3 +1,3 @@
-# globals.css is the mockup's CSS byte-for-byte; report-form.css follows its compact style.
+# globals.css is the mockup's CSS byte-for-byte; additions.css follows its compact style.
 src/app/globals.css
-src/app/report-form.css
+src/app/additions.css

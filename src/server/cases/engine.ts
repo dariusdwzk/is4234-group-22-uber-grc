@@ -260,11 +260,10 @@ export async function ingest(
 /** The mockup's checkEscalations(): run whenever time moves or a decision is taken. */
 export async function runEscalations(ctx: CommandCtx): Promise<void> {
   const { tx, now, log } = ctx;
-  const [notices, allCases, flags] = await Promise.all([
-    tx.select().from(boardNotices),
-    tx.select().from(cases),
-    tx.select().from(challengeFlags),
-  ]);
+  // One connection per transaction: queries run one after another, never in parallel.
+  const notices = await tx.select().from(boardNotices);
+  const allCases = await tx.select().from(cases);
+  const flags = await tx.select().from(challengeFlags);
   const due = dueEscalations({
     now,
     notices: notices.map((n) => ({

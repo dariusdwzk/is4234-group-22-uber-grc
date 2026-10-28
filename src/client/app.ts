@@ -1,0 +1,428 @@
+// The mockup's render() and action map (A), with every state change sent to the server.
+// The browser keeps only view state; rules, permissions and the ledger live on the server.
+import { ATTEMPT_LABELS, type Attempt } from "@/domain/blocked-reasons";
+import { ROLES, isRoleKey } from "@/domain/roles";
+import { act, fetchState, type ApiResult } from "./api";
+import { STEPS, atStep, guideCard, stepIdx } from "./guide";
+import { ck, toast, val } from "./html";
+import { S, cur } from "./store";
+import { vBoard } from "./views/board";
+import { vCase } from "./views/case";
+import {
+  header,
+  vApprovals,
+  vCeo,
+  vEmployee,
+  vFinance,
+  vLanding,
+  vSecurity,
+} from "./views/pages";
+
+let root: HTMLElement | null = null;
+let busy = false;
+
+const VIEWS: Record<string, () => string> = {
+  landing: vLanding,
+  employee: vEmployee,
+  security: vSecurity,
+  finance: vFinance,
+  case: vCase,
+  approvals: vApprovals,
+  ceo: vCeo,
+  board: vBoard,
+};
+
+function render(): void {
+  if (!root) return;
+  const guided = S.guided && S.view !== "landing";
+  root.innerHTML =
+    header() +
+    '<main class="' +
+    (guided ? "guided" : "") +
+    '">' +
+    (VIEWS[S.view] ?? vLanding)() +
+    "</main>" +
+    (guided
+      ? guideCard()
+      : '<button class="guide-fab" data-a="showGuide"><span>?</span>' +
+        (S.view === "landing" ? "Start guide" : "Show guide") +
+        "</button>");
+  if (!guided) return;
+  const i = stepIdx();
+  if (i === -1) return;
+  const s = STEPS[i]!;
+  if (s.jump || !atStep(s) || !s.target) return;
+  const sel = s.target(),
+    el =
+      root.querySelector("main " + sel) || root.querySelector("header " + sel);
+  if (!el) return;
+  el.classList.add("pulse");
+  const key = i + sel;
+  if (S.scrolledKey !== key) {
+    S.scrolledKey = key;
+    el.scrollIntoView({
+      block: "center",
+      behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "auto"
+        : "smooth",
+    });
+  }
+}
+
+async function refresh(): Promise<void> {
+  S.d = await fetchState(S.role);
+}
+
+const clearMsgs = () => {
+  S.lastBlock = null;
+  S.empMsg = null;
+  S.statusMsg = null;
+  S.finMsg = null;
+};
+
+async function setRole(r: string | undefined): Promise<void> {
+  S.role = isRoleKey(r) ? r : null;
+  S.view = S.role ? ROLES[S.role].home : "landing";
+  clearMsgs();
+  S.showDeclare = false;
+  S.menu = false;
+  await refresh();
+  render();
+  window.scrollTo(0, 0);
+}
+
+function openCase(x: string | undefined): void {
+  S.view = "case";
+  S.caseId = x ?? null;
+  if (x === S.d.replayId) S.seenReplay = true;
+  S.caseTab = "deadlines";
+  S.lastBlock = null;
+  S.menu = false;
+  render();
+  window.scrollTo(0, 0);
+}
+
+/** Sends an action as the current role, then reloads state. Unhandled refusals become a toast. */
+async function send<T>(
+  name: string,
+  body: unknown = {},
+): Promise<ApiResult<T>> {
+  const r = await act<T>(S.role, name, body);
+  await refresh();
+  return r;
+}
+const fail = (r: { ok: false; error: string }) => {
+  render();
+  toast(r.error);
+};
+
+const A: Record<string, (x?: string) => void | Promise<void>> = {
+  role: (x) => setRole(x),
+  home: () => {
+    S.view = S.role ? ROLES[S.role].home : "landing";
+    S.lastBlock = null;
+    render();
+  },
+  landing: () => setRole(undefined),
+  openCase: (x) => openCase(x),
+  startGuide: () => {
+    S.guided = true;
+    S.secTab = "cases";
+    return setRole("security");
+  },
+  goStep: async () => {
+    const s = STEPS[stepIdx()];
+    if (!s || s.jump || !s.role) return;
+    S.role = s.role;
+    clearMsgs();
+    S.menu = false;
+    await refresh();
+    if (s.onCase) openCase(S.d.replayId ?? undefined);
+    else {
+      S.view = s.view!;
+      S.secTab = "cases";
+      render();
+      window.scrollTo(0, 0);
+    }
+  },
+  guide: () => {
+    S.guided = !S.guided;
+    S.menu = false;
+    render();
+  },
+  menu: () => {
+    S.menu = !S.menu;
+    render();
+  },
+  clock: async (x) => {
+    S.menu = false;
+    const r = await send("clock", { hours: Number(x) });
+    if (!r.ok) return fail(r);
+    render();
+    toast("Moved forward " + x + " hours.");
+  },
+  jump: async () => {
+    if (S.d.jumped) {
+      toast("The payment request has already arrived.");
+      return;
+    }
+    S.menu = false;
+    const r = await send<{ caseId: string }>("jump");
+    if (!r.ok) return fail(r);
+    render();
+    toast(
+      "Day 24: report and payment request merged into " +
+        r.data.caseId +
+        ". Payment held.",
+    );
+  },
+  secTab: (x) => {
+    S.secTab = x === "inbox" ? "inbox" : "cases";
+    render();
+  },
+  caseTab: (x) => {
+    S.caseTab = x === "log" ? "log" : "deadlines";
+    render();
+  },
+  showDeclare: () => {
+    S.showDeclare = !S.showDeclare;
+    render();
+  },
+  declare: async () => {
+    const text = val("dTxt");
+    if (!text) {
+      toast("Describe what happened first.");
+      return;
+    }
+    const r = await send<{ caseId: string }>("declare", { text });
+    if (!r.ok) return fail(r);
+    S.showDeclare = false;
+    openCase(r.data.caseId);
+  },
+  attach: async () => {
+    const r = await send("attach", { caseId: S.caseId, text: val("aTxt") });
+    if (!r.ok) return fail(r);
+    render();
+    toast("Email attached. R5 fired: payment demand.");
+  },
+  rec: async () => {
+    const r = await send("recommend", {
+      caseId: S.caseId,
+      action: val("rAct"),
+      claims: { noData: ck("rC1"), verified: ck("rC2"), routine: ck("rC3") },
+    });
+    if (!r.ok) return fail(r);
+    render();
+    toast("Sent to the General Counsel and the Chief Privacy Officer.");
+  },
+  blocked: async (x) => {
+    const what = ATTEMPT_LABELS[x as Attempt];
+    const r = await send("attempt", { caseId: S.caseId, action: x });
+    if (r.ok || r.status !== 403) return r.ok ? render() : fail(r);
+    S.lastBlock = { what, why: r.error };
+    render();
+    window.scrollTo({ top: 0 });
+  },
+  release: async (x) => {
+    const r = await send("release", { paymentId: x });
+    if (r.ok)
+      S.finMsg = {
+        kind: "warn",
+        title: "Payment released",
+        text: "Both approvers signed, so the hold lifted. The board already holds the notices and the approvals are in the log.",
+      };
+    else if (r.status === 403)
+      S.finMsg = {
+        kind: "high",
+        title: "Payment held",
+        text: r.error + " This attempt is now in the log.",
+      };
+    else return fail(r);
+    render();
+  },
+  vote: async (x) => {
+    if (!ck("v1")) {
+      toast("Tick the checkbox first.");
+      document.getElementById("v1")?.closest("label")?.classList.add("pulse");
+      return;
+    }
+    const r = await send("vote", {
+      caseId: S.caseId,
+      vote: x,
+      reason: val("vReason"),
+      checklist: true,
+    });
+    if (!r.ok) return fail(r);
+    render();
+    const c = cur();
+    if (c?.status === "Disclosure required")
+      toast("Rejected. Payment cancelled. Disclosure required.");
+    else if (c?.status === "Disclosed") toast("Disclosure approved.");
+    else if (c?.status === "Disclosure limited")
+      toast("Both approved. The decision is permanently on record.");
+    else
+      toast(
+        "Approved. Waiting for " +
+          ROLES[S.role === "gc" ? "cpo" : "gc"].name +
+          ".",
+      );
+  },
+  finding: async () => {
+    const r = await send("finding", { caseId: S.caseId, text: val("fTxt") });
+    if (!r.ok) return fail(r);
+    render();
+    toast("Finding added to the case.");
+  },
+  boardTab: (x) => {
+    S.boardTab = x === "log" ? "log" : "overview";
+    render();
+  },
+  discl: async () => {
+    const r = await send("disclose", { caseId: S.caseId });
+    if (!r.ok) return fail(r);
+    render();
+    toast("Disclosure approved.");
+  },
+  ack: async (x) => {
+    if (S.role !== "board") {
+      toast("Only the Audit Committee Chair can acknowledge.");
+      return;
+    }
+    const r = await send("ack", { noticeId: x });
+    if (!r.ok) return fail(r);
+    render();
+  },
+  report: async () => {
+    const text = val("eTxt");
+    if (!text) {
+      toast("Describe what happened first.");
+      return;
+    }
+    const r = await send<{ code: string }>("report", {
+      text,
+      anonymous: ck("eAnon"),
+    });
+    if (!r.ok) return fail(r);
+    S.empMsg = "Report sent. Receipt code: " + r.data.code;
+    render();
+  },
+  challenge: async () => {
+    const r = await send<{ code: string; caseId: string }>("challenge", {
+      caseId: val("cRef"),
+      text: val("cTxt"),
+      anonymous: ck("cAnon"),
+    });
+    if (!r.ok) return fail(r);
+    S.empMsg =
+      "Challenge sent on " +
+      r.data.caseId +
+      ". Receipt code: " +
+      r.data.code +
+      ". If unresolved for 24 hours, the board is told.";
+    render();
+  },
+  status: async () => {
+    const r = await send<{ message: string }>("receipt", {
+      code: val("sCode"),
+    });
+    if (!r.ok) return fail(r);
+    S.statusMsg = r.data.message;
+    render();
+  },
+  showGuide: () => {
+    if (S.view === "landing") return A.startGuide!();
+    S.guided = true;
+    S.menu = false;
+    S.scrolledKey = null;
+    render();
+  },
+  logFilter: (x) => {
+    S.logFilter = x ?? "all";
+    render();
+  },
+  logLow: () => {
+    S.logLow = !S.logLow;
+    render();
+  },
+  expand: (x) => {
+    if (!x) return;
+    S.boardOpen[x] = !S.boardOpen[x];
+    render();
+  },
+  hideGuide: () => {
+    S.guided = false;
+    render();
+  },
+  reset: async () => {
+    const g = S.guided;
+    S.menu = false;
+    const r = await act(S.role, "reset");
+    if (!r.ok) return fail(r);
+    Object.assign(S, {
+      role: g ? "security" : null,
+      view: g ? "security" : "landing",
+      caseId: null,
+      secTab: "cases",
+      caseTab: "deadlines",
+      boardTab: "overview",
+      boardOpen: {},
+      logFilter: "all",
+      logLow: false,
+      showDeclare: false,
+      seenReplay: false,
+      scrolledKey: null,
+    });
+    clearMsgs();
+    await refresh();
+    render();
+    window.scrollTo(0, 0);
+    toast("Demo reset.");
+  },
+};
+
+async function run(name: string, x: string | undefined): Promise<void> {
+  const f = A[name];
+  if (!f || busy) return;
+  busy = true;
+  try {
+    await f(x);
+  } catch {
+    toast("Could not reach the server. Is it running?");
+  } finally {
+    busy = false;
+  }
+}
+
+function onClick(e: MouseEvent): void {
+  const target = e.target as Element | null;
+  const b = target?.closest<HTMLElement>("[data-a]");
+  if (!b) {
+    if (S.menu && !target?.closest(".menu")) {
+      S.menu = false;
+      render();
+    }
+    return;
+  }
+  void run(b.dataset.a!, b.dataset.x);
+}
+
+function onChange(e: Event): void {
+  const t = e.target as HTMLSelectElement | null;
+  if (t?.id === "roleSel") void run("role", t.value);
+}
+
+/** Mounts the app into `el` and returns a cleanup for React's effect. */
+export function mount(el: HTMLElement): () => void {
+  root = el;
+  document.addEventListener("click", onClick);
+  document.addEventListener("change", onChange);
+  render();
+  refresh()
+    .then(render)
+    .catch(() => toast("Could not reach the server. Is it running?"));
+  return () => {
+    document.removeEventListener("click", onClick);
+    document.removeEventListener("change", onChange);
+    root = null;
+  };
+}

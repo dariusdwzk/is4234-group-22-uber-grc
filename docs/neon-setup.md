@@ -1,21 +1,61 @@
-# Neon setup for P1 (human steps)
+# Hosting the Disclosure Gate (Neon + Vercel, human steps)
+
+The `disclosure-gate-ui` branch uses a new schema that cannot share a database with the old app.
+It gets its **own empty database**, `disclosure_gate`, in the existing Neon project `is4234-uber-grc`.
+The old `grc` database is not touched, so the current deployment keeps working until the PR is merged.
 
 Roles and grants come from `drizzle/0001_roles_grants_trigger.sql`; passwords are never in the repo.
-Do this on the Neon `main` branch and on the `preview` branch. Never paste connection strings into chat or commit them.
+Never paste connection strings into chat or commit them.
 
-1. Put the **owner** URL in `.env.local` as `DATABASE_URL_OWNER` (git-ignored; never deployed to Vercel).
-2. `npm run db:migrate` — creates tables, the `app_rw` and `demo_admin` roles, grants and the append-only trigger.
-3. In the Neon SQL editor, as the owner role:
+## 1. Neon (project owner)
+
+1. Neon console → project `is4234-uber-grc` → branch `main` → **Databases** → **New database**,
+   name `disclosure_gate`, owner = the project's owner role.
+2. Copy the **direct** (unpooled) owner connection string for `disclosure_gate`. On your machine, put it in
+   `.env.local` as `DATABASE_URL_OWNER` (git-ignored; never deployed to Vercel).
+3. From the repo, on branch `disclosure-gate-ui`:
+   ```bash
+   npm run db:migrate   # tables, app_rw and demo_admin roles, grants, append-only trigger
+   ```
+   `app_rw` and `demo_admin` are project-wide roles; if they already exist from the old app,
+   the migration reuses them and adds grants on the new database only.
+4. In the Neon SQL editor on `disclosure_gate`, as the owner role, give the two roles passwords
+   (skip if they already have them from the old app; reuse those):
    ```sql
    ALTER ROLE app_rw PASSWORD '<generated>';
    ALTER ROLE demo_admin PASSWORD '<generated>';
    ```
-   Verify that Neon allows this from the owner role and record the result under "Findings" below.
-4. Vercel env vars (Production + Preview): `DATABASE_URL` = pooled `app_rw` URL; `DEMO_ADMIN_DATABASE_URL` = `demo_admin` URL; `DEMO_MODE=true` for the hosted demonstrator.
-5. Verify: `GET /api/health` returns `{"status":"ok","db":"ok"}` and `GET /api/ledger/verify` returns `{"ok":true,...}` once the ledger is seeded (seeding arrives in P2).
-6. Run the roles tests once against the `preview` branch: `TEST_DATABASE_URL_OWNER=<preview owner URL> npm run test:int` (the harness derives the `app_rw`/`demo_admin` URLs by swapping user and password; set `TEST_ROLE_PASSWORD` to the passwords from step 3).
-   Warning: the suite truncates every table in that database. Use the `preview` branch, never `main`.
+5. Seed once:
+   ```bash
+   DATABASE_URL='<app_rw URL for disclosure_gate>' npm run db:seed
+   ```
+
+## 2. Vercel (project owner)
+
+Settings → Environment Variables. Scope them to **Preview, branch `disclosure-gate-ui`** for now,
+so the old production deployment is unchanged:
+
+| Name | Value |
+|---|---|
+| `DATABASE_URL` | pooled `app_rw` URL for `disclosure_gate` |
+| `DEMO_ADMIN_DATABASE_URL` | direct (unpooled) `demo_admin` URL for `disclosure_gate` (reset needs `LOCK TABLE`/`TRUNCATE`) |
+| `DEMO_MODE` | `true` (enables the Demo menu: +1 day, Jump to Day 24, Reset data) |
+
+`DATABASE_URL_OWNER` is never set in Vercel. The app needs no login secrets any more.
+
+Then push the branch; Vercel builds a preview URL for it.
+
+## 3. Verify the preview
+
+- `GET /api/health` returns `{"status":"ok","db":"ok"}`.
+- The landing page loads, and Demo → Reset data returns to Day 0.
+
+## 4. Switching production (after the PR is merged)
+
+Move the three variables above from the branch-scoped Preview to **Production**, then redeploy `main`.
+The professor's public link is the production URL. The old `grc` database can be dropped later,
+once the team agrees nothing needs it.
 
 ## Findings (fill in)
 - [ ] Neon permits `ALTER ROLE … PASSWORD` from the owner role: _not yet checked_
-- [ ] `SELECT … FOR UPDATE` works through the pooled URL (the 20-way concurrency test is the proof): _not yet checked_
+- [ ] `SELECT … FOR UPDATE` works through the pooled URL: _not yet checked_

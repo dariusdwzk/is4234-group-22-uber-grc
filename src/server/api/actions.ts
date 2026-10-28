@@ -4,6 +4,7 @@ import { acknowledgeNotice } from "../commands/acknowledge-notice";
 import { advanceClock } from "../commands/advance-clock";
 import { attachContact } from "../commands/attach-contact";
 import { attemptAction } from "../commands/attempt-action";
+import { confirmTriage } from "../commands/confirm-triage";
 import { declareIncident } from "../commands/declare-incident";
 import { disclose } from "../commands/disclose";
 import {
@@ -30,6 +31,7 @@ export const ACTIONS: Record<string, Handler> = {
   attempt: attemptAction,
   vote: castVote,
   disclose,
+  triage: confirmTriage,
   release: releasePayment,
   ack: acknowledgeNotice,
   report: reportIncident,

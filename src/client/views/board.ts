@@ -1,5 +1,6 @@
 // Ported from the mockup's vBoard() and logBody().
 import { DAY0_ISO, dayOf, fmtDur, fmtT } from "@/domain/demo-time";
+import { knownScale } from "@/domain/board-text";
 import { CATS, plainEvent, type EventCat } from "@/domain/plain-event";
 import { ROLES } from "@/domain/roles";
 import { CHK, esc } from "../html";
@@ -317,7 +318,9 @@ export function vBoard(): string {
               esc(x.title) +
               '<div class="muted small">' +
               (x.facts.dataAccessed
-                ? "About " + x.facts.records + " people’s records"
+                ? knownScale(x.facts)
+                  ? "About " + x.facts.records + " people’s records"
+                  : "Personal data reported; scale not yet known"
                 : "No personal data") +
               "</div></div>" +
               '<div class="inc-col"><span class="muted small">Stage</span>' +

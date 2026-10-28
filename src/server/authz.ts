@@ -12,6 +12,7 @@ export const POLICY = {
   recommend: ["security", "cso"],
   vote: ["gc", "cpo"],
   disclose: ["gc", "cpo"],
+  confirmTriage: ["cpo"],
   closeCase: [],
   lowerSeverity: [],
   releasePayment: ["finance"],
@@ -36,6 +37,12 @@ const DEMO_ACTIONS: ReadonlySet<Action> = new Set<Action>([
 
 export type AuthzResult = { ok: true } | { ok: false; reason: string };
 
+// Refusals people are expected to try get a plain explanation instead of the generic one.
+const REASONS: Partial<Record<Action, string>> = {
+  confirmTriage:
+    "Only the Chief Privacy Officer can confirm the rating. Security establishes the facts.",
+};
+
 export function authorize(actor: Actor | null, action: Action): AuthzResult {
   if (DEMO_ACTIONS.has(action)) return { ok: true };
   if (!actor?.role) return { ok: false, reason: "Choose a role first." };
@@ -43,7 +50,10 @@ export function authorize(actor: Actor | null, action: Action): AuthzResult {
     Object.hasOwn(POLICY, action) ? POLICY[action] : []
   ) as readonly RoleKey[];
   if (!allowed.includes(actor.role)) {
-    return { ok: false, reason: `${actor.name} may not ${action}.` };
+    return {
+      ok: false,
+      reason: REASONS[action] ?? `${actor.name} may not ${action}.`,
+    };
   }
   return { ok: true };
 }

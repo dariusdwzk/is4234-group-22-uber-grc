@@ -131,7 +131,43 @@ export function plainEvent(e: LedgerView): PlainEvent | null {
       cat: "work",
       text: staff(who) + " raised a concern about this case.",
     };
-  if (a === "Incident reported")
-    return { cat: "work", text: staff(who) + " reported an incident." };
+  if (a === "Staff report received")
+    return { cat: "work", text: staff(who) + " sent a report." };
+  if (
+    a === "Rated HIGH from questionnaire" ||
+    a === "Rated LOW from questionnaire"
+  )
+    return {
+      cat: "detect",
+      text:
+        "Rated " +
+        (a.includes("HIGH") ? "high" : "low") +
+        " risk by the rules, from the reporter’s answers.",
+    };
+  if (a === "Sent for triage: reporter unsure about impact")
+    return {
+      cat: "detect",
+      text: "Sent for triage: the reporter was unsure about the impact.",
+    };
+  if (
+    a === "Routed away from Security: concern about how an incident is handled"
+  )
+    return {
+      cat: "detect",
+      text: "Routed away from Security: the concern is about how an incident is handled.",
+    };
+  if (a.startsWith("Triage rating confirmed by Chief Privacy Officer: "))
+    return {
+      cat: "decision",
+      text:
+        "Chief Privacy Officer confirmed the rating: " +
+        (a.endsWith("HIGH") ? "high" : "low") +
+        " risk.",
+    };
+  if (a === "Triage timed out: rated HIGH automatically")
+    return {
+      cat: "notice",
+      text: "No rating within 24 hours, so the report was rated high risk automatically.",
+    };
   return null;
 }

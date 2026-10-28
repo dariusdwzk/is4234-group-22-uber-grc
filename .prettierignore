@@ -1,2 +1,3 @@
-# Kept byte-for-byte as in the mockup so the app looks the same.
+# globals.css is the mockup's CSS byte-for-byte; report-form.css follows its compact style.
 src/app/globals.css
+src/app/report-form.css

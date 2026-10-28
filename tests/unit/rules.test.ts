@@ -12,7 +12,7 @@ const MASS_DOWNLOAD = f({
 });
 
 describe("rules (rule-packs/v1.json)", () => {
-  it("the pack is data owned by Legal, with R1–R8", () => {
+  it("the pack is data owned by Legal: R1–R8 from the mockup, R9–R13 for staff reports", () => {
     expect(RULE_PACK.owner).toMatch(/Legal/);
     expect(RULE_PACK.rules.map((r) => r.id)).toEqual([
       "R1",
@@ -23,6 +23,11 @@ describe("rules (rule-packs/v1.json)", () => {
       "R6",
       "R7",
       "R8",
+      "R9",
+      "R10",
+      "R11",
+      "R12",
+      "R13",
     ]);
   });
 

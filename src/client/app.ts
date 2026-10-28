@@ -1,6 +1,11 @@
 // The mockup's render() and action map (A), with every state change sent to the server.
 // The browser keeps only view state; rules, permissions and the ledger live on the server.
 import { ATTEMPT_LABELS, type Attempt } from "@/domain/blocked-reasons";
+import {
+  QUESTIONNAIRE,
+  type Answer,
+  type Answers,
+} from "@/domain/questionnaire";
 import { ROLES, isRoleKey } from "@/domain/roles";
 import { act, fetchState, type ApiResult } from "./api";
 import { STEPS, atStep, guideCard, stepIdx } from "./guide";
@@ -19,7 +24,8 @@ import {
 } from "./views/pages";
 
 let root: HTMLElement | null = null;
-let busy = false;
+/** The action in flight, if any. Clicks during it are dropped (no double submits). */
+let inFlight: Promise<void> | null = null;
 
 const VIEWS: Record<string, () => string> = {
   landing: vLanding,
@@ -268,10 +274,50 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
       );
   },
   finding: async () => {
-    const r = await send("finding", { caseId: S.caseId, text: val("fTxt") });
+    // Triage: Security also records the facts it established (the CPO still rates).
+    const facts = document.getElementById("tData")
+      ? {
+          dataAccessed: ck("tData"),
+          moneyConcern: ck("tMoney"),
+          harmConcern: ck("tHarm"),
+        }
+      : undefined;
+    const r = await send("finding", {
+      caseId: S.caseId,
+      text: val("fTxt"),
+      ...(facts ? { facts } : {}),
+    });
     if (!r.ok) return fail(r);
     render();
     toast("Finding added to the case.");
+  },
+  triage: async () => {
+    const reason = val("tReason");
+    if (!reason) {
+      toast("Give a reason for the rating.");
+      return;
+    }
+    const rating = val("tRating");
+    const r = await send("triage", { caseId: S.caseId, rating, reason });
+    if (!r.ok) return fail(r);
+    render();
+    toast(
+      rating === "HIGH"
+        ? "Rated HIGH. The board has been told."
+        : "Rated LOW. Security reviews it within 3 business days.",
+    );
+  },
+  /** Security's "Confirm rating" button: always refused on the server, and logged. */
+  triageTry: async () => {
+    const r = await send("triage", {
+      caseId: S.caseId,
+      rating: "LOW",
+      reason: "Rated by Security",
+    });
+    if (r.ok || r.status !== 403) return r.ok ? render() : fail(r);
+    S.lastBlock = { what: "Confirm rating", why: r.error };
+    render();
+    window.scrollTo({ top: 0 });
   },
   boardTab: (x) => {
     S.boardTab = x === "log" ? "log" : "overview";
@@ -298,9 +344,15 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
       toast("Describe what happened first.");
       return;
     }
+    const answers = readAnswers();
+    if (!answers) {
+      toast("Answer every question: Yes, No or Not sure.");
+      return;
+    }
     const r = await send<{ code: string }>("report", {
       text,
       anonymous: ck("eAnon"),
+      answers,
     });
     if (!r.ok) return fail(r);
     S.empMsg = "Report sent. Receipt code: " + r.data.code;
@@ -380,17 +432,40 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
   },
 };
 
-async function run(name: string, x: string | undefined): Promise<void> {
-  const f = A[name];
-  if (!f || busy) return;
-  busy = true;
-  try {
-    await f(x);
-  } catch {
-    toast("Could not reach the server. Is it running?");
-  } finally {
-    busy = false;
+/** Every question's chosen answer, or null if any is unanswered. */
+function readAnswers(): Answers | null {
+  const out: Partial<Answers> = {};
+  for (const q of QUESTIONNAIRE.questions) {
+    const el = document.querySelector<HTMLInputElement>(
+      'input[name="q-' + q.id + '"]:checked',
+    );
+    if (!el) return null;
+    out[q.id] = el.value as Answer;
   }
+  return out as Answers;
+}
+
+async function run(
+  name: string,
+  x: string | undefined,
+  queue = false,
+): Promise<void> {
+  const f = A[name];
+  if (!f) return;
+  if (inFlight) {
+    if (!queue) return;
+    await inFlight; // a role change must never be lost: wait, then switch
+  }
+  const p = (async () => {
+    try {
+      await f(x);
+    } catch {
+      toast("Could not reach the server. Is it running?");
+    }
+  })();
+  inFlight = p;
+  await p;
+  if (inFlight === p) inFlight = null;
 }
 
 function onClick(e: MouseEvent): void {
@@ -408,7 +483,7 @@ function onClick(e: MouseEvent): void {
 
 function onChange(e: Event): void {
   const t = e.target as HTMLSelectElement | null;
-  if (t?.id === "roleSel") void run("role", t.value);
+  if (t?.id === "roleSel") void run("role", t.value, true);
 }
 
 /** Mounts the app into `el` and returns a cleanup for React's effect. */

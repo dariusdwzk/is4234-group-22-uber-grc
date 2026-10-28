@@ -120,15 +120,97 @@ test("Ending B: both approve; disclosure limited, payment approved for release, 
   ).toContainText("Intact");
 });
 
-test("employees report anonymously and get a receipt code", async ({
+async function answer(
+  page: Page,
+  answers: Record<string, string>,
+): Promise<void> {
+  for (const q of [
+    "data",
+    "money",
+    "harm",
+    "handling",
+    "systems",
+    "outsiders",
+    "ongoing",
+  ])
+    await page
+      .locator(`input[name="q-${q}"][value="${answers[q] ?? "NO"}"]`)
+      .check();
+}
+
+test("an employee's report runs through the same flow: rated by the rules, board told", async ({
   page,
 }) => {
   await page.goto("/");
   await reset(page);
   await asRole(page, "employee");
-  await page.locator("#eTxt").fill("Someone emailed me about rider data.");
+  await page
+    .locator("#eTxt")
+    .fill("Someone emailed me demanding money for rider data.");
+  await page.getByRole("button", { name: "Send report" }).click();
+  await expect(page.locator("#toast")).toHaveText(
+    "Answer every question: Yes, No or Not sure.",
+  );
+  await answer(page, { data: "YES", money: "YES", outsiders: "YES" });
   await page.getByRole("button", { name: "Send report" }).click();
   await expect(page.locator(".alert.ok")).toContainText(
     /Report sent. Receipt code: RC-[0-9A-Z]{4}/,
   );
+
+  await asRole(page, "security");
+  await page.locator('[data-a="openCase"][data-x="C-105"]').click();
+  await expect(page.locator(".case-head")).toContainText("HIGH");
+  await expect(
+    page.getByText("Reported by staff; scale not yet known").first(),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add finding" })).toBeVisible();
+});
+
+test("unsure reporter → triage; Security cannot rate, the CPO can", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await reset(page);
+  await asRole(page, "employee");
+  await page.locator("#eTxt").fill("Lost a laptop that may have rider data.");
+  await answer(page, { data: "NOT_SURE" });
+  await page.getByRole("button", { name: "Send report" }).click();
+  await expect(page.locator(".alert.ok")).toBeVisible();
+
+  await asRole(page, "security");
+  await expect(page.locator("tr", { hasText: "C-105" })).toContainText(
+    "Needs triage",
+  );
+  await page.locator('[data-a="openCase"][data-x="C-105"]').click();
+  await page.getByRole("button", { name: "Confirm rating" }).click();
+  await expect(page.getByText("Not allowed: Confirm rating")).toBeVisible();
+
+  await asRole(page, "cpo");
+  await page.locator('[data-a="openCase"][data-x="C-105"]').click();
+  await page.selectOption("#tRating", "LOW");
+  await page.locator("#tReason").fill("Encrypted and wiped remotely.");
+  await page.getByRole("button", { name: "Confirm rating" }).click();
+  await expect(page.locator("#toast")).toHaveText(
+    "Rated LOW. Security reviews it within 3 business days.",
+  );
+});
+
+test("a concern about how Security handles a case never reaches Security", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await reset(page);
+  await asRole(page, "employee");
+  await page.locator("#eTxt").fill("The CSO is calling a breach a bug bounty.");
+  await answer(page, { handling: "YES" });
+  await page.getByRole("button", { name: "Send report" }).click();
+  await expect(page.locator(".alert.ok")).toBeVisible();
+
+  await asRole(page, "security");
+  await expect(page.locator('[data-x="C-104"]').first()).toBeVisible(); // Security's list has loaded
+  await expect(page.locator('[data-x="C-105"]')).toHaveCount(0);
+  await asRole(page, "gc");
+  await expect(
+    page.locator("section", { hasText: "Handled independently of Security" }),
+  ).toContainText("C-105");
 });

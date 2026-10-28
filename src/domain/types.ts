@@ -1,7 +1,8 @@
 export type RoleKey =
   "employee" | "security" | "cso" | "finance" | "gc" | "cpo" | "ceo" | "board";
 
-export type Severity = "LOW" | "HIGH";
+/** PENDING: a staff report waiting for its triage rating. */
+export type Severity = "LOW" | "HIGH" | "PENDING";
 
 export type SignalOrigin = "system" | "manual";
 
@@ -28,6 +29,13 @@ export type Facts = {
   extortion: boolean;
   flags: number;
   jurisdictions: string[];
+  // From the staff report questionnaire (src/domain/questionnaire.ts).
+  moneyConcern: boolean;
+  harmConcern: boolean;
+  handlingConcern: boolean;
+  systemsDown: boolean;
+  outsidersAware: boolean;
+  ongoing: boolean;
 };
 
 export const defaultFacts = (): Facts => ({
@@ -40,4 +48,10 @@ export const defaultFacts = (): Facts => ({
   extortion: false,
   flags: 0,
   jurisdictions: [],
+  moneyConcern: false,
+  harmConcern: false,
+  handlingConcern: false,
+  systemsDown: false,
+  outsidersAware: false,
+  ongoing: false,
 });

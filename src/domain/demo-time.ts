@@ -37,3 +37,19 @@ export function fmtDur(h: number): string {
 
 export const dayOf = (h: number): string =>
   "Day " + Math.max(0, Math.floor(h / 24));
+
+/** Day 0 is a Monday, so day n of the demo is a weekend when n mod 7 is 5 or 6. */
+const isWeekend = (h: number) => {
+  const d = (((Math.floor(h / 24) % 7) + 7) % 7) as number;
+  return d === 5 || d === 6;
+};
+
+/** `n` business days after hour `h`, skipping Saturdays and Sundays. */
+export function addBusinessDays(h: number, n: number): number {
+  let t = h;
+  for (let left = n; left > 0;) {
+    t += 24;
+    if (!isWeekend(t)) left--;
+  }
+  return t;
+}

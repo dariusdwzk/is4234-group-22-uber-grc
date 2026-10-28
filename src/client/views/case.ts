@@ -5,7 +5,109 @@ import { ROLES } from "@/domain/roles";
 import type { CaseView } from "@/domain/view-state";
 import { esc } from "../html";
 import { S } from "../store";
-import { payBadge, remText, sev, tracker } from "./components";
+import { knownScale } from "@/domain/board-text";
+import { QUESTIONNAIRE } from "@/domain/questionnaire";
+import {
+  TRIAGE,
+  payBadge,
+  remText,
+  sev,
+  statusBadge,
+  tracker,
+} from "./components";
+
+const ANSWER_TEXT = { YES: "Yes", NO: "No", NOT_SURE: "Not sure" } as const;
+
+/** A staff report waiting for its rating: Security establishes facts, only the CPO rates. */
+function triageBox(c: CaseView): string {
+  const left = c.triageDueH !== null ? remText(c.triageDueH - S.d.clockH) : "";
+  const due =
+    '<p class="muted small" style="margin:8px 0 0">Rated HIGH automatically in ' +
+    left +
+    " if no rating is confirmed.</p>";
+  let h: string;
+  if (S.role === "security") {
+    h = !c.finding
+      ? '<h2>Triage: establish the facts</h2><div class="form"><label>What you found<textarea id="fTxt" rows="2"></textarea></label>' +
+        '<label class="chk"><input type="checkbox" id="tData"' +
+        (c.facts.dataAccessed ? " checked" : "") +
+        "> Personal or confidential data was involved</label>" +
+        '<label class="chk"><input type="checkbox" id="tMoney"' +
+        (c.facts.moneyConcern ? " checked" : "") +
+        "> Money demanded, paid, moved or lost</label>" +
+        '<label class="chk"><input type="checkbox" id="tHarm"' +
+        (c.facts.harmConcern ? " checked" : "") +
+        "> Someone could be harmed</label>" +
+        '<div><button class="btn primary" data-a="finding">Add finding</button></div></div>'
+      : '<h2>Finding recorded</h2><p class="muted" style="margin:0">' +
+        esc(c.finding) +
+        '</p><p class="muted small" style="margin:8px 0 0">Waiting for the Chief Privacy Officer to confirm the rating.</p>';
+    h +=
+      due +
+      '<div class="caseacts"><span class="muted small">Case actions</span><button class="btn sm" data-a="triageTry">Confirm rating</button></div>';
+  } else if (S.role === "cpo") {
+    h =
+      "<h2>Confirm rating</h2>" +
+      (c.finding
+        ? '<p style="margin:0 0 10px"><b>Security’s finding:</b> ' +
+          esc(c.finding) +
+          "</p>"
+        : '<p class="muted" style="margin:0 0 10px">No finding from Security yet.</p>') +
+      '<div class="form"><label>Rating<select id="tRating"><option value="HIGH">HIGH: needs the full process</option><option value="LOW">LOW: Security reviews it</option></select></label>' +
+      '<label>Reason<textarea id="tReason" rows="2"></textarea></label>' +
+      '<div><button class="btn primary" data-a="triage">Confirm rating</button></div></div>' +
+      due;
+  } else
+    h =
+      '<h2>Waiting for triage</h2><p class="muted" style="margin:0">The reporter was unsure about the impact. The Chief Privacy Officer confirms the rating.</p>' +
+      due;
+  return '<section class="panel action" id="actionbox">' + h + "</section>";
+}
+
+/** A LOW staff report: Security must review it within 3 business days. */
+function reviewBox(c: CaseView): string {
+  const due = c.reviewDueH !== null ? fmtT(c.reviewDueH) : "";
+  let h: string;
+  if (c.finding)
+    h =
+      '<h2>Reviewed</h2><p class="muted" style="margin:0">' +
+      esc(c.finding) +
+      "</p>";
+  else if (S.role === "security")
+    h =
+      '<h2>Review this report</h2><div class="form"><label>What you checked<textarea id="fTxt" rows="2"></textarea></label><div><button class="btn primary" data-a="finding">Add finding</button></div></div>' +
+      '<p class="muted small" style="margin:8px 0 0">Due ' +
+      due +
+      ". If it is not reviewed in time, the board is told.</p>";
+  else
+    h =
+      '<h2>Low risk</h2><p class="muted" style="margin:0">Rated LOW from the reporter’s answers. Security reviews it by ' +
+      due +
+      ".</p>";
+  return '<section class="panel action" id="actionbox">' + h + "</section>";
+}
+
+/** The reporter's answers, in the questionnaire's order. */
+export function answersList(c: CaseView): string {
+  if (!c.answers) return "";
+  const a = c.answers;
+  return (
+    '<h3 style="margin-top:14px">Reporter’s answers</h3><div class="qanswers">' +
+    QUESTIONNAIRE.questions
+      .map(
+        (q) =>
+          '<span title="' +
+          esc(q.text) +
+          '"><span class="muted">' +
+          q.id +
+          ":</span> " +
+          ANSWER_TEXT[a[q.id]] +
+          "</span>",
+      )
+      .join("") +
+    "</div>"
+  );
+}
 
 const isSec = () => S.role === "security" || S.role === "cso";
 const isAppr = () => S.role === "gc" || S.role === "cpo";
@@ -19,6 +121,9 @@ function actionBox(c: CaseView): string {
     '">' +
     l +
     "</button>";
+  if (c.status === TRIAGE) return triageBox(c);
+  if (c.severity === "LOW" && c.route === "SECURITY_TRIAGE")
+    return reviewBox(c);
   if (c.severity === "LOW")
     return '<section class="panel" id="actionbox"><h2>No action needed</h2><p class="muted" style="margin:0">Low risk. Logged without approval. Sampled periodically.</p></section>';
   let h = "";
@@ -123,10 +228,19 @@ function caseSummary(c: CaseView): string {
   if (f.dataAccessed)
     kv.push([
       "Data exposed",
-      "About " +
-        f.records +
-        " records" +
-        (f.licences ? ", incl. " + f.licences + " driver licence numbers" : ""),
+      knownScale(f)
+        ? "About " +
+          f.records +
+          " records" +
+          (f.licences
+            ? ", incl. " + f.licences + " driver licence numbers"
+            : "")
+        : "Reported by staff; scale not yet known",
+    ]);
+  if (c.route === "INDEPENDENT")
+    kv.push([
+      "Handled by",
+      "General Counsel and Chief Privacy Officer, not Security",
     ]);
   if (f.jurisdictions.length)
     kv.push(["Affected residents", f.jurisdictions.join(", ")]);
@@ -171,7 +285,9 @@ function caseSummary(c: CaseView): string {
           "</span></span></li>",
       )
       .join("") +
-    "</ul></div>" +
+    "</ul>" +
+    answersList(c) +
+    "</div>" +
     "<div><h2>" +
     (fired.length ? "Why it is high risk" : "Why it is low risk") +
     "</h2>" +
@@ -207,9 +323,9 @@ export function vCase(): string {
     "</h1>" +
     sev(c) +
     '<span class="badge">' +
-    esc(c.status) +
+    statusBadge(c) +
     "</span></div>";
-  if (c.severity === "HIGH") o += tracker(c);
+  if (c.severity === "HIGH" || c.status === TRIAGE) o += tracker(c);
   if (S.lastBlock)
     o +=
       '<div class="alert high"><b>Not allowed: ' +

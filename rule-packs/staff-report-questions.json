@@ -1,0 +1,43 @@
+{
+  "version": "q1",
+  "owner": "Legal (General Counsel)",
+  "triageHours": 24,
+  "reviewBusinessDays": 3,
+  "questions": [
+    {
+      "id": "data",
+      "text": "Could personal or confidential information have been seen, changed, deleted or taken by someone who should not have it?",
+      "type": "high"
+    },
+    {
+      "id": "money",
+      "text": "Is money being demanded, paid, moved or lost in a way that seems wrong?",
+      "type": "high"
+    },
+    {
+      "id": "harm",
+      "text": "Could anyone be harmed or put in danger (riders, drivers, staff, the public)?",
+      "type": "high"
+    },
+    {
+      "id": "handling",
+      "text": "Is your concern about how the company, including Security or management, is handling a problem?",
+      "type": "high-routing"
+    },
+    {
+      "id": "systems",
+      "text": "Are systems or services down, or behaving abnormally?",
+      "type": "raises"
+    },
+    {
+      "id": "outsiders",
+      "text": "Is someone outside the company already involved or aware (attacker, regulator, police, lawyer, journalist)?",
+      "type": "raises"
+    },
+    {
+      "id": "ongoing",
+      "text": "Is it still happening?",
+      "type": "raises"
+    }
+  ]
+}

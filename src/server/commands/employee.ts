@@ -4,13 +4,15 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { evaluate } from "@/domain/rules";
 import type { Actor } from "@/domain/types";
+import { AnswersSchema } from "@/domain/questionnaire";
 import {
   getCase,
-  insertSignal,
   nextId,
+  raised,
   regulatorInquiryOpen,
   sendNotice,
 } from "../cases/engine";
+import { openStaffReport } from "../cases/staff-report";
 import { authorize } from "../authz";
 import { db, type Tx } from "../db/client";
 import { cases, challengeFlags, receipts, signals } from "../db/schema";
@@ -44,9 +46,13 @@ async function newReceipt(
 const reportSchema = z.strictObject({
   text: z.string().trim().min(1).max(2000),
   anonymous: z.boolean(),
+  answers: AnswersSchema,
 });
 
-/** A staff report waits, unlinked, for Security to triage (mockup: A.report). */
+/**
+ * A staff report opens a case, rated from the employee's answers by the rules engine and
+ * routed by routeReport(). The receipt code is all the employee needs to follow up.
+ */
 export const reportIncidentCommand: CommandDef<
   z.infer<typeof reportSchema>,
   { code: string }
@@ -54,17 +60,11 @@ export const reportIncidentCommand: CommandDef<
   action: "reportIncident",
   blocked: "Blocked: Report incident",
   schema: reportSchema,
-  handler: async ({ tx, now, log }, { text, anonymous }) => {
-    const id = await insertSignal(tx, {
-      source: "Staff report",
-      origin: "manual",
-      detectedH: now,
-      title: (anonymous ? "Anonymous: " : "") + text.slice(0, 60),
-      entityKeys: [],
-      anonymous,
-    });
-    await log("Incident reported", null, id, { actor: who(anonymous) });
-    return { code: await newReceipt(tx, { kind: "report", signalId: id }) };
+  handler: async (ctx, report) => {
+    const { caseId, signalId } = await openStaffReport(ctx, report);
+    return {
+      code: await newReceipt(ctx.tx, { kind: "report", signalId, caseId }),
+    };
   },
 };
 
@@ -98,7 +98,7 @@ export const raiseChallengeCommand: CommandDef<
       .update(cases)
       .set({
         facts,
-        severity: e.severity,
+        severity: raised(c.severity, e.severity),
         ...(becameHigh ? { status: "Open" } : {}),
       })
       .where(eq(cases.id, c.id));
@@ -144,9 +144,10 @@ export async function checkReceipt(
       .select()
       .from(signals)
       .where(eq(signals.id, r.signalId!));
+    const linked = s?.caseId ? await getCase(db, s.caseId) : null;
     return {
-      message: s?.caseId
-        ? "Linked to case " + s.caseId + "."
+      message: linked
+        ? "Case " + linked.id + ": " + linked.status + "."
         : "Received by Security. Waiting for triage.",
     };
   }

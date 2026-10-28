@@ -4,7 +4,7 @@ import { z } from "zod";
 import { conflicts } from "@/domain/conflicts";
 import { decisionFor } from "@/domain/gate";
 import type { Actor, RoleKey } from "@/domain/types";
-import { getCase } from "../cases/engine";
+import { getCaseFor } from "../cases/engine";
 import { cases, decisions, recommendations } from "../db/schema";
 import { Conflict } from "../errors";
 import { caseIdOf, runCommand, type CommandDef } from "../run-command";
@@ -27,8 +27,9 @@ export const recommendCommand: CommandDef<z.infer<typeof schema>, void> = {
   action: "recommend",
   blocked: "Blocked: Send recommendation",
   schema,
-  handler: async ({ tx, now, actor, log }, { caseId, action, claims }) => {
-    const c = await getCase(tx, caseId);
+  handler: async (ctx, { caseId, action, claims }) => {
+    const { tx, now, actor, log } = ctx;
+    const c = await getCaseFor(ctx, caseId);
     if (c.severity !== "HIGH")
       throw new Conflict("Low-risk cases need no action.");
     const [prev] = await tx

@@ -5,12 +5,23 @@ import type { CaseView, NoticeView, PaymentView } from "@/domain/view-state";
 import { CHK, CRS, esc } from "../html";
 import { S } from "../store";
 
+export const TRIAGE = "Needs triage";
+const independent = (c: CaseView) => c.route === "INDEPENDENT";
+
 export const sev = (c: CaseView): string =>
-  '<span class="badge ' +
-  (c.severity === "HIGH" ? "high" : "") +
-  '">' +
-  c.severity +
-  "</span>";
+  c.severity === "PENDING"
+    ? '<span class="badge warn">Not rated</span>'
+    : '<span class="badge ' +
+      (c.severity === "HIGH" ? "high" : "") +
+      '">' +
+      c.severity +
+      "</span>";
+
+/** Case status; a staff report waiting for triage shows amber. */
+export const statusBadge = (c: CaseView): string =>
+  c.status === TRIAGE
+    ? '<span class="badge warn">Needs triage</span>'
+    : esc(c.status);
 
 export function remText(r: number): string {
   return r < 0
@@ -22,6 +33,16 @@ export function remText(r: number): string {
 
 function nearest(c: CaseView): string {
   if (c.status === "Disclosed") return '<span class="t-ok">Met</span>';
+  if (c.status === TRIAGE && c.triageDueH !== null)
+    return (
+      remText(c.triageDueH - S.d.clockH) +
+      ' <span class="muted small">then HIGH automatically</span>'
+    );
+  if (c.status === "Awaiting review" && c.reviewDueH !== null)
+    return (
+      remText(c.reviewDueH - S.d.clockH) +
+      ' <span class="muted small">to review</span>'
+    );
   const r = c.clocks
     .filter((k) => k.dur && !k.met && k.start !== null)
     .map((k) => k.start! + k.dur! - S.d.clockH);
@@ -64,7 +85,7 @@ export function caseTable(list: CaseView[]): string {
           "</td><td>" +
           sev(c) +
           "</td><td>" +
-          esc(c.status) +
+          statusBadge(c) +
           "</td><td>" +
           waitingOn(c) +
           "</td><td>" +
@@ -133,6 +154,7 @@ export function stages(c: CaseView): Stage[] {
   const recE = S.d.ledger.find(
     (e) => e.caseId === c.id && e.action === "Recommendation sent",
   );
+  const independent = c.route === "INDEPENDENT";
   const st: Stage[] = [
     {
       k: "auto",
@@ -148,22 +170,51 @@ export function stages(c: CaseView): Stage[] {
       state: t1 ? "done" : "todo",
       note: t1 ? dayOf(t1.t) + ", automatic" : "",
     },
-    {
-      label: "Investigate",
-      who: "Security team",
-      state: c.finding ? "done" : c.rec ? "skip" : "todo",
-      note: find ? dayOf(find.t) : c.rec ? "Skipped" : "",
-    },
-    {
-      label: "Recommend",
-      who: "CSO",
-      state: c.rec ? "done" : "todo",
-      note: recE ? dayOf(recE.t) : "",
-    },
+    // Staff reports that went to triage: the CPO confirms the rating before anyone investigates.
+    ...(c.triageDueH !== null
+      ? [
+          {
+            label: "Triage",
+            who: "CPO",
+            state: c.status === TRIAGE ? "todo" : "done",
+            note: c.status === TRIAGE ? "Rates it HIGH or LOW" : "Rated",
+          },
+        ]
+      : []),
+    // A concern about how an incident is handled skips Security entirely.
+    ...(independent
+      ? [
+          {
+            label: "Investigate",
+            who: "Security team",
+            state: "skip",
+            note: "Not Security",
+          },
+          {
+            label: "Recommend",
+            who: "CSO",
+            state: "skip",
+            note: "Not Security",
+          },
+        ]
+      : [
+          {
+            label: "Investigate",
+            who: "Security team",
+            state: c.finding ? "done" : c.rec ? "skip" : "todo",
+            note: find ? dayOf(find.t) : c.rec ? "Skipped" : "",
+          },
+          {
+            label: "Recommend",
+            who: "CSO",
+            state: c.rec ? "done" : "todo",
+            note: recE ? dayOf(recE.t) : "",
+          },
+        ]),
     {
       label: "Approve",
-      who: d && d.need === 1 ? "GC or CPO" : "GC + CPO",
-      dual: !d || d.need === 2,
+      who: independent || (d && d.need === 1) ? "GC or CPO" : "GC + CPO",
+      dual: !independent && (!d || d.need === 2),
       state: !d
         ? "todo"
         : d.status === "Approved"
@@ -196,12 +247,15 @@ export function stages(c: CaseView): Stage[] {
 }
 
 export function waitingOn(c: CaseView): string {
+  if (c.status === TRIAGE) return "Chief Privacy Officer (rating)";
+  if (c.status === "Awaiting review") return "Security team (review)";
   if (c.severity !== "HIGH")
     return '<span class="muted">Nothing pending</span>';
   const n = stages(c).find((x) => x.state === "now");
   if (!n) return '<span class="muted">Done</span>';
   if (n.label === "Approve") {
     const d = c.decision;
+    if (!d && independent(c)) return "General Counsel or Chief Privacy Officer";
     return (["gc", "cpo"] as const)
       .filter((k) => !d?.votes[k])
       .map((k) => ROLES[k].name)
@@ -229,6 +283,7 @@ export function tracker(c: CaseView): string {
     (x.who === "Security team" && me === "security") ||
     (x.who === "CSO" && me === "cso") ||
     (x.label === "Approve" && (me === "gc" || me === "cpo")) ||
+    (x.label === "Triage" && me === "cpo") ||
     (x.label === "Board notified" && me === "board");
   return (
     '<div class="tracker scroll" role="list" aria-label="Case progress">' +

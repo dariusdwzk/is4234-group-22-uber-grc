@@ -11,6 +11,7 @@ import {
   unique,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
+import type { Answers, Route } from "@/domain/questionnaire";
 import type {
   Facts,
   JsonValue,
@@ -44,6 +45,13 @@ export const cases = pgTable("cases", {
   clocksStartH: integer("clocks_start_h"),
   finding: text("finding"),
   disclosedH: integer("disclosed_h"),
+  // Staff reports (src/domain/questionnaire.ts). System cases keep the defaults.
+  route: text("route").$type<Route>().notNull().default("NORMAL"),
+  questionnaireAnswers: jsonb("questionnaire_answers").$type<Answers>(),
+  /** Unrated at this hour: rated HIGH automatically. */
+  triageDueH: integer("triage_due_h"),
+  /** LOW staff report not reviewed by Security at this hour: the board is told. */
+  reviewDueH: integer("review_due_h"),
 });
 
 export const signals = pgTable("signals", {

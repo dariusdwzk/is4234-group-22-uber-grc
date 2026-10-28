@@ -13,10 +13,14 @@ export function tier1Body(
     ": " +
     c.title.toLowerCase() +
     "." +
-    (c.facts.dataAccessed
+    (c.facts.dataAccessed && knownScale(c.facts)
       ? " About " + c.facts.records + " records affected."
       : "") +
     (regulatorInquiryOpen ? " FTC inquiry still open." : "") +
     (clocksStarted ? " GDPR deadline " + fmtT(c.detectedH + 72) + "." : "")
   );
 }
+
+/** Staff reports say data was involved but not how much; never print "0 records". */
+export const knownScale = (f: Facts): boolean =>
+  !!f.records && f.records !== "0";

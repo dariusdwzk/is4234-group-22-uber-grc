@@ -5,6 +5,7 @@ import {
   blockedReason,
   type Attempt,
 } from "@/domain/blocked-reasons";
+import { INDEPENDENT_REASON, canAccessCase } from "@/domain/case-access";
 import type { Actor } from "@/domain/types";
 import { authorize, type Action } from "../authz";
 import { getCase } from "../cases/engine";
@@ -34,10 +35,12 @@ export async function attemptAction(
   const parsed = schema.safeParse(raw);
   if (!parsed.success) throw new ValidationError(parsed.error.issues);
   const { caseId, action } = parsed.data;
-  await getCase(db, caseId); // 404 for an unknown case, before anything is logged
+  const c = await getCase(db, caseId); // 404 for an unknown case, before anything is logged
   if (authorize(actor, ACTION_FOR[action]).ok)
     throw new Conflict("Use the decision form to vote."); // only GC and CPO; they never see this button
-  const why = blockedReason(actor?.role ?? null, action);
+  const why = canAccessCase(actor?.role ?? null, c.route)
+    ? blockedReason(actor?.role ?? null, action)
+    : INDEPENDENT_REASON;
   await logRefusal(actor, `Blocked: ${ATTEMPT_LABELS[action]}`, caseId, why);
   throw new Forbidden(why);
 }

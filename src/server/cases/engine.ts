@@ -1,9 +1,12 @@
 import "server-only";
 import { eq, isNotNull, like } from "drizzle-orm";
 import { tier1Body } from "@/domain/board-text";
+import { INDEPENDENT_REASON, canAccessCase } from "@/domain/case-access";
 import { clocksFrom } from "@/domain/clocks";
 import { matchCase } from "@/domain/correlation";
+import { addBusinessDays } from "@/domain/demo-time";
 import { dueEscalations } from "@/domain/escalations";
+import { QUESTIONNAIRE } from "@/domain/questionnaire";
 import { evaluate, firedIds, startsClocks } from "@/domain/rules";
 import { defaultFacts, type Facts, type SignalOrigin } from "@/domain/types";
 import type { DbClient, Tx } from "../db/client";
@@ -14,7 +17,7 @@ import {
   settings,
   signals,
 } from "../db/schema";
-import { NotFound } from "../errors";
+import { Forbidden, NotFound } from "../errors";
 import { anchorHead } from "../ledger/anchor";
 import type { CommandCtx } from "../run-command";
 
@@ -43,6 +46,48 @@ export async function getCase(tx: DbClient, id: string): Promise<CaseRow> {
   const [c] = await tx.select().from(cases).where(eq(cases.id, id));
   if (!c) throw new NotFound("No case “" + id + "”.");
   return c;
+}
+
+/** getCase for a command: Security never acts on a case routed away from it. */
+export async function getCaseFor(
+  ctx: CommandCtx,
+  id: string,
+): Promise<CaseRow> {
+  const c = await getCase(ctx.tx, id);
+  if (!canAccessCase(ctx.actor.role, c.route))
+    throw new Forbidden(INDEPENDENT_REASON, { caseId: id });
+  return c;
+}
+
+/** Re-rating only ever raises a case: no later signal or flag can quietly lower it. */
+export const raised = (
+  was: CaseRow["severity"],
+  now: "LOW" | "HIGH",
+): CaseRow["severity"] => (was === "LOW" ? now : was);
+
+/** A staff report becomes a HIGH case on the normal path (after triage or a timeout). */
+export async function rateHigh(tx: Tx, caseId: string): Promise<void> {
+  await tx
+    .update(cases)
+    .set({ severity: "HIGH", route: "NORMAL", status: "Open" })
+    .where(eq(cases.id, caseId));
+}
+
+/** A LOW staff report: Security must review it within the configured business days. */
+export async function rateLow(
+  tx: Tx,
+  caseId: string,
+  now: number,
+): Promise<void> {
+  await tx
+    .update(cases)
+    .set({
+      severity: "LOW",
+      route: "SECURITY_TRIAGE",
+      status: "Awaiting review",
+      reviewDueH: addBusinessDays(now, QUESTIONNAIRE.reviewBusinessDays),
+    })
+    .where(eq(cases.id, caseId));
 }
 
 export async function regulatorInquiryOpen(tx: Tx): Promise<boolean> {
@@ -173,7 +218,7 @@ export async function addToCase(
     .update(cases)
     .set({
       facts,
-      severity: e.severity,
+      severity: raised(c.severity, e.severity),
       ...(becameHigh ? { status: "Open" } : {}),
     })
     .where(eq(cases.id, caseId));
@@ -280,6 +325,10 @@ export async function runEscalations(ctx: CommandCtx): Promise<void> {
       severity: c.severity,
       status: c.status,
       clocks: clocksFrom(c.clocksStartH),
+      route: c.route,
+      triageDueH: c.triageDueH,
+      reviewDueH: c.reviewDueH,
+      finding: c.finding,
     })),
     flags: flags.map((f) => ({
       id: f.id,
@@ -300,6 +349,16 @@ export async function runEscalations(ctx: CommandCtx): Promise<void> {
       id + " not acknowledged within 24 hours.",
       { actor: "System" },
     );
+  }
+  for (const id of due.triageTimeouts) {
+    await rateHigh(tx, id);
+    await log(
+      "Triage timed out: rated HIGH automatically",
+      id,
+      "No rating within " + QUESTIONNAIRE.triageHours + " hours of the report.",
+      { actor: "System" },
+    );
+    await sendNotice(ctx, id, 1, "t1");
   }
   for (const n of due.notices)
     await sendNotice(ctx, n.caseId, 2, n.kind, n.body);

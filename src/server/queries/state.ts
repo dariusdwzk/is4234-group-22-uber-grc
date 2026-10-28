@@ -1,6 +1,7 @@
 import "server-only";
 import { asc } from "drizzle-orm";
 import { clocksFrom } from "@/domain/clocks";
+import { canAccessCase } from "@/domain/case-access";
 import { conflicts } from "@/domain/conflicts";
 import { evaluate } from "@/domain/rules";
 import type { Actor } from "@/domain/types";
@@ -89,6 +90,10 @@ export async function getViewState(actor: Actor | null): Promise<ViewState> {
           }
         : null,
       conflicts: rec ? conflicts(rec.claims, c.facts) : [],
+      route: c.route,
+      triageDueH: c.triageDueH,
+      reviewDueH: c.reviewDueH,
+      answers: c.questionnaireAnswers,
     };
   });
 
@@ -99,7 +104,17 @@ export async function getViewState(actor: Actor | null): Promise<ViewState> {
   const replay = caseViews.find((c) => c.id === replayId);
   const blockedBy = (actorName: string, prefix = "Blocked") =>
     ledger.some((e) => e.action.startsWith(prefix) && e.actor === actorName);
-  const visibleCases = can("viewCases") ? caseViews : [];
+  // Cases routed away from Security are left out for Security and the CSO, with everything on them.
+  const visibleCases = can("viewCases")
+    ? caseViews.filter((c) => canAccessCase(actor?.role ?? null, c.route))
+    : [];
+  // Only cases this role is kept away from by their route; Finance still sees every payment.
+  const hidden = new Set(
+    caseViews
+      .filter((c) => !canAccessCase(actor?.role ?? null, c.route))
+      .map((c) => c.id),
+  );
+  const shown = (caseId: string | null) => !caseId || !hidden.has(caseId);
   const visibleIds = new Set(visibleCases.map((c) => c.id));
   const board = can("viewBoard");
   const integrity = board ? await verifyChain() : null;
@@ -114,27 +129,32 @@ export async function getViewState(actor: Actor | null): Promise<ViewState> {
     emailAttached: allSignals.some((x) => x.source === "Email to CSO"),
     cases: visibleCases,
     signals: can("viewCases")
-      ? allSignals.map((x) => ({
-          id: x.id,
-          src: x.source,
-          origin: x.origin,
-          h: x.detectedH,
-          title: x.title,
-          caseId: x.caseId,
-        }))
+      ? allSignals
+          .filter((x) => shown(x.caseId))
+          .map((x) => ({
+            id: x.id,
+            src: x.source,
+            origin: x.origin,
+            h: x.detectedH,
+            title: x.title,
+            caseId: x.caseId,
+          }))
       : [],
     payments: can("viewPayments")
-      ? pays.map((p) => ({
-          id: p.id,
-          payee: p.payee,
-          amountCents: p.amountCents,
-          caseId: p.caseId,
-          status: p.status,
-          t: p.createdH,
-        }))
+      ? pays
+          .filter((p) => shown(p.caseId))
+          .map((p) => ({
+            id: p.id,
+            payee: p.payee,
+            amountCents: p.amountCents,
+            caseId: p.caseId,
+            status: p.status,
+            t: p.createdH,
+          }))
       : [],
     notices: can("viewNotices")
       ? notices
+          .filter((n) => shown(n.caseId))
           .sort((a, b) => notifyOrder(a.id) - notifyOrder(b.id))
           .map((n) => ({
             id: n.id,

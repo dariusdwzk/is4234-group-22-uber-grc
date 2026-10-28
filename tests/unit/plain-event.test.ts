@@ -69,9 +69,15 @@ describe("plainEvent (the board's evidence log wording)", () => {
     expect(plainEvent(e("Anonymous employee", "Challenge raised"))!.text).toBe(
       "A staff member (anonymous) raised a concern about this case.",
     );
-    expect(plainEvent(e("Employee", "Incident reported"))!.text).toBe(
-      "A staff member reported an incident.",
+    expect(plainEvent(e("Employee", "Staff report received"))!.text).toBe(
+      "A staff member sent a report.",
     );
+    expect(
+      plainEvent(e("System", "Triage timed out: rated HIGH automatically")),
+    ).toEqual({
+      cat: "notice",
+      text: "No rating within 24 hours, so the report was rated high risk automatically.",
+    });
   });
 
   it("payments and notices get their own categories", () => {

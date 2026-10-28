@@ -15,6 +15,13 @@
       "when": 1793178150797,
       "tag": "0001_roles_grants_trigger",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793197782451,
+      "tag": "0002_whole_hiroim",
+      "breakpoints": true
     }
   ]
 }

@@ -184,12 +184,25 @@ describe("escalations", () => {
     now: 0,
     notices: [],
     cases: [
-      { id: "C-104", severity: "HIGH", status: "Open", clocks: clocksFrom(0) },
+      {
+        id: "C-104",
+        severity: "HIGH",
+        status: "Open",
+        clocks: clocksFrom(0),
+        route: "NORMAL",
+        triageDueH: null,
+        reviewDueH: null,
+        finding: null,
+      },
     ],
     flags: [],
   };
   it("nothing is due on Day 0", () => {
-    expect(dueEscalations(base)).toEqual({ toAllDirectors: [], notices: [] });
+    expect(dueEscalations(base)).toEqual({
+      toAllDirectors: [],
+      notices: [],
+      triageTimeouts: [],
+    });
   });
   it("GDPR window under 25% left (or passed) without disclosure: one Tier 2 notice", () => {
     expect(dueEscalations({ ...base, now: 54 }).notices).toEqual([]); // 18 h left = 25%

@@ -20,6 +20,8 @@ export const RulePackSchema = z.strictObject({
       effect: z.enum(["high", "modifier", "clocks"]),
       when: z.array(Condition).min(1),
       evidence: z.string(),
+      /** Shown instead of `evidence` when every number it quotes is still unknown (zero). */
+      unknownEvidence: z.string().optional(),
     }),
   ),
 });
@@ -35,7 +37,11 @@ export type RuleResult = {
   fired: boolean;
   ev: string;
 };
-export type Evaluation = { severity: Severity; rules: RuleResult[] };
+/** The rules engine only ever says LOW or HIGH; PENDING is a triage state, not a rating. */
+export type Evaluation = {
+  severity: Exclude<Severity, "PENDING">;
+  rules: RuleResult[];
+};
 
 type Inputs = Facts & { regulatorInquiryOpen: boolean; anyHigh: boolean };
 
@@ -59,7 +65,11 @@ function holds(
   }
 }
 
-function evidence(template: string, f: Facts, capCents: number): string {
+function evidence(
+  r: Pick<RulePack["rules"][number], "evidence" | "unknownEvidence">,
+  f: Facts,
+  capCents: number,
+): string {
   const values: Record<string, string> = {
     objects: String(f.objects),
     records: f.records,
@@ -68,7 +78,11 @@ function evidence(template: string, f: Facts, capCents: number): string {
     flags: String(f.flags),
     jurisdictions: f.jurisdictions.join(", "),
   };
-  return template.replace(/\{(\w+)\}/g, (_, k: string) => values[k] ?? "");
+  const used = [...r.evidence.matchAll(/\{(\w+)\}/g)].map((m) => values[m[1]!]);
+  // Never invent a scale: a staff report says data was taken but not how much.
+  if (r.unknownEvidence && used.length && used.every((v) => !v || v === "0"))
+    return r.unknownEvidence;
+  return r.evidence.replace(/\{(\w+)\}/g, (_, k: string) => values[k] ?? "");
 }
 
 /** The mockup's evaluate(): high rules first, then the rules that depend on them. */
@@ -85,7 +99,7 @@ export function evaluate(
         id: r.id,
         name: r.name,
         fired,
-        ev: fired ? evidence(r.evidence, facts, p.programMaxCents) : "",
+        ev: fired ? evidence(r, facts, p.programMaxCents) : "",
       };
     });
   const high = run(
@@ -99,7 +113,9 @@ export function evaluate(
   );
   return {
     severity: anyHigh ? "HIGH" : "LOW",
-    rules: [...high, ...rest].sort((a, b) => a.id.localeCompare(b.id)),
+    rules: [...high, ...rest].sort((a, b) =>
+      a.id.localeCompare(b.id, "en", { numeric: true }),
+    ),
   };
 }
 

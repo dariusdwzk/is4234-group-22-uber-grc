@@ -7,16 +7,28 @@
       "id": "R1",
       "name": "Personal data downloaded",
       "effect": "high",
-      "when": [{ "fact": "dataAccessed", "op": "isTrue" }],
-      "evidence": "{objects} objects, about {records} records"
+      "when": [
+        {
+          "fact": "dataAccessed",
+          "op": "isTrue"
+        }
+      ],
+      "evidence": "{objects} objects, about {records} records",
+      "unknownEvidence": "Reported by staff; scale not yet known"
     },
     {
       "id": "R2",
       "name": "Payment to an outsider on a data case",
       "effect": "high",
       "when": [
-        { "fact": "paymentCents", "op": "positive" },
-        { "fact": "dataAccessed", "op": "isTrue" }
+        {
+          "fact": "paymentCents",
+          "op": "positive"
+        },
+        {
+          "fact": "dataAccessed",
+          "op": "isTrue"
+        }
       ],
       "evidence": "{payment} requested"
     },
@@ -25,8 +37,14 @@
       "name": "Payee not verified",
       "effect": "high",
       "when": [
-        { "fact": "paymentCents", "op": "positive" },
-        { "fact": "payeeVerified", "op": "isFalse" }
+        {
+          "fact": "paymentCents",
+          "op": "positive"
+        },
+        {
+          "fact": "payeeVerified",
+          "op": "isFalse"
+        }
       ],
       "evidence": "Pseudonymous payee"
     },
@@ -34,14 +52,24 @@
       "id": "R4",
       "name": "Payout above US$10,000 cap",
       "effect": "high",
-      "when": [{ "fact": "paymentCents", "op": "aboveCap" }],
+      "when": [
+        {
+          "fact": "paymentCents",
+          "op": "aboveCap"
+        }
+      ],
       "evidence": "{capMultiple}× the cap"
     },
     {
       "id": "R5",
       "name": "Payment demand from the attacker",
       "effect": "high",
-      "when": [{ "fact": "extortion", "op": "isTrue" }],
+      "when": [
+        {
+          "fact": "extortion",
+          "op": "isTrue"
+        }
+      ],
       "evidence": "Demand for a six-figure payment"
     },
     {
@@ -49,8 +77,14 @@
       "name": "Regulator inquiry open",
       "effect": "modifier",
       "when": [
-        { "fact": "regulatorInquiryOpen", "op": "isTrue" },
-        { "fact": "anyHigh", "op": "isTrue" }
+        {
+          "fact": "regulatorInquiryOpen",
+          "op": "isTrue"
+        },
+        {
+          "fact": "anyHigh",
+          "op": "isTrue"
+        }
       ],
       "evidence": "FTC inquiry into the 2014 breach"
     },
@@ -58,7 +92,12 @@
       "id": "R7",
       "name": "Open challenge flag",
       "effect": "high",
-      "when": [{ "fact": "flags", "op": "positive" }],
+      "when": [
+        {
+          "fact": "flags",
+          "op": "positive"
+        }
+      ],
       "evidence": "{flags} raised by staff"
     },
     {
@@ -66,10 +105,84 @@
       "name": "Legal deadline triggered",
       "effect": "clocks",
       "when": [
-        { "fact": "dataAccessed", "op": "isTrue" },
-        { "fact": "jurisdictions", "op": "nonEmpty" }
+        {
+          "fact": "dataAccessed",
+          "op": "isTrue"
+        },
+        {
+          "fact": "jurisdictions",
+          "op": "nonEmpty"
+        }
       ],
       "evidence": "Residents of {jurisdictions}"
+    },
+    {
+      "id": "R9",
+      "name": "Money demanded, paid, moved or lost wrongly",
+      "effect": "high",
+      "when": [
+        {
+          "fact": "moneyConcern",
+          "op": "isTrue"
+        }
+      ],
+      "evidence": "Reported by staff"
+    },
+    {
+      "id": "R10",
+      "name": "Someone could be harmed",
+      "effect": "high",
+      "when": [
+        {
+          "fact": "harmConcern",
+          "op": "isTrue"
+        }
+      ],
+      "evidence": "Reported by staff"
+    },
+    {
+      "id": "R11",
+      "name": "Concern about how the incident is handled",
+      "effect": "high",
+      "when": [
+        {
+          "fact": "handlingConcern",
+          "op": "isTrue"
+        }
+      ],
+      "evidence": "Reported by staff; handled independently of Security"
+    },
+    {
+      "id": "R12",
+      "name": "Systems down and still happening",
+      "effect": "high",
+      "when": [
+        {
+          "fact": "systemsDown",
+          "op": "isTrue"
+        },
+        {
+          "fact": "ongoing",
+          "op": "isTrue"
+        }
+      ],
+      "evidence": "Reported by staff"
+    },
+    {
+      "id": "R13",
+      "name": "Systems down and outsiders involved",
+      "effect": "high",
+      "when": [
+        {
+          "fact": "systemsDown",
+          "op": "isTrue"
+        },
+        {
+          "fact": "outsidersAware",
+          "op": "isTrue"
+        }
+      ],
+      "evidence": "Reported by staff"
     }
   ]
 }

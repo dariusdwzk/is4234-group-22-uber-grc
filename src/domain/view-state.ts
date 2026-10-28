@@ -1,4 +1,5 @@
 import type { Clock } from "./clocks";
+import type { Answers, Route } from "./questionnaire";
 import type { Approver, DecisionStatus, Vote } from "./gate";
 import type { LedgerView } from "./plain-event";
 import type { RuleResult } from "./rules";
@@ -48,6 +49,12 @@ export type CaseView = {
     votes: Partial<Record<Approver, { vote: Vote; reason: string; t: number }>>;
   } | null;
   conflicts: string[];
+  route: Route;
+  /** Staff reports: hour the triage rating is due (else HIGH automatically). */
+  triageDueH: number | null;
+  /** LOW staff reports: hour Security's review is due. */
+  reviewDueH: number | null;
+  answers: Answers | null;
 };
 
 export type PaymentView = {

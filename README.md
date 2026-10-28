@@ -9,7 +9,7 @@ There is no login. Pick a role from the **Role** menu, or click **Start guided d
 | Part | What we use |
 |---|---|
 | App | [Next.js 16](https://nextjs.org) (App Router) with React 19 and TypeScript (strict) |
-| Front end | The mockup's own HTML and CSS, rendered by small TypeScript view modules in `src/client/`, which call the API with `fetch` |
+| Front end |  HTML and CSS, rendered by small TypeScript view modules in `src/client/`, which call the API with `fetch` |
 | API | Next.js route handlers: `GET /api/state` and `POST /api/actions/<name>` |
 | Database | PostgreSQL 16 (Docker locally, Neon when hosted), accessed through [Drizzle ORM](https://orm.drizzle.team) |
 | Validation | [zod](https://zod.dev) for every request body |
@@ -138,10 +138,6 @@ npm run db:seed            # loads the demo's starting data
 npm run dev
 ```
 
-Open <http://localhost:3000> and click **Start guided demo**. Use **Demo ▾ → Reset data** to start the story again from Day 0.
-
-To stop the app, press `Ctrl + C` in the terminal. Next time you only need: open Docker Desktop, `docker compose up -d`, `nvm use`, `npm run dev`.
-
 ## Troubleshooting
 
 | Error | Fix |
@@ -168,11 +164,4 @@ The server enforces every permission. The browser only says which role you picke
 | CEO | View cases and board notices | Approve, close or change anything |
 | Board (Audit Committee) | Read-only dashboard; acknowledge notices | Anything else; decisions happen in board meetings |
 
-## Checks
 
-```bash
-npm run lint && npm run typecheck && npm test   # fast, no database needed
-npm run test:int                                # integration tests (Docker must be running)
-npm run build
-PW_CHANNEL=chrome npm run e2e                   # browser tests; uses your installed Chrome
-```

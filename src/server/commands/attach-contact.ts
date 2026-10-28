@@ -2,7 +2,7 @@ import "server-only";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import type { Actor } from "@/domain/types";
-import { addToCase, getCase, insertSignal } from "../cases/engine";
+import { addToCase, getCaseFor, insertSignal } from "../cases/engine";
 import { signals } from "../db/schema";
 import { Conflict } from "../errors";
 import { caseIdOf, runCommand, type CommandDef } from "../run-command";
@@ -19,7 +19,7 @@ export const attachContactCommand: CommandDef<z.infer<typeof schema>, void> = {
   schema,
   handler: async (ctx, { caseId, text }) => {
     const { tx, now, actor, log } = ctx;
-    const c = await getCase(tx, caseId);
+    const c = await getCaseFor(ctx, caseId);
     if (c.severity !== "HIGH")
       throw new Conflict("Low-risk cases need no action.");
     const [already] = await tx

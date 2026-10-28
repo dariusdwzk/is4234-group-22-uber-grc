@@ -4,6 +4,7 @@ import { hoursToIso } from "@/domain/demo-time";
 import type { Actor } from "@/domain/types";
 import { SYSTEM_ACTOR } from "@/domain/types";
 import { authorize, type Action } from "./authz";
+import { runEscalations } from "./cases/engine";
 import { getNow } from "./clock";
 import { db, type Tx } from "./db/client";
 import { Forbidden, ValidationError } from "./errors";
@@ -97,10 +98,15 @@ export async function runCommand<I, O>(
       await lockHead(tx); // first statement: one global lock order (head, then rows)
       const now = await getNow(tx);
       const acting = actor ?? SYSTEM_ACTOR; // only demo actions run without a role
-      return def.handler(
-        { tx, actor: acting, now, log: logFor(tx, acting, now) },
-        parsed.data,
-      );
+      const ctx: CommandCtx = {
+        tx,
+        actor: acting,
+        now,
+        log: logFor(tx, acting, now),
+      };
+      // Escalations are checked lazily on every request (no cron); they act as the System.
+      await runEscalations({ ...ctx, log: logFor(tx, SYSTEM_ACTOR, now) });
+      return def.handler(ctx, parsed.data);
     });
   } catch (err) {
     // Business-rule refusal inside the handler: state has rolled back, the refusal must persist.

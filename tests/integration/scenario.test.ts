@@ -26,6 +26,15 @@ import { getViewState } from "@/server/queries/state";
 
 const as = (role: RoleKey): Actor => ({ role, name: ROLES[role].name });
 const CLAIMS = { noData: true, verified: true, routine: true };
+const ALL_NO = {
+  data: "NO",
+  money: "NO",
+  harm: "NO",
+  handling: "NO",
+  systems: "NO",
+  outsiders: "NO",
+  ongoing: "NO",
+} as const;
 const vote = (role: "gc" | "cpo", v: "approve" | "reject") =>
   castVote(as(role), {
     caseId: "C-104",
@@ -230,7 +239,8 @@ describe("the guided tour, end to end on the server", () => {
       () => disclose(board, { caseId: "C-104" }),
       () => releasePayment(board, { paymentId: "PAY-1" }),
       () => declareIncident(board, { text: "x" }),
-      () => reportIncident(board, { text: "x", anonymous: true }),
+      () =>
+        reportIncident(board, { text: "x", anonymous: true, answers: ALL_NO }),
     ];
     for (const attempt of attempts)
       await expect(attempt()).rejects.toThrow(Forbidden);
@@ -246,10 +256,11 @@ describe("the guided tour, end to end on the server", () => {
     const { code } = (await reportIncident(emp, {
       text: "Odd login",
       anonymous: true,
+      answers: ALL_NO,
     })) as { code: string };
     expect(code).toMatch(/^RC-[0-9A-Z]{4}$/);
     expect(await checkReceipt(emp, { code })).toEqual({
-      message: "Received by Security. Waiting for triage.",
+      message: "Case C-105: Awaiting review.",
     });
     const ch = (await raiseChallenge(emp, {
       caseId: "c-104",

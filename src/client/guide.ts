@@ -1,5 +1,6 @@
 // The mockup's guided tour. Progress comes from the server (S.d.progress), so a step counts
-// as done whichever role is viewing; only the highlight is worked out in the browser.
+// as done whichever role is viewing. The current step only moves forward (S.guideStep): it
+// follows the user when they skip ahead, and the card has a Skip link.
 import type { RoleKey } from "@/domain/types";
 import { ROLES } from "@/domain/roles";
 import { S } from "./store";
@@ -14,6 +15,8 @@ type Step = {
   text: string | (() => string);
   target?: () => string;
   done: () => boolean;
+  /** False when the step can be done early just by looking around, so it is no sign of progress. */
+  showsProgress?: boolean;
 };
 
 const P = () => S.d.progress;
@@ -94,6 +97,7 @@ export const STEPS: Step[] = [
   {
     role: "board",
     view: "board",
+    showsProgress: false, // notices can be acknowledged at any time
     title: "Read the board’s view",
     text: () =>
       !S.boardOpen[id()]
@@ -108,6 +112,7 @@ export const STEPS: Step[] = [
   {
     role: "board",
     view: "board",
+    showsProgress: false, // the log filter can be clicked at any time
     title: () =>
       S.boardTab === "log"
         ? "A record no one can change"
@@ -124,7 +129,21 @@ export const STEPS: Step[] = [
   },
 ];
 
-export const stepIdx = (): number => STEPS.findIndex((s) => !s.done());
+/**
+ * The step to show, or -1 when the tour is complete. Never moves back: if a later step is
+ * already done, the tour carries on after it; then it passes over any step that is done.
+ */
+export function stepIdx(): number {
+  let i = S.guideStep;
+  for (let j = STEPS.length - 1; j >= i; j--)
+    if (STEPS[j]!.showsProgress !== false && STEPS[j]!.done()) {
+      i = j + 1;
+      break;
+    }
+  while (i < STEPS.length && STEPS[i]!.done()) i++;
+  S.guideStep = i;
+  return i < STEPS.length ? i : -1;
+}
 
 export function atStep(s: Step): boolean {
   if (s.jump) return true;
@@ -174,7 +193,7 @@ export function guideCard(): string {
     " of " +
     STEPS.length +
     (s.role ? ": " + ROLES[s.role].name : "") +
-    '</span><button class="link small" data-a="hideGuide">Hide</button></div>' +
+    '</span><span class="row"><button class="link small" data-a="skipStep">Skip</button><button class="link small" data-a="hideGuide">Hide</button></span></div>' +
     "<h3>" +
     txt(s.title) +
     "</h3><p>" +

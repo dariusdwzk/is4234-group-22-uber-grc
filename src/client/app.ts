@@ -135,6 +135,7 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
   openCase: (x) => openCase(x),
   startGuide: () => {
     S.guided = true;
+    S.guideStep = 0;
     S.secTab = "cases";
     return setRole("security");
   },
@@ -451,6 +452,13 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
     S.boardOpen[x] = !S.boardOpen[x];
     render();
   },
+  skipStep: () => {
+    const i = stepIdx();
+    if (i === -1) return;
+    S.guideStep = i + 1;
+    S.scrolledKey = null;
+    render();
+  },
   hideGuide: () => {
     S.guided = false;
     render();
@@ -473,6 +481,7 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
       showDeclare: false,
       seenReplay: false,
       scrolledKey: null,
+      guideStep: 0,
     });
     clearMsgs();
     await refresh();

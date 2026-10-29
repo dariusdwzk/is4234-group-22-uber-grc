@@ -39,7 +39,9 @@ async function playToCpo(page: Page): Promise<void> {
     .locator(".guidecard")
     .getByRole("button", { name: "Jump to Day 24" })
     .click();
-  await expect(page.locator(".clock")).toContainText("Day 24");
+  await expect(page.locator("#toast")).toHaveText(
+    "Day 24: report and payment request merged into C-104. Payment held.",
+  );
 
   await page.getByRole("button", { name: "Go as Finance" }).click();
   await page.getByRole("button", { name: "Release payment" }).first().click();

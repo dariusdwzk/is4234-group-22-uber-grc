@@ -1,5 +1,4 @@
-// The mockup's header: Home, role picker, demo clock and Demo menu.
-import { dayOf, fmtT } from "@/domain/demo-time";
+// The mockup's header: Home, role picker and Demo menu.
 import { ROLES, ROLE_KEYS } from "@/domain/roles";
 import { S } from "../store";
 
@@ -26,11 +25,6 @@ export function header(): string {
     '<label class="rolepick">Role <select id="roleSel">' +
     opts +
     "</select></label>" +
-    '<span class="clock"><span class="day">' +
-    dayOf(S.d.clockH) +
-    "</span> " +
-    fmtT(S.d.clockH) +
-    "</span>" +
     '<button class="btn sm" data-a="menu" aria-expanded="' +
     S.menu +
     '">Demo ▾</button>' +

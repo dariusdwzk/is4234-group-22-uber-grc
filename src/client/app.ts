@@ -44,7 +44,9 @@ function render(): void {
   root.innerHTML =
     header() +
     '<main class="' +
-    (guided ? "guided" : "") +
+    [guided ? "guided" : "", S.view === "landing" ? "landing" : ""]
+      .join(" ")
+      .trim() +
     '">' +
     (VIEWS[S.view] ?? vLanding)() +
     "</main>" +

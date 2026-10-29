@@ -40,7 +40,7 @@ export function vLanding(): string {
     "</h1>" +
     '<p class="lp-tagline">No incident goes undetected.</p>' +
     '<p class="lp-lede">Security investigates. The General Counsel and the Chief Privacy Officer decide. The board is told automatically.</p>' +
-    '<div class="lp-cta"><button class="btn big lp-start" data-a="startGuide">Start guided demo</button><span class="lp-note">8 steps · about 4 minutes</span></div>' +
+    '<div class="lp-cta"><button class="btn primary big" data-a="startGuide">Start guided demo</button><span class="lp-note">8 steps · about 4 minutes</span></div>' +
     '<ul class="lp-points">' +
     POINTS.map(
       ([t, d]) => "<li><b>" + t + "</b><span>" + d + "</span></li>",
@@ -65,7 +65,6 @@ export function vLanding(): string {
         ROLES[k].short +
         "</span></button>",
     ).join("") +
-    "</div></section>" +
-    '<p class="muted small lp-foot">Replays Uber’s 2016 breach with simulated data. Day 0 is the day the breach was found.</p>'
+    "</div></section>"
   );
 }

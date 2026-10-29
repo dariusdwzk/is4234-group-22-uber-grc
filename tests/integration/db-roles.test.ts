@@ -80,7 +80,7 @@ describe("DB roles, grants and the append-only trigger", () => {
     for (const stmt of [
       "UPDATE approvals SET vote = 'approve'",
       "UPDATE recommendations SET action = 'disclose'",
-      "UPDATE receipts SET kind = 'report'",
+      "UPDATE receipts SET case_id = 'C-104'",
       "UPDATE external_anchors SET seq = 1",
     ])
       await expect(appPool.query(stmt)).rejects.toThrow(/permission denied/);

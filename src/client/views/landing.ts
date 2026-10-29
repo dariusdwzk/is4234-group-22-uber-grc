@@ -1,20 +1,7 @@
-// Landing: the app's name and promise, the guided demo, and every role as a profile tile.
+// Landing: the app's name and promise, the guided demo, and a button for every role.
 import { ROLES, ROLE_KEYS } from "@/domain/roles";
-import type { RoleKey } from "@/domain/types";
 
 const APP_NAME = "UberSecure";
-
-/** Initials and colour for each role's profile tile. */
-const AVATAR: Record<RoleKey, { mark: string; tone: string }> = {
-  employee: { mark: "EM", tone: "blue" },
-  security: { mark: "SE", tone: "ink" },
-  cso: { mark: "CSO", tone: "slate" },
-  finance: { mark: "FI", tone: "green" },
-  gc: { mark: "GC", tone: "amber" },
-  cpo: { mark: "CPO", tone: "violet" },
-  ceo: { mark: "CEO", tone: "red" },
-  board: { mark: "AC", tone: "teal" },
-};
 
 const POINTS = [
   [
@@ -50,20 +37,14 @@ export function vLanding(): string {
     APP_NAME +
     "?</h2>" +
     '<p class="muted">Pick a role to see the app as they do.</p>' +
-    '<div class="lp-profiles">' +
+    '<div class="lp-roles">' +
     ROLE_KEYS.map(
       (k) =>
-        '<button class="lp-profile" data-a="role" data-x="' +
+        '<button class="btn primary big" data-a="role" data-x="' +
         k +
-        '"><span class="lp-avatar ' +
-        AVATAR[k].tone +
-        '" aria-hidden="true">' +
-        AVATAR[k].mark +
-        "</span><b>" +
+        '">' +
         ROLES[k].name +
-        '</b><span class="lp-role">' +
-        ROLES[k].short +
-        "</span></button>",
+        "</button>",
     ).join("") +
     "</div></section>"
   );

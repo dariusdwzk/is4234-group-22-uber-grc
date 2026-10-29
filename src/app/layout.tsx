@@ -17,8 +17,9 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Disclosure Gate: prototype flow",
-  description: "Replays Uber's 2016 breach with simulated data",
+  title: "UberSecure",
+  description:
+    "No incident goes undetected. Replays Uber's 2016 breach with simulated data.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

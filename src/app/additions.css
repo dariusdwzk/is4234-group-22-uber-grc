@@ -19,3 +19,33 @@ header.top .home{margin-right:auto}
 /* Board: three number tiles since staff challenges were removed (the mockup had four). */
 .kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
 @media (max-width:900px){.kpis{grid-template-columns:1fr}}
+
+/* Landing: dark hero card, then every role as a profile tile (like choosing a profile). */
+.lp-hero{background:#000;color:#fff;border-radius:20px;padding:48px 44px 40px;margin:8px 0 40px;position:relative;overflow:hidden}
+.lp-hero::after{content:"";position:absolute;right:-120px;top:-120px;width:360px;height:360px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.14),rgba(255,255,255,0) 70%);pointer-events:none}
+.lp-eyebrow{font-size:.78rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#BDBDBD;margin:0 0 14px}
+.lp-name{font-size:clamp(2.6rem,7vw,4.2rem);font-weight:700;letter-spacing:-.04em;line-height:1;margin:0 0 10px;color:#fff}
+.lp-tagline{font-size:clamp(1.2rem,3vw,1.6rem);font-weight:600;letter-spacing:-.02em;margin:0 0 14px}
+.lp-lede{max-width:560px;color:#BDBDBD;font-size:1.02rem;margin:0 0 26px}
+.lp-cta{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;margin-bottom:34px}
+.lp-start{background:#fff;color:#000;font-weight:600}
+.lp-start:hover{background:#E8E8E8}
+.lp-start:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.lp-note{font-size:.88rem;color:#9E9E9E}
+.lp-points{list-style:none;margin:0;padding:22px 0 0;border-top:1px solid #2A2A2A;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.lp-points b{display:block;font-weight:600;margin-bottom:4px}
+.lp-points span{font-size:.88rem;color:#9E9E9E}
+.lp-who{text-align:center}
+.lp-who h2{font-size:1.6rem;letter-spacing:-.02em;margin:0 0 4px}
+.lp-profiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:22px 18px;margin:26px 0 0}
+.lp-profile{display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:0;padding:6px;cursor:pointer;text-align:center;border-radius:14px}
+.lp-avatar{width:112px;height:112px;border-radius:18px;display:grid;place-items:center;color:#fff;font-weight:700;font-size:1.5rem;letter-spacing:.02em;margin-bottom:6px;outline:3px solid transparent;outline-offset:3px;transition:transform .15s,outline-color .15s,box-shadow .15s}
+.lp-profile:hover .lp-avatar,.lp-profile:focus-visible .lp-avatar{transform:translateY(-3px);outline-color:#000;box-shadow:var(--shadow)}
+.lp-profile:focus-visible{outline:none}
+.lp-profile b{font-weight:600}
+.lp-profile .lp-role{font-size:.82rem;color:var(--muted);max-width:200px}
+.lp-avatar.blue{background:#2F6FB4}.lp-avatar.ink{background:#000}.lp-avatar.slate{background:#4A4A4A}.lp-avatar.green{background:#05944F}
+.lp-avatar.amber{background:#B07E00}.lp-avatar.violet{background:#6B4FBB}.lp-avatar.red{background:#D3240F}.lp-avatar.teal{background:#0F766E}
+.lp-foot{text-align:center;margin-top:36px}
+@media (max-width:800px){.lp-hero{padding:34px 22px 28px}.lp-points{grid-template-columns:1fr;gap:14px}.lp-profiles{grid-template-columns:repeat(2,minmax(0,1fr))}.lp-avatar{width:92px;height:92px;font-size:1.25rem}}
+@media (prefers-reduced-motion:reduce){.lp-avatar{transition:none}.lp-profile:hover .lp-avatar{transform:none}}

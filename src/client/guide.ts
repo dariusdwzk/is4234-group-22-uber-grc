@@ -44,24 +44,25 @@ export const STEPS: Step[] = [
   {
     role: "cso",
     onCase: true,
+    // Attaching is optional: once the recommendation is sent, the step moves on either way.
     title: () =>
-      !S.d.emailAttached
-        ? "Attach the hacker’s email"
-        : !P().recommended
+      P().recommended
+        ? "Try to close the case"
+        : S.d.emailAttached
           ? "Recommend keeping it internal"
-          : "Try to close the case",
+          : "Attach the hacker’s email, then recommend",
     text: () =>
-      !S.d.emailAttached
-        ? "The hacker emailed the CSO directly, so no system saw it. Click “Attach to case”."
-        : !P().recommended
+      P().recommended
+        ? "Now try to make the case go away. Click “Close case” under Case actions. The CSO is not allowed to, and the attempt is logged."
+        : S.d.emailAttached
           ? "Send the prefilled recommendation to escalate internally, as the CSO kept it in-house in 2016. The reason goes on the record."
-          : "Now try to make the case go away. Click “Close case” under Case actions. The CSO is not allowed to, and the attempt is logged.",
+          : "The hacker emailed the CSO directly, so no system saw it. Attaching it is optional: click “Attach to case”, then send the prefilled recommendation below.",
     target: () =>
-      !S.d.emailAttached
-        ? '[data-a="attach"]'
-        : !P().recommended
+      P().recommended
+        ? '[data-a="blocked"][data-x="close"]'
+        : S.d.emailAttached
           ? '[data-a="rec"]'
-          : '[data-a="blocked"][data-x="close"]',
+          : '[data-a="attach"]',
     done: () => P().recommended && P().csoBlocked,
   },
   {

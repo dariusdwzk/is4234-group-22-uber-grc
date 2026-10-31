@@ -19,6 +19,12 @@ const box = (id: string, hint: string, demoText: string) =>
   (S.mode === "demo" ? esc(demoText) : "") +
   "</textarea>";
 
+/** Whether the CSO already attached an out-of-band message to this case. */
+const hasAttachment = (c: CaseView) =>
+  c.signals.some(
+    (id) => S.d.signals.find((x) => x.id === id)?.src === "Email to CSO",
+  );
+
 const isSec = () => S.role === "security" || S.role === "cso";
 const isAppr = () => S.role === "gc" || S.role === "cpo";
 
@@ -52,17 +58,19 @@ export function normalBox(c: CaseView): string {
           (!c.rec
             ? '<p class="muted small" style="margin:8px 0 0">Waiting for the CSO’s recommendation.</p>'
             : "");
-    } else if (c.id === S.d.replayId && !S.d.emailAttached)
+    } else if (!c.rec)
+      // Optional first: a message no monitored system saw. Then the recommendation itself.
       h =
-        '<h2>Attach out-of-band contact</h2><div class="form"><label>Message received outside monitored systems' +
-        box(
-          "aTxt",
-          "Paste or summarise the message: who sent it, how it arrived, what it says.",
-          "Email to the CSO from an anonymous sender: “We have your rider data. We expect a six-figure payment.”",
-        ) +
-        '</label><div><button class="btn primary" data-a="attach">Attach to case</button></div></div>';
-    else if (!c.rec)
-      h =
+        (hasAttachment(c)
+          ? ""
+          : '<h2>Attach out-of-band contact <span class="muted small">(optional)</span></h2><div class="form"><label>Message received outside monitored systems' +
+            box(
+              "aTxt",
+              "Paste or summarise the message: who sent it, how it arrived, what it says.",
+              "Email to the CSO from an anonymous sender: “We have your rider data. We expect a six-figure payment.”",
+            ) +
+            '</label><div><button class="btn" data-a="attach">Attach to case</button></div></div>' +
+            '<div style="margin-top:22px"></div>') +
         '<h2>Recommendation</h2><div class="form"><label>Recommended action<select id="rAct"><option value="escalate">' +
         ESCALATE_TYPE +
         '</option><option value="disclose">' +

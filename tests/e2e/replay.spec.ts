@@ -27,6 +27,9 @@ async function playToCpo(page: Page): Promise<void> {
     .getByRole("button", { name: "Go as CSO (also Deputy GC)" })
     .click();
   await page.getByRole("button", { name: "Attach to case" }).click();
+  await expect(page.locator("#toast")).toHaveText(
+    "Email attached. R5 fired: payment demand.",
+  );
   await page.getByRole("button", { name: "Send for decision" }).click();
   await expect(page.locator("#toast")).toHaveText(
     "Sent to the General Counsel and the Chief Privacy Officer.",

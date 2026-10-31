@@ -11,6 +11,7 @@ import {
 import { ROLES, isRoleKey } from "@/domain/roles";
 import { act, fetchState, type ApiResult } from "./api";
 import { STEPS, atStep, guideCard, stepIdx } from "./guide";
+import { helpCard } from "./help";
 import { ck, toast, val } from "./html";
 import { S, cur } from "./store";
 import { vBoard } from "./views/board";
@@ -51,11 +52,13 @@ function render(): void {
     (VIEWS[S.view] ?? vLanding)() +
     "</main>" +
     (guided
-      ? guideCard()
+      ? S.mode === "demo"
+        ? guideCard()
+        : helpCard()
       : '<button class="guide-fab" data-a="showGuide"><span>?</span>' +
         (S.view === "landing" ? "Start guide" : "Show guide") +
         "</button>");
-  if (!guided) return;
+  if (!guided || S.mode !== "demo") return; // only the guided demo highlights the page
   const i = stepIdx();
   if (i === -1) return;
   const s = STEPS[i]!;
@@ -125,7 +128,14 @@ const fail = (r: { ok: false; error: string }) => {
 };
 
 const A: Record<string, (x?: string) => void | Promise<void>> = {
-  role: (x) => setRole(x),
+  role: (x) => {
+    // Picking a role from the start page means exploring: the card explains each page.
+    if (S.view === "landing") {
+      S.mode = "explore";
+      S.guided = true;
+    }
+    return setRole(x);
+  },
   home: () => {
     S.view = S.role ? ROLES[S.role].home : "landing";
     S.lastBlock = null;
@@ -135,6 +145,7 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
   openCase: (x) => openCase(x),
   startGuide: () => {
     S.guided = true;
+    S.mode = "demo";
     S.guideStep = 0;
     S.secTab = "cases";
     return setRole("security");
@@ -464,7 +475,7 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
     render();
   },
   reset: async () => {
-    const g = S.guided;
+    const g = S.guided && S.mode === "demo";
     S.menu = false;
     const r = await act(S.role, "reset");
     if (!r.ok) return fail(r);

@@ -1,6 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
 import { APP_URL, DEMO_URL, OWNER_URL } from "./tests/integration/setup/urls";
 
+// PW_PORT lets the tests run while a dev server already holds port 3000.
+const PORT = Number(process.env.PW_PORT ?? 3000);
+
 export default defineConfig({
   testDir: "tests/e2e",
   globalSetup: "./tests/e2e/global-setup.ts",
@@ -9,7 +12,7 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? "github" : "list",
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: `http://localhost:${PORT}`,
     trace: "on-first-retry",
   },
   projects: [
@@ -23,8 +26,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "npm run build && npm run start",
-    port: 3000,
+    command: `npm run build && npm run start -- -p ${PORT}`,
+    port: PORT,
     reuseExistingServer: false,
     timeout: 300_000,
     env: {

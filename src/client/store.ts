@@ -9,6 +9,8 @@ export type UiState = {
   view: string;
   caseId: string | null;
   guided: boolean;
+  /** demo: the 8-step guided tour. explore: the card explains whichever page is on screen. */
+  mode: "demo" | "explore";
   /** The guided tour's current step; only moves forward (see guide.ts stepIdx). */
   guideStep: number;
   menu: boolean;
@@ -58,6 +60,7 @@ export const S: UiState & { d: ViewState } = {
   view: "landing",
   caseId: null,
   guided: false,
+  mode: "explore",
   guideStep: 0,
   menu: false,
   secTab: "cases",

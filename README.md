@@ -90,7 +90,7 @@ DEMO_MODE=true
 EOF
 ```
 
-This creates a file named exactly `.env.local` (with the leading dot). The passwords are local-only defaults for your own Docker database, not secrets. Note the port is **5433**. `DEMO_MODE=true` turns on the Demo menu: +1 day, Jump to Day 24, Reset data.
+This creates a file named exactly `.env.local` (with the leading dot). The passwords are local-only defaults for your own Docker database, not secrets. Note the port is **5433**. `DEMO_MODE=true` turns on Reset data (in the Demo menu) and the guided demo's Day 24 jump.
 
 `.env.local` is ignored by git. Never commit it, and never put real values in `.env.example`.
 

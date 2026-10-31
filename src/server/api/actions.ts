@@ -2,7 +2,6 @@ import "server-only";
 import type { Actor } from "@/domain/types";
 import { acknowledgeNotice } from "../commands/acknowledge-notice";
 import { addEvidence } from "../commands/add-evidence";
-import { advanceClock } from "../commands/advance-clock";
 import { attachContact } from "../commands/attach-contact";
 import { attemptAction } from "../commands/attempt-action";
 import { confirmTriage } from "../commands/confirm-triage";
@@ -32,7 +31,6 @@ export const ACTIONS: Record<string, Handler> = {
   ack: acknowledgeNotice,
   report: reportIncident,
   receipt: checkReceipt,
-  clock: advanceClock,
   jump: jumpToDay24,
   reset: () => resetDemo(),
 };

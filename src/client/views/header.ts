@@ -29,12 +29,7 @@ export function header(): string {
     S.menu +
     '">Demo ▾</button>' +
     (S.menu
-      ? '<div class="menu"><div><h3>Time</h3><div class="row"><button class="btn sm" data-a="clock" data-x="24">+1 day</button>' +
-        (S.d.jumped
-          ? ""
-          : '<button class="btn sm" data-a="jump">Jump to Day 24</button>') +
-        "</div></div>" +
-        '<div><h3>Demo</h3><div class="row"><button class="btn sm" data-a="guide">' +
+      ? '<div class="menu"><div><h3>Demo</h3><div class="row"><button class="btn sm" data-a="guide">' +
         (S.guided ? "Hide guide" : "Show guide") +
         '</button><button class="btn sm danger" data-a="reset">Reset data</button></div></div></div>'
       : "") +

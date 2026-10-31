@@ -173,13 +173,6 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
     S.menu = !S.menu;
     render();
   },
-  clock: async (x) => {
-    S.menu = false;
-    const r = await send("clock", { hours: Number(x) });
-    if (!r.ok) return fail(r);
-    render();
-    toast("Moved forward " + x + " hours.");
-  },
   jump: async () => {
     if (S.d.jumped) {
       toast("The payment request has already arrived.");

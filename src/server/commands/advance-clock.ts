@@ -8,7 +8,8 @@ import { anchorHead } from "../ledger/anchor";
 import { runEscalations } from "../cases/engine";
 import { logFor, runCommand, type CommandDef } from "../run-command";
 
-const schema = z.strictObject({ hours: z.literal(24) }); // the mockup's only step: "+1 day"
+// Not in the UI: tests use it to move demo time (triage timeouts, review deadlines, escalations).
+const schema = z.strictObject({ hours: z.literal(24) });
 
 export const advanceClockCommand: CommandDef<z.infer<typeof schema>, void> = {
   action: "advanceClock",

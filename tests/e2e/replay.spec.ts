@@ -185,8 +185,8 @@ test("unsure reporter → triage; Security cannot rate, the CPO can", async ({
   await page.getByRole("button", { name: "Confirm rating" }).click();
   await expect(page.getByText("Not allowed: Confirm rating")).toBeVisible();
 
-  await asRole(page, "cpo");
-  await page.locator('[data-a="openCase"][data-x="C-105"]').click();
+  await asRole(page, "cpo"); // the case stays open when the new role may see it
+  await expect(page.locator(".case-head")).toContainText("C-105");
   await page.selectOption("#tRating", "LOW");
   await page.locator("#tReason").fill("Encrypted and wiped remotely.");
   await page.getByRole("button", { name: "Confirm rating" }).click();
@@ -260,8 +260,8 @@ test("independent path: the GC investigates with evidence and recommends; the CP
     ),
   ).toBeVisible();
 
-  await asRole(page, "cpo");
-  await page.locator('[data-a="openCase"][data-x="C-105"]').first().click();
+  await asRole(page, "cpo"); // the case stays open when the new role may see it
+  await expect(page.locator(".case-head")).toContainText("C-105");
   await expect(
     page.getByRole("heading", { name: "Your decision" }),
   ).toBeVisible();

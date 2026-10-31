@@ -93,14 +93,23 @@ const clearMsgs = () => {
   S.finMsg = null;
 };
 
-async function setRole(r: string | undefined): Promise<void> {
+/**
+ * Switches role. With `keepCase`, a case page stays open when the new role may see that
+ * case (the server decides what each role sees); otherwise the role's home page opens.
+ */
+async function setRole(
+  r: string | undefined,
+  opts: { keepCase?: boolean } = {},
+): Promise<void> {
+  const onCase = opts.keepCase === true && S.view === "case" && S.caseId;
   S.role = isRoleKey(r) ? r : null;
-  S.view = S.role ? ROLES[S.role].home : "landing";
   clearMsgs();
   S.menu = false;
   await refresh();
+  const stay = onCase && S.d.cases.some((c) => c.id === S.caseId);
+  S.view = stay ? "case" : S.role ? ROLES[S.role].home : "landing";
   render();
-  window.scrollTo(0, 0);
+  if (!stay) window.scrollTo(0, 0);
 }
 
 function openCase(x: string | undefined): void {
@@ -135,7 +144,7 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
       S.mode = "explore";
       S.guided = true;
     }
-    return setRole(x);
+    return setRole(x, { keepCase: true });
   },
   home: () => {
     S.view = S.role ? ROLES[S.role].home : "landing";

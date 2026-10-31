@@ -20,21 +20,12 @@ header.top .home{margin-right:auto}
 .kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
 @media (max-width:900px){.kpis{grid-template-columns:1fr}}
 
-/* Landing: a wide white hero, then a button for every role. */
-main.landing{max-width:1320px;padding-left:32px;padding-right:32px}
-.lp-hero{padding:72px 0 48px;margin:0 0 24px;border-bottom:1px solid var(--line)}
-.lp-eyebrow{font-size:.78rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0 0 16px}
-.lp-name{font-size:clamp(2.8rem,8vw,5.4rem);font-weight:700;letter-spacing:-.045em;line-height:.95;margin:0 0 14px}
-.lp-tagline{font-size:clamp(1.25rem,3vw,1.85rem);font-weight:600;letter-spacing:-.02em;margin:0 0 16px}
-.lp-lede{max-width:640px;color:var(--muted);font-size:1.08rem;margin:0 0 30px}
-.lp-cta{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:center;margin-bottom:48px}
-.lp-note{font-size:.88rem;color:var(--muted)}
-.lp-points{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px}
-.lp-points li{border-top:3px solid #000;padding-top:14px}
-.lp-points b{display:block;font-weight:600;margin-bottom:4px}
-.lp-points span{font-size:.9rem;color:var(--muted)}
-.lp-who{text-align:center;padding:36px 0 24px}
-.lp-who h2{font-size:1.8rem;letter-spacing:-.02em;margin:0 0 4px}
-.lp-roles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:28px 0 0}
+/* Landing: name, promise, one call to action, then the roles. Centred, lots of white space. */
+main.landing{max-width:1120px;padding-left:32px;padding-right:32px}
+.lp{display:flex;flex-direction:column;align-items:center;text-align:center;padding:12vh 0 48px}
+.lp-name{font-size:clamp(3rem,9vw,6rem);font-weight:700;letter-spacing:-.05em;line-height:.95;margin:0 0 16px}
+.lp-tagline{font-size:clamp(1.15rem,2.6vw,1.6rem);font-weight:500;color:var(--muted);letter-spacing:-.01em;margin:0 0 36px}
+.lp-or{font-size:.85rem;color:var(--muted);margin:64px 0 16px;letter-spacing:.02em}
+.lp-roles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;width:100%}
 .lp-roles .btn{justify-content:center;white-space:normal;text-align:center}
-@media (max-width:800px){main.landing{padding-left:20px;padding-right:20px}.lp-hero{padding:40px 0 32px}.lp-points{grid-template-columns:1fr;gap:18px}.lp-roles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:800px){main.landing{padding-left:20px;padding-right:20px}.lp{padding-top:8vh}.lp-or{margin-top:48px}.lp-roles{grid-template-columns:repeat(2,minmax(0,1fr))}}

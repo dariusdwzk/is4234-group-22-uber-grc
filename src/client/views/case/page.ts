@@ -158,7 +158,12 @@ export function vCase(): string {
     '<span class="badge">' +
     statusBadge(c) +
     "</span></div>";
-  if (c.severity === "HIGH" || c.status === TRIAGE) o += tracker(c);
+  if (
+    c.severity === "HIGH" ||
+    c.status === TRIAGE ||
+    c.route === "SECURITY_TRIAGE"
+  )
+    o += tracker(c);
   if (S.lastBlock)
     o +=
       '<div class="alert high"><b>Not allowed: ' +

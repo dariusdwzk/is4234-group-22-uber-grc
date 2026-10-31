@@ -268,7 +268,7 @@ describe("the guided tour, end to end on the server", () => {
       answers: ALL_NO,
     })) as { code: string };
     expect(code).toMatch(/^RC-[0-9A-Z]{4}$/);
-    expect(await checkReceipt(emp, { code })).toEqual({
+    expect(await checkReceipt(emp, { code })).toMatchObject({
       message: "Case C-105: Awaiting review.",
     });
     const board = await getViewState(as("board"));

@@ -4,7 +4,7 @@ import { dayOf } from "@/domain/demo-time";
 import { ESCALATED_STATUS, otherApprover, type Approver } from "@/domain/gate";
 import { ROLES } from "@/domain/roles";
 import type { RoleKey } from "@/domain/types";
-import type { CaseView } from "@/domain/view-state";
+import type { CaseView, ViewState } from "@/domain/view-state";
 import { CHK, CRS } from "../../html";
 import { S } from "../../store";
 import { TRIAGE } from "../components";
@@ -25,29 +25,49 @@ type Stage = {
 
 const OUTCOMES = ["Disclosed", ESCALATED_STATUS, "Disclosure required"];
 const short = (r: Approver) => (r === "gc" ? "GC" : "CPO");
-const entry = (c: CaseView, action: string) =>
-  S.d.ledger.find((e) => e.caseId === c.id && e.action === action);
+/** Where the timeline reads notices and ledger entries: the current role's data by default. */
+export type TimelineSource = Pick<ViewState, "notices" | "ledger">;
 
-/** Case opened (or report received) and the automatic board notice: every route starts here. */
-function opening(c: CaseView): Stage[] {
-  const t1 = S.d.notices.find((n) => n.caseId === c.id && n.tier === 1);
-  return [
-    {
-      k: "auto",
-      label: c.answers ? "Report received" : "Case opened",
-      who: c.answers ? "Employee" : "System",
-      state: "done",
-      note: dayOf(c.detectedH) + (c.answers ? ", staff report" : ", automatic"),
-    },
-    {
-      k: "auto",
-      label: "Board notified",
-      who: "System",
-      state: t1 ? "done" : "todo",
-      note: t1 ? dayOf(t1.t) + ", automatic" : "",
-      roles: ["board"],
-    },
-  ];
+const entry = (c: CaseView, src: TimelineSource, action: string) =>
+  src.ledger.find((e) => e.caseId === c.id && e.action === action);
+
+/** Case opened by the system, or a staff report received: every route starts here. */
+function opened(c: CaseView): Stage {
+  return {
+    k: "auto",
+    label: c.answers ? "Report received" : "Case opened",
+    who: c.answers ? "Employee" : "System",
+    state: "done",
+    note: dayOf(c.detectedH) + (c.answers ? ", staff report" : ", automatic"),
+  };
+}
+
+/** The automatic Tier 1 notice. For a triage case it only comes once the CPO rates it HIGH. */
+function boardNotified(c: CaseView, src: TimelineSource): Stage {
+  const t1 = src.notices.find((n) => n.caseId === c.id && n.tier === 1);
+  return {
+    k: "auto",
+    label: "Board notified",
+    who: "System",
+    state: t1 ? "done" : "todo",
+    note: t1 ? dayOf(t1.t) + ", automatic" : "",
+    roles: ["board"],
+  };
+}
+
+/** A LOW staff report: Security reviews it; the board is told only if the review is late. */
+function reviewStage(c: CaseView): Stage {
+  return {
+    label: "Review",
+    who: "Security team",
+    state: c.finding ? "done" : "todo",
+    note: c.finding
+      ? "Reviewed"
+      : c.reviewDueH !== null
+        ? "Due " + dayOf(c.reviewDueH)
+        : "",
+    roles: ["security"],
+  };
 }
 
 /** Staff reports the reporter was unsure about: the CPO rates them first. */
@@ -93,10 +113,10 @@ function approveState(c: CaseView): string {
 }
 
 /** The demo flow: Security investigates, the CSO recommends, GC + CPO approve. */
-function normalStages(c: CaseView): Stage[] {
+function normalStages(c: CaseView, src: TimelineSource): Stage[] {
   const d = c.decision;
-  const find = entry(c, "Finding recorded"),
-    recE = entry(c, "Recommendation sent");
+  const find = entry(c, src, "Finding recorded"),
+    recE = entry(c, src, "Recommendation sent");
   const one = !!d && d.need === 1;
   return [
     {
@@ -133,13 +153,13 @@ function normalStages(c: CaseView): Stage[] {
  * A concern about how an incident is handled: Security is skipped. The GC or CPO investigates
  * and recommends; the other one approves, so nobody decides their own recommendation.
  */
-function independentStages(c: CaseView): Stage[] {
+function independentStages(c: CaseView, src: TimelineSource): Stage[] {
   const d = c.decision;
   const author = c.rec?.author as Approver | undefined;
   const first = c.evidence[0];
   const investigator = first
     ? ROLES[first.author].name
-    : (entry(c, "Finding recorded")?.actor ?? "GC or CPO");
+    : (entry(c, src, "Finding recorded")?.actor ?? "GC or CPO");
   const investigated = !!c.finding || c.evidence.length > 0;
   const n = c.evidence.length;
   const approver = author ? otherApprover(author) : undefined;
@@ -182,16 +202,21 @@ function independentStages(c: CaseView): Stage[] {
   ];
 }
 
-export function stages(c: CaseView): Stage[] {
-  const body =
-    c.route === "INDEPENDENT" ? independentStages(c) : normalStages(c);
-  const st = [...opening(c), ...triage(c), ...body];
+export function stages(c: CaseView, src: TimelineSource = S.d): Stage[] {
+  const body = () =>
+    c.route === "INDEPENDENT"
+      ? independentStages(c, src)
+      : normalStages(c, src);
+  const lowReport = c.route === "SECURITY_TRIAGE" && c.severity === "LOW";
+  const st = lowReport
+    ? [opened(c), ...triage(c), reviewStage(c)]
+    : [opened(c), ...triage(c), boardNotified(c, src), ...body()];
   const i = st.findIndex((x) => x.state === "todo");
   if (i > -1) st[i]!.state = "now";
   return st;
 }
 
-export function waitingOn(c: CaseView): string {
+export function waitingOn(c: CaseView, src: TimelineSource = S.d): string {
   if (c.status === TRIAGE) return "Chief Privacy Officer (rating)";
   if (c.status === "Awaiting review") return "Security team (review)";
   // Escalating is a pause, not an outcome: either approver can still disclose.
@@ -199,7 +224,7 @@ export function waitingOn(c: CaseView): string {
     return "General Counsel or Chief Privacy Officer (to disclose)";
   if (c.severity !== "HIGH")
     return '<span class="muted">Nothing pending</span>';
-  const n = stages(c).find((x) => x.state === "now");
+  const n = stages(c, src).find((x) => x.state === "now");
   if (!n) return '<span class="muted">Done</span>';
   if (c.route === "INDEPENDENT") {
     if (n.label === "Investigate" || n.label === "Recommend")
@@ -218,8 +243,8 @@ export function waitingOn(c: CaseView): string {
   return n.who || "Decision";
 }
 
-export function tracker(c: CaseView): string {
-  const st = stages(c),
+export function tracker(c: CaseView, src: TimelineSource = S.d): string {
+  const st = stages(c, src),
     me = S.role;
   const icon = (x: Stage) =>
     x.state === "done"

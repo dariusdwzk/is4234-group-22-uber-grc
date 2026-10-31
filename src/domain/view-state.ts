@@ -115,3 +115,13 @@ export type ViewState = {
   ledger: LedgerView[];
   progress: Progress;
 };
+
+/**
+ * What an employee sees for their own report, by receipt code: just enough to draw the
+ * case timeline. No findings, reasons, evidence, rules or other cases.
+ */
+export type ReceiptTrack = {
+  case: CaseView;
+  notices: NoticeView[];
+  ledger: LedgerView[];
+};

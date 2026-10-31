@@ -4,11 +4,13 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { AnswersSchema } from "@/domain/questionnaire";
 import type { Actor } from "@/domain/types";
+import type { ReceiptTrack } from "@/domain/view-state";
 import { authorize } from "../authz";
 import { getCase } from "../cases/engine";
 import { openStaffReport } from "../cases/staff-report";
 import { db, type Tx } from "../db/client";
 import { receipts } from "../db/schema";
+import { receiptTrack } from "../queries/receipt-track";
 import { Forbidden } from "../errors";
 import { logRefusal, runCommand, type CommandDef } from "../run-command";
 
@@ -55,11 +57,11 @@ export const reportIncidentCommand: CommandDef<
 export const reportIncident = (actor: Actor | null, raw: unknown) =>
   runCommand(reportIncidentCommand, actor, raw);
 
-/** Read-only: what happened to a report, by receipt code (mockup: A.status). */
+/** Read-only: what happened to a report, by receipt code, with its timeline (mockup: A.status). */
 export async function checkReceipt(
   actor: Actor | null,
   raw: unknown,
-): Promise<{ message: string }> {
+): Promise<{ message: string; track: ReceiptTrack | null }> {
   const auth = authorize(actor, "checkReceipt");
   if (!auth.ok) {
     await logRefusal(actor, "Blocked: Check receipt", null, auth.reason);
@@ -72,7 +74,10 @@ export async function checkReceipt(
     .catch("")
     .parse((raw as { code?: unknown } | null)?.code);
   const [r] = await db.select().from(receipts).where(eq(receipts.code, code));
-  if (!r) return { message: "No submission matches that code." };
+  if (!r) return { message: "No submission matches that code.", track: null };
   const c = await getCase(db, r.caseId);
-  return { message: "Case " + c.id + ": " + c.status + "." };
+  return {
+    message: "Case " + c.id + ": " + c.status + ".",
+    track: await receiptTrack(c.id),
+  };
 }

@@ -85,7 +85,7 @@ export function pageHelp(): Help {
     case "employee":
       return {
         title: "Speak up",
-        text: "Employees report anything that worries them here, anonymously if they like. Seven quick questions decide where the report goes; you never choose how serious it is. Keep the receipt code to check on it later.",
+        text: "Employees report anything that worries them here, anonymously if they like. Seven quick questions decide who the report goes to. ",
       };
     case "security":
       return r === "cso"
@@ -95,7 +95,7 @@ export function pageHelp(): Help {
           }
         : {
             title: "Security’s cases",
-            text: "Cases open by themselves from cloud monitoring, HackerOne and Finance. Open one to investigate. Cases about how Security handles an incident never appear here.",
+            text: "Cases open by themselves from cloud monitoring, HackerOne and Finance. Open one to investigate. Cases that involve Security handles an incident never appear here.",
           };
     case "finance":
       return {

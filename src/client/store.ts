@@ -1,5 +1,5 @@
 import type { RoleKey } from "@/domain/types";
-import type { CaseView, ViewState } from "@/domain/view-state";
+import type { CaseView, ReceiptTrack, ViewState } from "@/domain/view-state";
 
 export type Msg = { kind: "high" | "warn" | "ok"; title: string; text: string };
 
@@ -23,6 +23,8 @@ export type UiState = {
   showDeclare: boolean;
   seenReplay: boolean;
   statusMsg: string | null;
+  /** The last receipt checked on the Employee page, and its case timeline. */
+  receipt: { code: string; track: ReceiptTrack | null } | null;
   empMsg: string | null;
   finMsg: Msg | null;
   lastBlock: { what: string; why: string } | null;
@@ -72,6 +74,7 @@ export const S: UiState & { d: ViewState } = {
   showDeclare: false,
   seenReplay: false,
   statusMsg: null,
+  receipt: null,
   empMsg: null,
   finMsg: null,
   lastBlock: null,

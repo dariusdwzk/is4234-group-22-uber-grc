@@ -3,6 +3,7 @@
 import { ATTEMPT_LABELS, type Attempt } from "@/domain/blocked-reasons";
 import { fileProblem } from "@/domain/evidence";
 import { ESCALATED_STATUS } from "@/domain/gate";
+import type { ReceiptTrack } from "@/domain/view-state";
 import {
   QUESTIONNAIRE,
   type Answer,
@@ -88,6 +89,7 @@ const clearMsgs = () => {
   S.lastBlock = null;
   S.empMsg = null;
   S.statusMsg = null;
+  S.receipt = null;
   S.finMsg = null;
 };
 
@@ -436,11 +438,14 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
     render();
   },
   status: async () => {
-    const r = await send<{ message: string }>("receipt", {
-      code: val("sCode"),
-    });
+    const code = val("sCode").toUpperCase();
+    const r = await send<{ message: string; track: ReceiptTrack | null }>(
+      "receipt",
+      { code },
+    );
     if (!r.ok) return fail(r);
     S.statusMsg = r.data.message;
+    S.receipt = { code, track: r.data.track };
     render();
   },
   showGuide: () => {

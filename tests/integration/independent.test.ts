@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { Answers } from "@/domain/questionnaire";
 import { ROLES } from "@/domain/roles";
@@ -5,7 +6,7 @@ import type { Actor, RoleKey } from "@/domain/types";
 import { db } from "@/server/db/client";
 import { boardNotices, cases, evidence } from "@/server/db/schema";
 import { addEvidence } from "@/server/commands/add-evidence";
-import { reportIncident } from "@/server/commands/employee";
+import { checkReceipt, reportIncident } from "@/server/commands/employee";
 import { recommend } from "@/server/commands/recommend";
 import { recordFinding } from "@/server/commands/record-finding";
 import { resetDemo } from "@/server/commands/reset-demo";
@@ -184,6 +185,43 @@ describe("independent path: GC and CPO investigate, the other one decides", () =
     });
     await vote("cpo", "approve");
     expect(await status()).toBe("Disclosed");
+  });
+
+  it("the reporter's receipt shows the case timeline, and nothing else", async () => {
+    await recordFinding(as("gc"), {
+      caseId: "C-105",
+      text: "Secret finding text.",
+    });
+    await addEvidence(as("gc"), {
+      caseId: "C-105",
+      note: "Secret evidence note.",
+    });
+    await recommend(as("gc"), {
+      caseId: "C-105",
+      action: "escalate",
+      reason: "Secret reason.",
+    });
+    const rows = (
+      await db.execute(sql`select code from receipts where case_id = 'C-105'`)
+    ).rows as { code: string }[];
+    const code = rows[0]!.code;
+    const r = await checkReceipt(as("employee"), { code });
+    expect(r.message).toBe("Case C-105: Awaiting Chief Privacy Officer.");
+    const t = r.track!;
+    expect(t.case.id).toBe("C-105");
+    expect(t.case.rec).toMatchObject({
+      author: "gc",
+      act: "escalate",
+      reason: null,
+    });
+    expect(t.case.evidence).toHaveLength(1);
+    const json = JSON.stringify(t);
+    for (const secret of ["Secret finding", "Secret evidence", "Secret reason"])
+      expect(json).not.toContain(secret);
+    expect(t.notices.every((n) => n.caseId === "C-105" && n.body === "")).toBe(
+      true,
+    );
+    expect(t.ledger.every((e) => e.detail === "")).toBe(true);
   });
 
   it("on the normal path GC and CPO decide but do not investigate or recommend", async () => {

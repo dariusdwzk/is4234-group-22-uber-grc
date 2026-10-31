@@ -72,7 +72,7 @@ describe("employee incident reports (staff report flow)", () => {
       "Rated HIGH from questionnaire",
       "Board notice sent (Tier 1)",
     ]);
-    expect(await checkReceipt(as("employee"), { code })).toEqual({
+    expect(await checkReceipt(as("employee"), { code })).toMatchObject({
       message: "Case C-105: Open.",
     });
     expect(

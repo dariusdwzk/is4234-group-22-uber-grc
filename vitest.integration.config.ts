@@ -21,6 +21,8 @@ export default defineConfig({
     env: {
       DATABASE_URL: APP_URL,
       DEMO_ADMIN_DATABASE_URL: DEMO_URL,
+      // Pin "now" at 0 so tests move time themselves (see src/server/clock.ts).
+      DEMO_FROZEN_CLOCK: "true",
     },
   },
 });

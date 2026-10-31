@@ -10,7 +10,6 @@ type Step = {
   view?: string;
   alsoCase?: boolean;
   onCase?: boolean;
-  jump?: boolean;
   title: string | (() => string);
   text: string | (() => string);
   target?: () => string;
@@ -31,7 +30,7 @@ export const STEPS: Step[] = [
       S.view === "case" ? "Record what you found" : "A case opened by itself",
     text: () =>
       S.view === "case"
-        ? "Within a day, Uber’s security team confirmed what was taken. Record the finding with “Add finding”. The case already existed before anyone in Security acted."
+        ? "Within a day, Uber’s security team confirmed what was taken. Record the finding with “Add finding”. "
         : "Cloud monitoring flagged a mass download. Case " +
           id() +
           " opened, was rated HIGH and the board was told, with no one in Security acting. Click the case to open it.",
@@ -66,20 +65,6 @@ export const STEPS: Step[] = [
     done: () => P().recommended && P().csoBlocked,
   },
   {
-    jump: true,
-    title: "Jump to Day 24",
-    text: "In 2016 the payout went through HackerOne on 8 December, 24 days after the hacker’s email. Move time forward to see the payment request arrive.",
-    done: () => P().jumped,
-  },
-  {
-    role: "finance",
-    view: "finance",
-    title: "Try to release the payment",
-    text: "The HackerOne report and the US$100,000 request merged into the case on their own, and the payment was held. Click “Release payment” to see what Finance is allowed to do.",
-    target: () => '[data-a="release"]',
-    done: () => P().financeBlocked,
-  },
-  {
     role: "gc",
     onCase: true,
     title: "Approve as General Counsel",
@@ -91,7 +76,7 @@ export const STEPS: Step[] = [
     role: "cpo",
     onCase: true,
     title: "Decide as Chief Privacy Officer",
-    text: "This is the second of two approvals. Reject: the payment is cancelled and disclosure is required. Approve: the case stays internal, the payment stays frozen and the board is told.",
+    text: "This is the second of two approvals. Reject: disclosure is required. Approve: the case stays internal and the board is told.",
     target: () => "#actionbox",
     done: () => P().cpoDone,
   },
@@ -147,7 +132,6 @@ export function stepIdx(): number {
 }
 
 export function atStep(s: Step): boolean {
-  if (s.jump) return true;
   if (S.role !== s.role) return false;
   if (s.alsoCase && S.view === "case" && S.caseId === S.d.replayId) return true;
   if (s.onCase) return S.view === "case" && S.caseId === S.d.replayId;
@@ -176,9 +160,7 @@ export function guideCard(): string {
   const s = STEPS[i]!,
     here = atStep(s);
   let act: string;
-  if (s.jump)
-    act = '<button class="btn primary" data-a="jump">Jump to Day 24</button>';
-  else if (here)
+  if (here)
     act =
       '<span class="gc-hint">Click the highlighted area on the page.</span>';
   else

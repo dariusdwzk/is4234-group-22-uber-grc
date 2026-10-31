@@ -4,7 +4,7 @@ import { caseTable, noticeRow } from "./components";
 
 export function vCeo(): string {
   return (
-    '<div class="pagehead"><div><h1>Overview</h1><p class="lede">You can see everything. You cannot approve or close cases.</p></div></div>' +
+    '<div class="pagehead"><div><h1>Overview</h1><p class="lede"></p></div></div>' +
     '<section class="panel"><h2>High-risk cases</h2>' +
     caseTable(S.d.cases.filter((c) => c.severity === "HIGH")) +
     "</section>" +

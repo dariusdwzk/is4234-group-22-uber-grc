@@ -1,7 +1,6 @@
 {
   "version": "v1",
   "owner": "Legal (General Counsel)",
-  "programMaxCents": 1000000,
   "rules": [
     {
       "id": "R1",
@@ -17,52 +16,8 @@
       "unknownEvidence": "Reported by staff; scale not yet known"
     },
     {
-      "id": "R2",
-      "name": "Payment to an outsider on a data case",
-      "effect": "high",
-      "when": [
-        {
-          "fact": "paymentCents",
-          "op": "positive"
-        },
-        {
-          "fact": "dataAccessed",
-          "op": "isTrue"
-        }
-      ],
-      "evidence": "{payment} requested"
-    },
-    {
-      "id": "R3",
-      "name": "Payee not verified",
-      "effect": "high",
-      "when": [
-        {
-          "fact": "paymentCents",
-          "op": "positive"
-        },
-        {
-          "fact": "payeeVerified",
-          "op": "isFalse"
-        }
-      ],
-      "evidence": "Pseudonymous payee"
-    },
-    {
-      "id": "R4",
-      "name": "Payout above US$10,000 cap",
-      "effect": "high",
-      "when": [
-        {
-          "fact": "paymentCents",
-          "op": "aboveCap"
-        }
-      ],
-      "evidence": "{capMultiple}× the cap"
-    },
-    {
       "id": "R5",
-      "name": "Payment demand from the attacker",
+      "name": "Extortion demand from the attacker",
       "effect": "high",
       "when": [
         {
@@ -70,7 +25,7 @@
           "op": "isTrue"
         }
       ],
-      "evidence": "Demand for a six-figure payment"
+      "evidence": "Attacker demands money to delete the data"
     },
     {
       "id": "R6",

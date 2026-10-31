@@ -9,12 +9,11 @@ async function asRole(page: Page, role: string): Promise<void> {
 }
 
 async function reset(page: Page): Promise<void> {
-  await page.getByRole("button", { name: "Demo ▾" }).click();
   await page.getByRole("button", { name: "Reset data" }).click();
   await expect(page.locator("#toast")).toHaveText("Demo reset.");
 }
 
-/** Guided steps 1-5: finding, email, recommendation, blocked close, Day 24, blocked release, GC approves. */
+/** Guided steps 1-3: finding, email, recommendation, blocked close, GC approves. */
 async function playToCpo(page: Page): Promise<void> {
   await page.goto("/");
   await reset(page);
@@ -28,7 +27,7 @@ async function playToCpo(page: Page): Promise<void> {
     .click();
   await page.getByRole("button", { name: "Attach to case" }).click();
   await expect(page.locator("#toast")).toHaveText(
-    "Email attached. R5 fired: payment demand.",
+    "Email attached. R5 fired: extortion demand.",
   );
   await page.getByRole("button", { name: "Send for decision" }).click();
   await expect(page.locator("#toast")).toHaveText(
@@ -37,18 +36,6 @@ async function playToCpo(page: Page): Promise<void> {
   await page.getByRole("button", { name: "Close case" }).click();
   await expect(page.getByText("Not allowed: Close case")).toBeVisible();
   await expect(page.getByText("Security cannot close cases.")).toBeVisible();
-
-  await page
-    .locator(".guidecard")
-    .getByRole("button", { name: "Jump to Day 24" })
-    .click();
-  await expect(page.locator("#toast")).toHaveText(
-    "Day 24: report and payment request merged into C-104. Payment held.",
-  );
-
-  await page.getByRole("button", { name: "Go as Finance" }).click();
-  await page.getByRole("button", { name: "Release payment" }).first().click();
-  await expect(page.getByText("Payment held")).toBeVisible();
 
   await page.getByRole("button", { name: "Go as General Counsel" }).click();
   await page.locator("#v1").check();
@@ -62,19 +49,18 @@ async function playToCpo(page: Page): Promise<void> {
   await page.locator("#v1").check();
 }
 
-test("Ending A: the CPO rejects; payment cancelled, disclosure required, board told", async ({
+test("Ending A: the CPO rejects; disclosure required, board told", async ({
   page,
 }) => {
   await playToCpo(page);
   await page.getByRole("button", { name: "Reject" }).click();
   await expect(page.locator(".case-head")).toContainText("Disclosure required");
 
-  await asRole(page, "finance");
-  await expect(page.locator("tbody tr").first()).toContainText("Cancelled");
-
   await asRole(page, "board");
+  // The role menu keeps the open case; Back goes to the board's dashboard.
+  await page.getByRole("button", { name: "← Back" }).click();
   await expect(page.locator(".brief")).toContainText(
-    "A US$100,000 payment to the attacker was cancelled.",
+    "Disclosure has been required, but not yet made.",
   );
   await page.locator('[data-a="expand"][data-x="C-104"]').click();
   await expect(
@@ -91,13 +77,10 @@ test("Ending A: the CPO rejects; payment cancelled, disclosure required, board t
   await expect(
     page.getByText("CSO (also Deputy GC) tried to close case. Not allowed."),
   ).toBeVisible();
-  await expect(
-    page.getByText("Finance tried to release payment. Not allowed."),
-  ).toBeVisible();
   await expect(page.locator(".guidecard h3")).toHaveText("Demo complete");
 });
 
-test("Ending B: both approve escalating internally; payment stays frozen, board told", async ({
+test("Ending B: both approve escalating internally, board told", async ({
   page,
 }) => {
   await playToCpo(page);
@@ -109,10 +92,9 @@ test("Ending B: both approve escalating internally; payment stays frozen, board 
     page.getByText("Escalated internally by both approvers"),
   ).toBeVisible();
 
-  await asRole(page, "finance");
-  await expect(page.locator("tbody tr").first()).toContainText("Held");
-
   await asRole(page, "board");
+  // The role menu keeps the open case; Back goes to the board's dashboard.
+  await page.getByRole("button", { name: "← Back" }).click();
   await expect(page.locator(".brief")).toContainText(
     "Management chose to investigate internally before disclosing.",
   );

@@ -1,5 +1,6 @@
 // Landing: the app's name and promise, the guided demo, and a button for every role.
 import { ROLES, ROLE_KEYS } from "@/domain/roles";
+import { LOGO } from "./header";
 
 export function vLanding(): string {
   return (

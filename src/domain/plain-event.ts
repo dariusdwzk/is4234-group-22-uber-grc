@@ -10,8 +10,7 @@ export type LedgerView = {
   hash: string;
 };
 
-export type EventCat =
-  "detect" | "notice" | "work" | "decision" | "blocked" | "money";
+export type EventCat = "detect" | "notice" | "work" | "decision" | "blocked";
 
 export type PlainEvent = { cat: EventCat; text: string };
 
@@ -22,7 +21,6 @@ export const CATS: Record<EventCat, [label: string, cls: string]> = {
   work: ["Investigation", ""],
   decision: ["Decision", "a"],
   blocked: ["Blocked", "r"],
-  money: ["Payment", "a"],
 };
 
 const staff = (who: string) =>
@@ -35,14 +33,6 @@ export function plainEvent(e: LedgerView): PlainEvent | null {
     d = e.detail;
   if (a === "Signal received") {
     const t = d.split(": ")[1] || d;
-    if (who === "Finance")
-      return {
-        cat: "detect",
-        text:
-          "Finance system received a " +
-          t.replace("payment request ", "payment request of ") +
-          ".",
-      };
     if (who === "HackerOne")
       return { cat: "detect", text: "HackerOne received a " + t + "." };
     return { cat: "detect", text: who + " detected a " + t + "." };
@@ -110,18 +100,6 @@ export function plainEvent(e: LedgerView): PlainEvent | null {
     return {
       cat: "decision",
       text: who + " approved notifying regulators and affected people.",
-    };
-  if (a === "Payment held")
-    return {
-      cat: "money",
-      text: "US$100,000 payment to the attacker frozen automatically.",
-    };
-  if (a === "Payment cancelled")
-    return { cat: "money", text: "US$100,000 payment cancelled." };
-  if (a === "Payment released")
-    return {
-      cat: "money",
-      text: "Finance released a payment: " + d.split(". ")[0] + ".",
     };
   if (a === "Staff report received")
     return { cat: "work", text: staff(who) + " sent a report." };

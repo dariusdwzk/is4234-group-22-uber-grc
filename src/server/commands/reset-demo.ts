@@ -10,7 +10,6 @@ const TABLES = [
   "approvals",
   "decisions",
   "recommendations",
-  "payments",
   "board_notices",
   "evidence",
   "signals",

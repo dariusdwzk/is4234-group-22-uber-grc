@@ -13,7 +13,6 @@ export type UiState = {
   mode: "demo" | "explore";
   /** The guided tour's current step; only moves forward (see guide.ts stepIdx). */
   guideStep: number;
-  menu: boolean;
   caseTab: "deadlines" | "log";
   boardTab: "overview" | "log";
   boardOpen: Record<string, boolean>;
@@ -24,7 +23,6 @@ export type UiState = {
   /** The last receipt checked on the Employee page, and its case timeline. */
   receipt: { code: string; track: ReceiptTrack | null } | null;
   empMsg: string | null;
-  finMsg: Msg | null;
   lastBlock: { what: string; why: string } | null;
   scrolledKey: string | null;
 };
@@ -35,19 +33,15 @@ export const emptyState = (): ViewState => ({
   clockH: 0,
   regulatorOpen: true,
   replayId: null,
-  jumped: false,
   emailAttached: false,
   cases: [],
   signals: [],
-  payments: [],
   notices: [],
   ledger: [],
   progress: {
     finding: false,
     recommended: false,
     csoBlocked: false,
-    jumped: false,
-    financeBlocked: false,
     gcDone: false,
     cpoDone: false,
     allAcked: false,
@@ -62,7 +56,6 @@ export const S: UiState & { d: ViewState } = {
   guided: false,
   mode: "explore",
   guideStep: 0,
-  menu: false,
   caseTab: "deadlines",
   boardTab: "overview",
   boardOpen: {},
@@ -72,7 +65,6 @@ export const S: UiState & { d: ViewState } = {
   statusMsg: null,
   receipt: null,
   empMsg: null,
-  finMsg: null,
   lastBlock: null,
   scrolledKey: null,
   d: emptyState(),

@@ -12,13 +12,10 @@ const MASS_DOWNLOAD = f({
 });
 
 describe("rules (rule-packs/v1.json)", () => {
-  it("the pack is data owned by Legal: R1–R8 from the mockup (R7 retired), R9–R13 for staff reports", () => {
+  it("the pack is data owned by Legal: R1, R5, R6, R8 from the mockup (payment rules removed), R9–R13 for staff reports", () => {
     expect(RULE_PACK.owner).toMatch(/Legal/);
     expect(RULE_PACK.rules.map((r) => r.id)).toEqual([
       "R1",
-      "R2",
-      "R3",
-      "R4",
       "R5",
       "R6",
       "R8",
@@ -51,28 +48,11 @@ describe("rules (rule-packs/v1.json)", () => {
     expect(firedIds(evaluate(f({ jurisdictions: ["EU"] }), true))).toBe("");
   });
 
-  it("Day 24 merge: payment and extortion fire R2–R5", () => {
-    const e = evaluate(
-      {
-        ...MASS_DOWNLOAD,
-        extortion: true,
-        paymentCents: 10_000_000,
-        payeeVerified: false,
-      },
-      true,
-    );
-    expect(firedIds(e)).toBe("R1, R2, R3, R4, R5, R6, R8");
+  it("the hacker's email to the CSO fires R5", () => {
+    const e = evaluate({ ...MASS_DOWNLOAD, extortion: true }, true);
+    expect(firedIds(e)).toBe("R1, R5, R6, R8");
     const ev = Object.fromEntries(e.rules.map((r) => [r.id, r.ev]));
-    expect(ev.R2).toBe("US$100,000 requested");
-    expect(ev.R3).toBe("Pseudonymous payee");
-    expect(ev.R4).toBe("10× the cap");
-  });
-
-  it("a legitimate US$3,000 bounty to a verified researcher stays LOW", () => {
-    expect(
-      evaluate(f({ paymentCents: 300_000, payeeVerified: true }), true)
-        .severity,
-    ).toBe("LOW");
+    expect(ev.R5).toBe("Attacker demands money to delete the data");
   });
 
   it("clocks start only for accessed data with affected residents", () => {

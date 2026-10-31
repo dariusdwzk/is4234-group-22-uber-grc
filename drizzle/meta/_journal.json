@@ -50,6 +50,13 @@
       "when": 1793202281105,
       "tag": "0006_sweet_warbird",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793456330563,
+      "tag": "0007_lovely_namor",
+      "breakpoints": true
     }
   ]
 }

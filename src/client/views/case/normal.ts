@@ -138,7 +138,7 @@ export function normalBox(c: CaseView): string {
         "</div>";
       if (d.status === "Pending" && !d.votes[me])
         h +=
-          '<div class="form"><label class="chk"><input type="checkbox" id="v1"> I have read the reason, the open FTC inquiry and any held payment</label><label>Reason<select id="vReason"><option>Facts support it</option><option>Facts contradict it</option><option>Regulator must be told</option></select></label><div class="row"><button class="btn primary" data-a="vote" data-x="approve">Approve</button><button class="btn danger" data-a="vote" data-x="reject">Reject</button></div></div>';
+          '<div class="form"><label class="chk"><input type="checkbox" id="v1"> I have read the reason and the open FTC inquiry</label><label>Reason<select id="vReason"><option>Facts support it</option><option>Facts contradict it</option><option>Regulator must be told</option></select></label><div class="row"><button class="btn primary" data-a="vote" data-x="approve">Approve</button><button class="btn danger" data-a="vote" data-x="reject">Reject</button></div></div>';
       else if (c.status === "Disclosed")
         h +=
           '<p class="t-ok" style="margin:0">Disclosure approved ' +

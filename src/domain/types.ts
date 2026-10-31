@@ -1,18 +1,15 @@
 export type RoleKey =
-  "employee" | "security" | "cso" | "finance" | "gc" | "cpo" | "ceo" | "board";
+  "employee" | "security" | "cso" | "gc" | "cpo" | "ceo" | "board";
 
 /** PENDING: a staff report waiting for its triage rating. */
 export type Severity = "LOW" | "HIGH" | "PENDING";
 
 export type SignalOrigin = "system" | "manual";
 
-export type PaymentStatus =
-  "Held" | "Approved for release" | "Released" | "Cancelled";
-
 export type JsonValue =
   string | number | boolean | null | JsonValue[] | { [k: string]: JsonValue };
 
-/** Who acted. `name` is what the ledger records, e.g. "Finance" or "Anonymous employee". */
+/** Who acted. `name` is what the ledger records, e.g. "General Counsel" or "Anonymous employee". */
 export type Actor = { role: RoleKey | null; name: string };
 
 export const SYSTEM_ACTOR: Actor = { role: null, name: "System" };
@@ -23,9 +20,6 @@ export type Facts = {
   objects: number;
   records: string;
   licences: string;
-  /** Requested payout in US cents (the mockup's `payment`, in dollars). */
-  paymentCents: number;
-  payeeVerified: boolean;
   extortion: boolean;
   jurisdictions: string[];
   // From the staff report questionnaire (src/domain/questionnaire.ts).
@@ -42,8 +36,6 @@ export const defaultFacts = (): Facts => ({
   objects: 0,
   records: "0",
   licences: "",
-  paymentCents: 0,
-  payeeVerified: true,
   extortion: false,
   jurisdictions: [],
   moneyConcern: false,

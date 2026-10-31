@@ -1,6 +1,6 @@
 // The case timeline (mockup: stages(), waitingOn(), tracker()). Each route has its own steps;
 // tracker() draws whichever list the case's route produces, in the mockup's style.
-import { dayOf } from "@/domain/demo-time";
+import { fmtT } from "@/domain/demo-time";
 import { ESCALATED_STATUS, otherApprover, type Approver } from "@/domain/gate";
 import { ROLES } from "@/domain/roles";
 import type { RoleKey } from "@/domain/types";
@@ -38,7 +38,7 @@ function opened(c: CaseView): Stage {
     label: c.answers ? "Report received" : "Case opened",
     who: c.answers ? "Employee" : "System",
     state: "done",
-    note: dayOf(c.detectedH) + (c.answers ? ", staff report" : ", automatic"),
+    note: fmtT(c.detectedH) + (c.answers ? ", staff report" : ", automatic"),
   };
 }
 
@@ -50,7 +50,7 @@ function boardNotified(c: CaseView, src: TimelineSource): Stage {
     label: "Board notified",
     who: "System",
     state: t1 ? "done" : "todo",
-    note: t1 ? dayOf(t1.t) + ", automatic" : "",
+    note: t1 ? fmtT(t1.t) + ", automatic" : "",
     roles: ["board"],
   };
 }
@@ -64,7 +64,7 @@ function reviewStage(c: CaseView): Stage {
     note: c.finding
       ? "Reviewed"
       : c.reviewDueH !== null
-        ? "Due " + dayOf(c.reviewDueH)
+        ? "Due " + fmtT(c.reviewDueH)
         : "",
     roles: ["security"],
   };
@@ -123,14 +123,14 @@ function normalStages(c: CaseView, src: TimelineSource): Stage[] {
       label: "Investigate",
       who: "Security team",
       state: c.finding ? "done" : c.rec ? "skip" : "todo",
-      note: find ? dayOf(find.t) : c.rec ? "Skipped" : "",
+      note: find ? fmtT(find.t) : c.rec ? "Skipped" : "",
       roles: ["security"],
     },
     {
       label: "Recommend",
       who: "CSO",
       state: c.rec ? "done" : "todo",
-      note: recE ? dayOf(recE.t) : "",
+      note: recE ? fmtT(recE.t) : "",
       roles: ["cso"],
     },
     {
@@ -179,7 +179,7 @@ function independentStages(c: CaseView, src: TimelineSource): Stage[] {
       label: "Recommend",
       who: author ? ROLES[author].name : "GC or CPO",
       state: c.rec ? "done" : "todo",
-      note: c.rec ? dayOf(c.rec.t) : "",
+      note: c.rec ? fmtT(c.rec.t) : "",
       roles: ["gc", "cpo"],
     },
     {

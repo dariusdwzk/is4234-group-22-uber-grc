@@ -1,13 +1,12 @@
 // The case page: header, timeline, alerts, summary, action panel, Deadlines / Activity.
 import { knownScale } from "@/domain/board-text";
 import { ESCALATED_STATUS } from "@/domain/gate";
-import { dayOf, fmtDur } from "@/domain/demo-time";
-import { money } from "@/domain/money";
+import { fmtDur, fmtT } from "@/domain/demo-time";
 import { QUESTIONNAIRE } from "@/domain/questionnaire";
 import type { CaseView } from "@/domain/view-state";
 import { esc } from "../../html";
 import { S } from "../../store";
-import { TRIAGE, payBadge, remText, sev, statusBadge } from "../components";
+import { TRIAGE, remText, sev, statusBadge } from "../components";
 import { evidencePanel, independentBox } from "./independent";
 import { normalBox } from "./normal";
 import { reviewBox } from "./review";
@@ -55,8 +54,7 @@ function caseSummary(c: CaseView): string {
       .map((id) => S.d.signals.find((s) => s.id === id))
       .filter((s) => !!s),
     fired = c.rules.filter((x) => x.fired);
-  const p = S.d.payments.find((x) => x.caseId === c.id),
-    t1 = S.d.notices.find((n) => n.caseId === c.id && n.tier === 1);
+  const t1 = S.d.notices.find((n) => n.caseId === c.id && n.tier === 1);
   const g = c.clocks.find((k) => k.key === "gdpr");
   const kv: [string, string][] = [];
   if (f.dataAccessed)
@@ -78,13 +76,8 @@ function caseSummary(c: CaseView): string {
     ]);
   if (f.jurisdictions.length)
     kv.push(["Affected residents", f.jurisdictions.join(", ")]);
-  if (p)
-    kv.push([
-      "Payment",
-      money(p.amountCents) + " to " + esc(p.payee) + " " + payBadge(p),
-    ]);
   if (c.severity === "HIGH") kv.push(["Regulator", "FTC inquiry open"]);
-  if (t1) kv.push(["Board", "Notified " + dayOf(t1.t)]);
+  if (t1) kv.push(["Board", "Notified " + fmtT(t1.t)]);
   if (g && g.start !== null && g.dur !== null && c.status !== "Disclosed")
     kv.push(["GDPR deadline", remText(g.start + g.dur - S.d.clockH)]);
   return (
@@ -97,7 +90,7 @@ function caseSummary(c: CaseView): string {
               "<dt>" +
               k +
               "</dt><dd>" +
-              (k === "Payment" || k === "GDPR deadline" ? v : esc(v)) +
+              (k === "GDPR deadline" ? v : esc(v)) +
               "</dd>",
           )
           .join("") +
@@ -107,8 +100,8 @@ function caseSummary(c: CaseView): string {
     sigs
       .map(
         (s) =>
-          '<li><span class="muted small" style="width:3.4rem;flex:none">' +
-          dayOf(s.h) +
+          '<li><span class="muted small" style="width:8.5rem;flex:none">' +
+          fmtT(s.h) +
           '</span><span class="grow">' +
           esc(s.title) +
           ' <span class="badge ' +
@@ -240,7 +233,7 @@ export function vCase(): string {
             '</b> <span class="muted">by ' +
             esc(e.actor) +
             ", " +
-            dayOf(e.t) +
+            fmtT(e.t) +
             '</span><div class="muted small">' +
             esc(e.detail) +
             "</div></li>",

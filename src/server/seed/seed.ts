@@ -2,13 +2,15 @@ import "server-only";
 import { hoursToIso } from "@/domain/demo-time";
 import { SYSTEM_ACTOR, defaultFacts, type Facts } from "@/domain/types";
 import { ingest, insertSignal } from "../cases/engine";
+import { wallNow } from "../clock";
 import type { Tx } from "../db/client";
-import { cases, payments, settings, signals } from "../db/schema";
+import { cases, settings, signals } from "../db/schema";
 import { anchorHead } from "../ledger/anchor";
 import { writeGenesis } from "../ledger/genesis";
 import { logFor, type CommandCtx } from "../run-command";
 
 // Copied from seed() in docs/mockup/disclosure-gate-flow.html. Synthetic data only.
+// Times are made up: hours before the reset, so the story always ends "now".
 const LOW_CASES: {
   id: string;
   title: string;
@@ -16,12 +18,7 @@ const LOW_CASES: {
   facts?: Partial<Facts>;
 }[] = [
   { id: "C-101", title: "Blocked login attempts", h: -50 },
-  {
-    id: "C-102",
-    title: "Bug bounty: cross-site scripting",
-    h: -30,
-    facts: { paymentCents: 300_000, payeeVerified: true },
-  },
+  { id: "C-102", title: "Cross-site scripting report", h: -30 },
   { id: "C-103", title: "AWS key in public repository", h: -20 },
 ];
 
@@ -43,14 +40,6 @@ const SIGNALS = [
     caseId: "C-102",
   },
   {
-    id: "SIG-103",
-    source: "Finance",
-    detectedH: -28,
-    title: "US$3,000 to verified researcher",
-    entityKeys: ["researcher-ak"],
-    caseId: "C-102",
-  },
-  {
     id: "SIG-104",
     source: "Secret scanning",
     detectedH: -20,
@@ -60,12 +49,13 @@ const SIGNALS = [
   },
 ];
 
-/** Low-risk history before Day 0, the daily anchor, then Day 0: the mass download opens C-104. */
+/** Low-risk history before Day 0, the daily anchor, then Day 0 (now): the mass download opens C-104. */
 export async function seed(tx: Tx): Promise<void> {
+  const t0 = wallNow();
   await tx
     .insert(settings)
     .values({ id: 1, clockH: 0, regulatorInquiryOpen: true });
-  await writeGenesis(tx, hoursToIso(-50));
+  await writeGenesis(tx, hoursToIso(t0 - 50));
 
   await tx.insert(cases).values(
     LOW_CASES.map((c) => ({
@@ -73,65 +63,50 @@ export async function seed(tx: Tx): Promise<void> {
       title: c.title,
       severity: "LOW" as const,
       status: "Logged",
-      detectedH: c.h,
+      detectedH: t0 + c.h,
       facts: { ...defaultFacts(), ...c.facts },
     })),
   );
-  await tx
-    .insert(signals)
-    .values(
-      SIGNALS.map((s) => ({ ...s, origin: "system" as const, facts: {} })),
-    );
-  await tx.insert(payments).values({
-    id: "PAY-1",
-    caseId: "C-102",
-    payee: "researcher-ak (verified)",
-    amountCents: 300_000,
-    status: "Released",
-    createdH: -27,
-  });
+  await tx.insert(signals).values(
+    SIGNALS.map((s) => ({
+      ...s,
+      detectedH: t0 + s.detectedH,
+      origin: "system" as const,
+      facts: {},
+    })),
+  );
 
-  const log = logFor(tx, { role: null, name: "System" }, 0);
+  const log = logFor(tx, { role: null, name: "System" }, t0);
   const low = (caseId: string, t: number) =>
     log(
       "Classified LOW",
       caseId,
       "No high-risk rule fired. Logged without approval.",
-      { t },
+      { t: t0 + t },
     );
   await log("Signal received", "C-101", "SIG-101", {
     actor: "Cloud monitoring",
-    t: -50,
+    t: t0 - 50,
   });
   await low("C-101", -50);
   await log("Signal received", "C-102", "SIG-102", {
     actor: "HackerOne",
-    t: -30,
+    t: t0 - 30,
   });
-  await log("Signal received", "C-102", "SIG-103", {
-    actor: "Finance",
-    t: -28,
-  });
-  await low("C-102", -28);
-  await log(
-    "Payment released",
-    "C-102",
-    "US$3,000 to verified researcher. Low-risk case, no hold.",
-    { actor: "Finance", t: -27 },
-  );
+  await low("C-102", -30);
   await log("Signal received", "C-103", "SIG-104", {
     actor: "Secret scanning",
-    t: -20,
+    t: t0 - 20,
   });
   await low("C-103", -20);
-  await anchorHead(tx, 0, "Daily export");
+  await anchorHead(tx, t0, "Daily export");
 
   // Day 0: cloud monitoring flags the mass download. The case opens by itself.
-  const ctx: CommandCtx = { tx, actor: SYSTEM_ACTOR, now: 0, log };
+  const ctx: CommandCtx = { tx, actor: SYSTEM_ACTOR, now: t0, log };
   const sig = await insertSignal(tx, {
     source: "Cloud monitoring",
     origin: "system",
-    detectedH: 0,
+    detectedH: t0,
     title: "16 objects downloaded from rider-backup by an unknown IP",
     entityKeys: ["rider-backup"],
     facts: {

@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import {
   ESCALATED_STATUS,
@@ -10,13 +10,7 @@ import {
 import { ROLES } from "@/domain/roles";
 import type { Actor } from "@/domain/types";
 import { getCase, runEscalations, sendNotice } from "../cases/engine";
-import {
-  approvals,
-  cases,
-  decisions,
-  payments,
-  recommendations,
-} from "../db/schema";
+import { approvals, cases, decisions, recommendations } from "../db/schema";
 import { Conflict, Forbidden } from "../errors";
 import { anchorHead } from "../ledger/anchor";
 import { caseIdOf, runCommand, type CommandDef } from "../run-command";
@@ -82,10 +76,6 @@ export const voteCommand: CommandDef<z.infer<typeof schema>, void> = {
       ? "approve"
       : (votes.find((v) => v.role !== voter)?.vote ?? null);
     const outcome = voteOutcome(d, voter, vote, other);
-    const [held] = await tx
-      .select()
-      .from(payments)
-      .where(and(eq(payments.caseId, caseId), eq(payments.status, "Held")));
     const sys = { actor: "System" };
     const resolve = (status: "Approved" | "Rejected") =>
       tx
@@ -99,13 +89,6 @@ export const voteCommand: CommandDef<z.infer<typeof schema>, void> = {
         .update(cases)
         .set({ status: "Disclosure required" })
         .where(eq(cases.id, caseId));
-      if (held) {
-        await tx
-          .update(payments)
-          .set({ status: "Cancelled" })
-          .where(eq(payments.id, held.id));
-        await log("Payment cancelled", caseId, "Recommendation rejected.", sys);
-      }
       await sendNotice(
         ctx,
         caseId,
@@ -114,16 +97,14 @@ export const voteCommand: CommandDef<z.infer<typeof schema>, void> = {
         actor.name +
           " rejected the recommendation on " +
           c.id +
-          "." +
-          (held ? " Payment cancelled." : "") +
-          " Disclosure is required.",
+          ". Disclosure is required.",
       );
     } else if (outcome.kind === "disclosed") {
       await resolve("Approved");
       await markDisclosed(ctx, caseId);
     } else if (outcome.kind === "escalated") {
-      // Both keys agreed to investigate further. No payment is approved, the clocks keep
-      // running and the board is told; GC or CPO can still approve disclosure later.
+      // Both keys agreed to investigate further. The clocks keep running and the board is
+      // told; GC or CPO can still approve disclosure later.
       await resolve("Approved");
       await tx
         .update(cases)

@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  actionRequired,
-  paymentActionRequired,
-} from "@/client/action-required";
-import type { CaseView, PaymentView } from "@/domain/view-state";
+import { actionRequired } from "@/client/action-required";
+import type { CaseView } from "@/domain/view-state";
 
 const c = (o: Partial<CaseView>) =>
   ({
@@ -89,11 +86,5 @@ describe("Action required, per role", () => {
   it("CEO and board never act on cases", () => {
     expect(actionRequired(c({ decision: pending() }), "ceo")).toBe(false);
     expect(actionRequired(c({}), "board")).toBe(false);
-  });
-
-  it("Finance: only payments that can be released", () => {
-    const p = (status: PaymentView["status"]) => ({ status }) as PaymentView;
-    expect(paymentActionRequired(p("Approved for release"))).toBe(true);
-    expect(paymentActionRequired(p("Held"))).toBe(false);
   });
 });

@@ -19,7 +19,6 @@ export const ROLES: Record<RoleKey, RoleInfo> = {
     home: "security",
     short: "Leads Security and recommends. Cannot approve.",
   },
-  finance: { name: "Finance", home: "finance", short: "Releases payments" },
   gc: {
     name: "General Counsel",
     home: "approvals",

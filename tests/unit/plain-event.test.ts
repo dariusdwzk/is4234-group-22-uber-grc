@@ -22,14 +22,6 @@ describe("plainEvent (the board's evidence log wording)", () => {
       cat: "detect",
       text: "HackerOne received a report from jdough.",
     });
-    expect(
-      plainEvent(
-        e("Finance", "Signal received", "SIG-203: payment request US$100,000"),
-      ),
-    ).toEqual({
-      cat: "detect",
-      text: "Finance system received a payment request of US$100,000.",
-    });
   });
 
   it("blocked attempts name who tried what", () => {
@@ -45,9 +37,7 @@ describe("plainEvent (the board's evidence log wording)", () => {
       cat: "blocked",
       text: "CSO (also Deputy GC) tried to close case. Not allowed.",
     });
-    expect(plainEvent(e("Finance", "Blocked: Release payment"))!.cat).toBe(
-      "blocked",
-    );
+    expect(plainEvent(e("CEO", "Blocked: Approve"))!.cat).toBe("blocked");
   });
 
   it("votes keep only the first sentence of the detail", () => {
@@ -80,17 +70,7 @@ describe("plainEvent (the board's evidence log wording)", () => {
     });
   });
 
-  it("payments and notices get their own categories", () => {
-    expect(plainEvent(e("System", "Payment held"))!.cat).toBe("money");
-    expect(
-      plainEvent(
-        e(
-          "Finance",
-          "Payment released",
-          "US$3,000 to verified researcher. Low-risk case, no hold.",
-        ),
-      )!.text,
-    ).toBe("Finance released a payment: US$3,000 to verified researcher.");
+  it("notices get their own category", () => {
     expect(
       plainEvent(
         e("System", "Board notice sent (Tier 2)", "GDPR deadline is close."),

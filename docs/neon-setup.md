@@ -39,7 +39,7 @@ so the old production deployment is unchanged:
 |---|---|
 | `DATABASE_URL` | pooled `app_rw` URL for `disclosure_gate` |
 | `DEMO_ADMIN_DATABASE_URL` | direct (unpooled) `demo_admin` URL for `disclosure_gate` (reset needs `LOCK TABLE`/`TRUNCATE`) |
-| `DEMO_MODE` | `true` (enables Reset data and the guided demo's Day 24 jump) |
+| `DEMO_MODE` | `true` (enables Reset data) |
 
 `DATABASE_URL_OWNER` is never set in Vercel. The app needs no login secrets any more.
 

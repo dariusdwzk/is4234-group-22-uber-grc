@@ -2,24 +2,23 @@
 
 A demonstrator for IS4234 that replays Uber's 2016 breach cover-up with **synthetic data**. It shows a control that would have prevented the cover-up: the team that investigates an incident can never decide whether it is disclosed, and every decision leaves evidence the board can see.
 
-There is no login. Pick a role from the **Role** menu, or click **Start guided demo** for the 8-step walkthrough. **Home** (top left) always returns to the start page.
+There is no login. Pick a role from the **Role** menu, or click **Start guided demo** for the 6-step walkthrough. The **UberSecure** logo (top left) always returns to the start page.
 
 ## How it works
 
 **The guided demo (Uber 2016).** On Day 0, cloud monitoring flags a mass download, and case C-104 opens and is rated HIGH by itself. The board is told automatically.
 1. Security records a finding.
 2. The CSO attaches the hacker's email, recommends, and is refused when he tries to close the case.
-3. On Day 24, the HackerOne report and a US$100,000 payment request merge into the case, and the payment is frozen.
-4. The General Counsel (GC) and the Chief Privacy Officer (CPO) decide.
+3. The General Counsel (GC) and the Chief Privacy Officer (CPO) decide.
 
 **Recommendations.** The CSO, or the GC / CPO on independent cases, picks one of two options:
 
 | Option | Approvals needed | If approved |
 |---|---|---|
-| Escalate internally for further investigation (a reason is required) | GC **and** CPO | "Under internal investigation". The board is told, the deadlines keep running, and any frozen payment stays frozen. |
+| Escalate internally for further investigation (a reason is required) | GC **and** CPO | "Under internal investigation". The board is told and the deadlines keep running. |
 | Notify regulators and affected people | GC **or** CPO | "Disclosed" |
 
-Any rejection means "Disclosure required" and cancels a frozen payment. No decision ever releases a payment on a high-risk case.
+Any rejection means "Disclosure required".
 
 **Staff reports.** An employee describes the incident and answers 7 questions with Yes / No / Not sure. The same rules engine rates the answers; the employee never picks the severity.
 
@@ -90,7 +89,7 @@ DEMO_MODE=true
 EOF
 ```
 
-This creates a file named exactly `.env.local` (with the leading dot). The passwords are local-only defaults for your own Docker database, not secrets. Note the port is **5433**. `DEMO_MODE=true` turns on Reset data (in the Demo menu) and the guided demo's Day 24 jump.
+This creates a file named exactly `.env.local` (with the leading dot). The passwords are local-only defaults for your own Docker database, not secrets. Note the port is **5433**. `DEMO_MODE=true` shows the Reset data button in the top bar.
 
 `.env.local` is ignored by git. Never commit it, and never put real values in `.env.example`.
 
@@ -121,7 +120,7 @@ docker compose up -d
 npm run dev
 ```
 
-Open <http://localhost:3000> and click **Start guided demo**. Use **Demo ▾ → Reset data** to start the story again from Day 0.
+Open <http://localhost:3000> and click **Start guided demo**. Use **Reset data** (top right) to start the story again from Day 0.
 
 To stop the app, press `Ctrl + C`. Next time you only need to open Docker Desktop, then run `docker compose up -d`, `nvm use` and `npm run dev`.
 
@@ -134,7 +133,7 @@ npm run db:migrate     # applies any new migrations
 npm run dev
 ```
 
-Then click **Demo ▾ → Reset data**, so your data matches the latest version.
+Then click **Reset data** (top right), so your data matches the latest version.
 
 ## Troubleshooting
 
@@ -146,10 +145,10 @@ Then click **Demo ▾ → Reset data**, so your data matches the latest version.
 | `password authentication failed for user "app_rw"` | Run the `ALTER ROLE` command from step 5. |
 | `relation "cases" does not exist` | Run `npm run db:migrate`, then `npm run db:seed`. |
 | `relation "cases" already exists` | Old tables from before this version: run `docker compose down -v`, then redo steps 3 and 5. |
-| `column ... does not exist` (for example `reason` or `route`) | New migrations are waiting: run `npm run db:migrate`, then Demo ▾ → Reset data. |
+| `column ... does not exist` (for example `reason` or `route`) | New migrations are waiting: run `npm run db:migrate`, then Reset data (top right). |
 | Reset data fails with `permission denied` | Run `npm run db:migrate`: a later migration gives the reset login its permissions. |
 | `eval() is not supported` in the browser console | Restart `npm run dev`. The dev server allows it; production never uses it. |
-| Old or odd data on screen | Demo ▾ → Reset data. |
+| Old or odd data on screen | Reset data (top right). |
 
 ## Roles
 
@@ -158,9 +157,8 @@ The server enforces every permission. The browser only says which role you picke
 | Role | Can | Cannot |
 |---|---|---|
 | Employee | Report an incident (7 questions, optionally anonymous), check a receipt code | See the case list or choose a severity |
-| Security team | View cases, add findings, declare an incident, add facts on triage cases, review LOW staff reports | Close, downgrade, approve or rate a triage case. Cannot see independent cases. |
+| Security team | View cases, add findings, add facts on triage cases, review LOW staff reports | Close, downgrade, approve or rate a triage case. Cannot see independent cases. |
 | CSO (also Deputy GC) | Attach the out-of-band email, send a recommendation | Close, downgrade or approve (reports to Security despite the legal title). Cannot see independent cases. |
-| Finance | View payments, release payments not frozen on a high-risk case | Release a frozen payment |
 | General Counsel | Approver; on independent cases, investigate, add evidence and recommend | Approve escalating alone, or approve their own recommendation |
 | Chief Privacy Officer | Approver; rates triage cases; on independent cases, as the GC | Approve escalating alone, or approve their own recommendation |
 | CEO | View cases and board notices | Approve, close or change anything |
@@ -185,14 +183,14 @@ src/
   app/              The only page (page.tsx) and the API routes
   client/           Browser code
     app.ts          Renders the current view and handles every click
-    views/          One file per page: landing, employee, security, finance, decisions, ceo, board
+    views/          One file per page: landing, employee, security, decisions, ceo, board
       case/         The case page: page.ts plus one panel per path (normal, independent, triage, review)
                     and timeline.ts (the progress tracker, built per path)
-    guide.ts        The 8-step guided tour
+    guide.ts        The 6-step guided tour
   domain/           Pure logic, no I/O: rules, questionnaire, clocks, decision gate, escalations, ledger wording
   server/           Server-only code
     authz.ts        The permissions map: which role may do what
-    commands/       One file per action (vote, recommend, add evidence, release payment, ...)
+    commands/       One file per action (vote, recommend, add evidence, ...)
     cases/          Signal routing, case rating, staff reports, board notices, escalations
     ledger/         Hash-chained evidence ledger: append, verify, anchors
     db/             Drizzle schema and database connections
@@ -209,10 +207,10 @@ Every change goes through one function, `runCommand()` in `src/server/run-comman
 
 PostgreSQL, with tables defined in [src/server/db/schema.ts](src/server/db/schema.ts):
 
-- **Cases:** `cases` (including the staff report's route, answers and triage and review deadlines), `signals` (system alerts and staff reports), `recommendations`, `decisions`, `approvals` (one vote per approver, enforced by the database), `payments`, `challenge_flags`, `receipts`, `board_notices`
+- **Cases:** `cases` (including the staff report's route, answers and triage and review deadlines), `signals` (system alerts and staff reports), `recommendations`, `decisions`, `approvals` (one vote per approver, enforced by the database), `receipts`, `board_notices`
 - **Evidence:** `evidence` (notes plus optional files; add only, never edited)
 - **Evidence ledger:** `ledger_entries` (append-only: a database trigger refuses any edit or delete), `ledger_head`, `external_anchors` (copies of the latest fingerprint, used to detect tampering)
-- **Demo:** `settings` (the demo clock, in hours since Day 0)
+- **Demo:** `settings` (an offset added to the real clock; tests use it to move time)
 
 The app connects as `app_rw`, which can add rows but never change evidence. The reset button uses `demo_admin`, which can also empty tables. Both logins are created by the migrations.
 

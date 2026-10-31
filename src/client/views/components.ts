@@ -1,6 +1,6 @@
 // Ported from the mockup's "small components" and "progress tracker" sections.
-import { dayOf, fmtDur, fmtT } from "@/domain/demo-time";
-import type { CaseView, NoticeView, PaymentView } from "@/domain/view-state";
+import { fmtDay, fmtDur, fmtT } from "@/domain/demo-time";
+import type { CaseView, NoticeView } from "@/domain/view-state";
 import { CHK, esc } from "../html";
 import { ESCALATED_STATUS } from "@/domain/gate";
 import { actionRequired, yesNo } from "../action-required";
@@ -49,17 +49,6 @@ function nearest(c: CaseView): string {
     .map((k) => k.start! + k.dur! - S.d.clockH);
   return r.length ? remText(Math.min(...r)) : '<span class="muted">None</span>';
 }
-
-export const payBadge = (p: PaymentView): string =>
-  '<span class="badge ' +
-  (p.status === "Held"
-    ? "warn"
-    : p.status === "Approved for release"
-      ? "ok"
-      : "") +
-  '">' +
-  p.status +
-  "</span>";
 
 /** Cases, high-risk first. With `action`, adds "Action required" for the signed-in role and lists those first. */
 export function caseTable(
@@ -115,7 +104,7 @@ export function noticeRow(n: NoticeView, canAck: boolean): string {
       ? '<span class="ack-ok">' +
         CHK +
         " Acknowledged " +
-        dayOf(n.ack) +
+        fmtT(n.ack) +
         "</span>"
       : canAck
         ? '<button class="btn sm primary" data-a="ack" data-x="' +
@@ -130,8 +119,6 @@ export function noticeRow(n: NoticeView, canAck: boolean): string {
     '</span><div class="grow">' +
     esc(n.body) +
     '<div class="muted small">' +
-    dayOf(n.t) +
-    ", " +
     fmtT(n.t) +
     (n.allDirs
       ? ' <span class="badge high">Sent to all directors</span>'
@@ -147,7 +134,7 @@ export const rag = (level: string, label: string): string =>
 
 export function discStatus(c: CaseView): string {
   if (c.status === "Disclosed")
-    return rag("g", "Disclosed " + dayOf(c.disclosedH ?? 0));
+    return rag("g", "Disclosed " + fmtDay(c.disclosedH ?? 0));
   if (c.status === ESCALATED_STATUS)
     return rag("a", "Investigating internally");
   if (c.status === "Disclosure required")

@@ -5,8 +5,6 @@ import { clocksFrom, gdprRemaining } from "@/domain/clocks";
 import { matchCase } from "@/domain/correlation";
 import { dueEscalations, type EscalationInput } from "@/domain/escalations";
 import { decisionFor, voteOutcome } from "@/domain/gate";
-import { money } from "@/domain/money";
-import { canRelease, initialPaymentStatus } from "@/domain/payments";
 import { defaultFacts } from "@/domain/types";
 
 const facts = {
@@ -84,7 +82,7 @@ describe("tier 1 board notice text", () => {
         true,
       ),
     ).toBe(
-      "New high-risk incident C-104: mass download of rider and driver data. About 57 million records affected. FTC inquiry still open. GDPR deadline Thu 19 Nov, 09:00.",
+      "New high-risk incident C-104: mass download of rider and driver data. About 57 million records affected. FTC inquiry still open. GDPR deadline Thu 19 Nov, 17:00.",
     );
   });
 });
@@ -136,30 +134,6 @@ describe("blocked attempts", () => {
     expect(blockedReason("ceo", "close")).toBe(
       "The CEO can view cases but cannot change them.",
     );
-  });
-});
-
-describe("payment hold", () => {
-  it("payments on open HIGH cases start Held", () => {
-    expect(initialPaymentStatus("HIGH")).toBe("Held");
-    expect(initialPaymentStatus("LOW")).toBe("Approved for release");
-  });
-  it("a held payment cannot be released; an approved one can", () => {
-    expect(canRelease({ status: "Held", caseId: "C-104" })).toEqual({
-      ok: false,
-      reason:
-        "Linked to C-104, an open high-risk case. Payments on high-risk cases stay frozen; no decision on the case releases them.",
-    });
-    expect(
-      canRelease({ status: "Approved for release", caseId: "C-104" }),
-    ).toEqual({ ok: true });
-    expect(canRelease({ status: "Released", caseId: "C-104" })).toEqual({
-      ok: false,
-      noop: true,
-    });
-  });
-  it("money formats cents as whole US dollars", () => {
-    expect(money(10_000_000)).toBe("US$100,000");
   });
 });
 

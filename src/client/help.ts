@@ -63,7 +63,7 @@ function caseHelp(c: CaseView): Help {
     case "cpo":
       return {
         title: "Decide",
-        text: "Read the reason first. Escalating internally needs both of you; notifying needs one. Either way the board is told, and a frozen payment stays frozen.",
+        text: "Read the reason first. Escalating internally needs both of you; notifying needs one. Either way the board is told.",
       };
     case "ceo":
       return {
@@ -95,13 +95,8 @@ export function pageHelp(): Help {
           }
         : {
             title: "Security’s cases",
-            text: "Cases open by themselves from cloud monitoring, HackerOne and Finance. Open one to investigate. Cases that involve Security handles an incident never appear here.",
+            text: "Cases open by themselves from cloud monitoring, HackerOne and secret scanning. Open one to investigate. Cases that involve Security handles an incident never appear here.",
           };
-    case "finance":
-      return {
-        title: "Payments",
-        text: "A payment linked to an open high-risk case is frozen. Try releasing it: the attempt is refused and written to the record the board sees.",
-      };
     case "approvals":
       return {
         title: "Your decisions",
@@ -109,12 +104,12 @@ export function pageHelp(): Help {
           (r === "cpo"
             ? "You also rate staff reports the reporter was unsure about. "
             : "") +
-          "Holding back disclosure needs both the General Counsel and the Chief Privacy Officer; notifying needs one. Cases about how Security handles an incident come straight to you.",
+          "Holding back disclosure needs both the General Counsel and the Chief Privacy Officer; notifying needs one. Cases involving Security come straight to CPO.",
       };
     case "ceo":
       return {
         title: "Overview",
-        text: "You can see every high-risk case and what the board has been told. You cannot approve or close anything.",
+        text: "This is a read-only dashboard. CEO can see every high-risk case and what the board has been told.",
       };
     case "board":
       return S.boardTab === "log"
@@ -124,7 +119,7 @@ export function pageHelp(): Help {
           }
         : {
             title: "What the board is told",
-            text: "Each serious incident in plain language, with the notices sent about it. Your only action is acknowledging them; decisions happen in board meetings.",
+            text: "Dashboard shows serious incidents. Board's only action is acknowledging them; real decisions happen in board meetings.",
           };
     case "case": {
       const c = S.d.cases.find((x) => x.id === S.caseId);

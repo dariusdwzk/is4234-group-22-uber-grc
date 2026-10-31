@@ -1,6 +1,6 @@
 // Whether a case needs something from the signed-in role right now ("Action required").
 import type { RoleKey } from "@/domain/types";
-import type { CaseView, PaymentView } from "@/domain/view-state";
+import type { CaseView } from "@/domain/view-state";
 
 const TRIAGE = "Needs triage";
 
@@ -27,10 +27,6 @@ export function actionRequired(c: CaseView, role: RoleKey | null): boolean {
       return false;
   }
 }
-
-/** Finance acts only on payments that can be released. */
-export const paymentActionRequired = (p: PaymentView): boolean =>
-  p.status === "Approved for release";
 
 export const yesNo = (yes: boolean): string =>
   yes ? '<span class="badge high">Yes</span>' : '<span class="muted">No</span>';

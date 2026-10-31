@@ -38,7 +38,7 @@ export type CommandCtx = {
 
 export type CommandDef<I, O> = {
   action: Action;
-  /** The ledger action written when this command is refused, e.g. "Blocked: Release payment". */
+  /** The ledger action written when this command is refused, e.g. "Blocked: Close case". */
   blocked: BlockedEventType;
   schema: z.ZodType<I>;
   handler: (ctx: CommandCtx, input: I) => Promise<O>;

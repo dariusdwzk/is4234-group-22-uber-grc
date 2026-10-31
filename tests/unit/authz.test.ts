@@ -4,7 +4,7 @@ import type { Actor, RoleKey } from "@/domain/types";
 import { POLICY, authorize, type Action } from "@/server/authz";
 
 const ACTIONS = Object.keys(POLICY) as Action[];
-const DEMO: Action[] = ["advanceClock", "jumpToDay24", "resetDemo"];
+const DEMO: Action[] = ["advanceClock", "resetDemo"];
 const actorOf = (role: RoleKey): Actor => ({ role, name: ROLES[role].name });
 const allowed = (a: Action) =>
   ROLE_KEYS.filter((r) => authorize(actorOf(r), a).ok);
@@ -75,18 +75,8 @@ describe("authorize", () => {
     expect(authorize(actorOf("employee"), "viewCases").ok).toBe(false);
   });
 
-  it("only Finance releases payments", () => {
-    expect(allowed("releasePayment")).toEqual(["finance"]);
-  });
-
-  it("employees and Finance cannot see cases; employees see no payments or notices", () => {
-    expect(authorize(actorOf("finance"), "viewCases").ok).toBe(false);
-    for (const a of [
-      "viewCases",
-      "viewPayments",
-      "viewNotices",
-      "viewBoard",
-    ] as Action[])
+  it("employees cannot see cases or notices", () => {
+    for (const a of ["viewCases", "viewNotices", "viewBoard"] as Action[])
       expect(authorize(actorOf("employee"), a).ok).toBe(false);
     expect(allowed("viewBoard")).toEqual(["board"]);
   });

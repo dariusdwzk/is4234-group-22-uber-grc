@@ -6,6 +6,7 @@ import { evaluate } from "@/domain/rules";
 import type { Actor } from "@/domain/types";
 import type { CaseView, ViewState } from "@/domain/view-state";
 import { authorize } from "../authz";
+import { getNow } from "../clock";
 import { db } from "../db/client";
 import {
   approvals,
@@ -13,7 +14,6 @@ import {
   cases,
   decisions,
   evidence,
-  payments,
   recommendations,
   settings,
   signals,
@@ -24,14 +24,13 @@ import { listLedger } from "./ledger";
 export async function getViewState(actor: Actor | null): Promise<ViewState> {
   const can = (a: Parameters<typeof authorize>[1]) => authorize(actor, a).ok;
   const [s] = await db.select().from(settings);
-  const [allCases, allSignals, recs, decs, votes, pays, notices, ledger] =
+  const [allCases, allSignals, recs, decs, votes, notices, ledger] =
     await Promise.all([
       db.select().from(cases).orderBy(asc(cases.id)),
       db.select().from(signals).orderBy(asc(signals.id)),
       db.select().from(recommendations),
       db.select().from(decisions),
       db.select().from(approvals),
-      db.select().from(payments).orderBy(asc(payments.id)),
       db.select().from(boardNotices),
       listLedger(),
     ]);
@@ -117,9 +116,6 @@ export async function getViewState(actor: Actor | null): Promise<ViewState> {
   });
 
   const replayId = allSignals.find((x) => x.id === "SIG-201")?.caseId ?? null;
-  const jumped = allSignals.some(
-    (x) => x.source === "HackerOne" && x.entityKeys.includes("jdough"),
-  );
   const replay = caseViews.find((c) => c.id === replayId);
   const blockedBy = (actorName: string, prefix = "Blocked") =>
     ledger.some((e) => e.action.startsWith(prefix) && e.actor === actorName);
@@ -127,7 +123,7 @@ export async function getViewState(actor: Actor | null): Promise<ViewState> {
   const visibleCases = can("viewCases")
     ? caseViews.filter((c) => canAccessCase(actor?.role ?? null, c.route))
     : [];
-  // Only cases this role is kept away from by their route; Finance still sees every payment.
+  // Only cases this role is kept away from by their route.
   const hidden = new Set(
     caseViews
       .filter((c) => !canAccessCase(actor?.role ?? null, c.route))
@@ -140,10 +136,9 @@ export async function getViewState(actor: Actor | null): Promise<ViewState> {
   return {
     role: actor?.role ?? null,
     demoMode: process.env.DEMO_MODE === "true",
-    clockH: s?.clockH ?? 0,
+    clockH: await getNow(),
     regulatorOpen,
     replayId,
-    jumped,
     emailAttached: allSignals.some((x) => x.source === "Email to CSO"),
     cases: visibleCases,
     signals: can("viewCases")
@@ -156,18 +151,6 @@ export async function getViewState(actor: Actor | null): Promise<ViewState> {
             h: x.detectedH,
             title: x.title,
             caseId: x.caseId,
-          }))
-      : [],
-    payments: can("viewPayments")
-      ? pays
-          .filter((p) => shown(p.caseId))
-          .map((p) => ({
-            id: p.id,
-            payee: p.payee,
-            amountCents: p.amountCents,
-            caseId: p.caseId,
-            status: p.status,
-            t: p.createdH,
           }))
       : [],
     notices: can("viewNotices")
@@ -190,10 +173,6 @@ export async function getViewState(actor: Actor | null): Promise<ViewState> {
       finding: !!replay?.finding,
       recommended: !!replay?.rec,
       csoBlocked: blockedBy("CSO (also Deputy GC)"),
-      jumped,
-      financeBlocked: ledger.some(
-        (e) => e.action === "Blocked: Release payment",
-      ),
       gcDone:
         !!replay?.decision &&
         (!!replay.decision.votes.gc || replay.decision.status !== "Pending"),

@@ -1,5 +1,5 @@
 // Ported from the mockup's vBoard() and logBody().
-import { DAY0_ISO, dayOf, fmtT } from "@/domain/demo-time";
+import { dateKey, fmtDay, fmtHM, fmtT } from "@/domain/demo-time";
 import { knownScale } from "@/domain/board-text";
 import { ESCALATED_STATUS } from "@/domain/gate";
 import { CATS, plainEvent, type EventCat } from "@/domain/plain-event";
@@ -8,22 +8,22 @@ import { S, rep } from "../store";
 import { discStatus, noticeRow, remText } from "./components";
 import { miniTrack, waitingOn } from "./case/timeline";
 
-const BASE = Date.parse(DAY0_ISO);
-const at = (h: number) => new Date(BASE + h * 3_600_000);
-
 function logBody(): string {
   const f = S.logFilter || "all",
     showLow = S.logLow;
   const serious = new Set(
     S.d.cases.filter((c) => c.severity === "HIGH").map((c) => c.id),
   );
+  // Low-risk history from before the Day 0 case is hidden unless "Include low-risk cases" is on.
+  const day0 =
+    S.d.cases.find((c) => c.id === S.d.replayId)?.detectedH ?? -Infinity;
   let ev = S.d.ledger
     .map((e) => ({ e, p: plainEvent(e) }))
     .filter(
       (x): x is { e: (typeof x)["e"]; p: NonNullable<(typeof x)["p"]> } =>
         !!x.p &&
         (showLow || !x.e.caseId || serious.has(x.e.caseId)) &&
-        (showLow || x.e.t >= 0),
+        (showLow || x.e.t >= day0),
     );
   const count = (c: EventCat) => ev.filter((x) => x.p.cat === c).length;
   const counts: Record<string, number> = {
@@ -31,21 +31,13 @@ function logBody(): string {
     blocked: count("blocked"),
     decision: count("decision"),
     notice: count("notice"),
-    money: count("money"),
   };
   if (f !== "all") ev = ev.filter((x) => x.p.cat === f);
-  const dkey = (h: number) => at(h).toISOString().slice(0, 10);
   const days: Record<string, typeof ev> = {};
   ev.forEach((x) => {
-    const k = dkey(x.e.t);
+    const k = dateKey(x.e.t);
     (days[k] = days[k] || []).push(x);
   });
-  const hm = (h: number) =>
-    at(h).toLocaleTimeString("en-GB", {
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: "UTC",
-    });
   const chip = (k: string, l: string) =>
     '<button class="fchip ' +
     (f === k ? "on" : "") +
@@ -63,7 +55,6 @@ function logBody(): string {
     chip("decision", "Decisions") +
     chip("blocked", "Blocked attempts") +
     chip("notice", "Board notices") +
-    chip("money", "Payments") +
     '<label class="lowtoggle"><input type="checkbox" data-a="logLow" ' +
     (showLow ? "checked" : "") +
     "> Include low-risk cases</label></div>";
@@ -78,17 +69,8 @@ function logBody(): string {
             const list = days[k]!;
             return (
               '<div class="lday"><div class="lday-h">' +
-              (list[0]!.e.t < 0
-                ? "Before"
-                : dayOf(list[list.length - 1]!.e.t)) +
-              "<span>" +
-              at(list[0]!.e.t).toLocaleDateString("en-GB", {
-                weekday: "short",
-                day: "numeric",
-                month: "short",
-                timeZone: "UTC",
-              }) +
-              '</span></div><ol class="lev">' +
+              fmtDay(list[0]!.e.t) +
+              '</div><ol class="lev">' +
               list
                 .slice()
                 .sort((a, b) => b.e.t - a.e.t || b.e.seq - a.e.seq)
@@ -96,7 +78,7 @@ function logBody(): string {
                   const c = CATS[x.p.cat];
                   return (
                     '<li><span class="lev-t">' +
-                    hm(x.e.t) +
+                    fmtHM(x.e.t) +
                     '</span><span class="lev-c ' +
                     c[1] +
                     '">' +
@@ -119,7 +101,7 @@ function logBody(): string {
   o +=
     '<details class="panel"><summary>Technical record for auditors (' +
     S.d.ledger.length +
-    ' entries)</summary><p class="muted small">Each entry carries a fingerprint (hash) that includes the previous entry, so a change anywhere breaks the chain.</p><div class="scroll"><table class="tbl"><thead><tr><th>#</th><th>Day</th><th>Who</th><th>Action</th><th>Case</th><th>Fingerprint</th></tr></thead><tbody>' +
+    ' entries)</summary><p class="muted small">Each entry carries a fingerprint (hash) that includes the previous entry, so a change anywhere breaks the chain.</p><div class="scroll"><table class="tbl"><thead><tr><th>#</th><th>Time</th><th>Who</th><th>Action</th><th>Case</th><th>Fingerprint</th></tr></thead><tbody>' +
     S.d.ledger
       .slice()
       .reverse()
@@ -128,7 +110,7 @@ function logBody(): string {
           "<tr><td>" +
           e.seq +
           '</td><td style="white-space:nowrap">' +
-          (e.t < 0 ? "Before" : dayOf(e.t)) +
+          fmtT(e.t) +
           "</td><td>" +
           esc(e.actor) +
           "</td><td>" +
@@ -168,7 +150,6 @@ export function vBoard(): string {
     const g = gdprOf(x);
     return !!g && g.start !== null && g.dur !== null && g.start + g.dur < now;
   }).length;
-  const p = S.d.payments.find((x) => x.id === "PAY-2");
 
   // plain-language summary
   const lines: string[] = [];
@@ -204,12 +185,6 @@ export function vBoard(): string {
         "A decision on disclosure is waiting on " + waitingOn(c) + ".",
       );
   }
-  if (p) {
-    if (p.status === "Held")
-      lines.push("A US$100,000 payment to the attacker is frozen.");
-    else if (p.status === "Cancelled")
-      lines.push("A US$100,000 payment to the attacker was cancelled.");
-  }
   o +=
     '<section class="brief ' +
     lvl +
@@ -218,12 +193,11 @@ export function vBoard(): string {
     "</div><p>" +
     lines.join(" ") +
     '</p><span class="muted small">' +
-    dayOf(now) +
-    ", " +
     fmtT(now) +
     "</span></section>";
 
   // three numbers
+  const unread = S.d.notices.filter((n) => n.ack === null).length;
   const k = (l: string, label: string, v: string | number, sub: string) =>
     '<div class="kpi ' +
     l +
@@ -249,14 +223,10 @@ export function vBoard(): string {
       missed ? "Regulators not yet told" : "All on time",
     ) +
     k(
-      p && p.status === "Held" ? "a" : "g",
-      "Payments frozen",
-      p && p.status === "Held" ? "US$100,000" : "None",
-      p
-        ? p.status === "Held"
-          ? "To the attacker"
-          : "Payment " + p.status.toLowerCase()
-        : "Nothing requested",
+      unread ? "a" : "g",
+      "Notices not acknowledged",
+      unread,
+      unread ? "Waiting for the board" : "All read",
     ) +
     "</div>";
 

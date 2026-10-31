@@ -62,7 +62,6 @@ describe("questionnaire data", () => {
     const f = answersToFacts(answer({ data: "YES", money: "YES" }));
     expect(f).not.toHaveProperty("objects");
     expect(f).not.toHaveProperty("records");
-    expect(f).not.toHaveProperty("paymentCents");
     const e = evaluate({ ...defaultFacts(), ...f }, true);
     expect(e.rules.find((r) => r.id === "R1")!.ev).toBe(
       "Reported by staff; scale not yet known",

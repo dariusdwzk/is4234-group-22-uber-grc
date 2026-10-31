@@ -3,13 +3,7 @@ import type { Answers, Route } from "./questionnaire";
 import type { Approver, DecisionStatus, RecAction, Vote } from "./gate";
 import type { LedgerView } from "./plain-event";
 import type { RuleResult } from "./rules";
-import type {
-  Facts,
-  PaymentStatus,
-  RoleKey,
-  Severity,
-  SignalOrigin,
-} from "./types";
+import type { Facts, RoleKey, Severity, SignalOrigin } from "./types";
 
 // What GET /api/state returns: everything the current role may see, already filtered on
 // the server. Shapes follow the mockup's in-memory state (S.cases, S.notices, ...).
@@ -66,15 +60,6 @@ export type EvidenceView = {
   t: number;
 };
 
-export type PaymentView = {
-  id: string;
-  payee: string;
-  amountCents: number;
-  caseId: string;
-  status: PaymentStatus;
-  t: number;
-};
-
 export type NoticeView = {
   id: string;
   caseId: string;
@@ -91,8 +76,6 @@ export type Progress = {
   finding: boolean;
   recommended: boolean;
   csoBlocked: boolean;
-  jumped: boolean;
-  financeBlocked: boolean;
   gcDone: boolean;
   cpoDone: boolean;
   allAcked: boolean;
@@ -105,11 +88,9 @@ export type ViewState = {
   regulatorOpen: boolean;
   /** The Day 0 case (mockup: S.replayId). */
   replayId: string | null;
-  jumped: boolean;
   emailAttached: boolean;
   cases: CaseView[];
   signals: SignalView[];
-  payments: PaymentView[];
   notices: NoticeView[];
   /** Board: the whole ledger. Case viewers: entries on cases they can see. */
   ledger: LedgerView[];

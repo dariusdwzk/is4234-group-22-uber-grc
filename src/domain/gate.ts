@@ -58,11 +58,11 @@ export function decisionFor(action: RecAction): NewDecision {
 }
 
 export type VoteOutcome =
-  /** Any rejection: disclosure required, held payment cancelled, board told. */
+  /** Any rejection: disclosure required, board told. */
   | { kind: "rejected" }
   /** A disclose decision approved by one key. */
   | { kind: "disclosed" }
-  /** Both keys agreed to escalate internally: no payment approved, board told, clocks run on. */
+  /** Both keys agreed to escalate internally: board told, clocks run on. */
   | { kind: "escalated" }
   | { kind: "waiting"; caseStatus: string };
 

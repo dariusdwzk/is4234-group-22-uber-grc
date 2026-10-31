@@ -1,9 +1,10 @@
-// The mockup's header: Home, role picker and Demo menu.
+// The app bar: the UberSecure mark (goes Home), role picker and Reset data.
 import { ROLES, ROLE_KEYS } from "@/domain/roles";
 import { S } from "../store";
 
-const HOME_ICON =
-  '<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 1.5 1 7.4l1 1.2 1-.8V14.5h4v-4h2v4h4V7.8l1 .8 1-1.2L8 1.5Z"/></svg>';
+/** A shield with a tick: the product mark, in the app bar and on the landing page. */
+export const LOGO =
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" d="M12 2.8 4.5 5.6v5.9c0 4.6 3.1 8.4 7.5 9.7 4.4-1.3 7.5-5.1 7.5-9.7V5.6L12 2.8Z"/><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="m8.6 12.2 2.4 2.4 4.5-4.7"/></svg>';
 
 export function header(): string {
   const opts =
@@ -19,19 +20,15 @@ export function header(): string {
         "</option>",
     ).join("");
   return (
-    '<header class="top"><button class="btn sm home" data-a="landing">' +
-    HOME_ICON +
-    "Home</button>" +
+    '<header class="top"><button class="brand" data-a="landing" aria-label="Home"><span class="logo">' +
+    LOGO +
+    "</span>UberSecure<small>GRC</small></button>" +
     '<label class="rolepick">Role <select id="roleSel">' +
     opts +
     "</select></label>" +
-    '<button class="btn sm" data-a="menu" aria-expanded="' +
-    S.menu +
-    '">Demo ▾</button>' +
-    (S.menu
-      ? '<div class="menu"><div><h3>Demo</h3><div class="row"><button class="btn sm" data-a="guide">' +
-        (S.guided ? "Hide guide" : "Show guide") +
-        '</button><button class="btn sm danger" data-a="reset">Reset data</button></div></div></div>'
+    // Only when DEMO_MODE is on: the server refuses a reset otherwise.
+    (S.d.demoMode
+      ? '<button class="btn sm danger" data-a="reset">Reset data</button>'
       : "") +
     "</header>"
   );

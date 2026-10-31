@@ -20,7 +20,6 @@ import { vCase } from "./views/case/page";
 import { vCeo } from "./views/ceo";
 import { vApprovals } from "./views/decisions";
 import { vEmployee } from "./views/employee";
-import { vFinance } from "./views/finance";
 import { header } from "./views/header";
 import { vLanding } from "./views/landing";
 import { vSecurity } from "./views/security";
@@ -33,7 +32,6 @@ const VIEWS: Record<string, () => string> = {
   landing: vLanding,
   employee: vEmployee,
   security: vSecurity,
-  finance: vFinance,
   case: vCase,
   approvals: vApprovals,
   ceo: vCeo,
@@ -63,7 +61,7 @@ function render(): void {
   const i = stepIdx();
   if (i === -1) return;
   const s = STEPS[i]!;
-  if (s.jump || !atStep(s) || !s.target) return;
+  if (!atStep(s) || !s.target) return;
   const sel = s.target(),
     el =
       root.querySelector("main " + sel) || root.querySelector("header " + sel);
@@ -90,7 +88,6 @@ const clearMsgs = () => {
   S.empMsg = null;
   S.statusMsg = null;
   S.receipt = null;
-  S.finMsg = null;
 };
 
 /**
@@ -104,7 +101,6 @@ async function setRole(
   const onCase = opts.keepCase === true && S.view === "case" && S.caseId;
   S.role = isRoleKey(r) ? r : null;
   clearMsgs();
-  S.menu = false;
   await refresh();
   const stay = onCase && S.d.cases.some((c) => c.id === S.caseId);
   S.view = stay ? "case" : S.role ? ROLES[S.role].home : "landing";
@@ -118,7 +114,6 @@ function openCase(x: string | undefined): void {
   if (x === S.d.replayId) S.seenReplay = true;
   S.caseTab = "deadlines";
   S.lastBlock = null;
-  S.menu = false;
   render();
   window.scrollTo(0, 0);
 }
@@ -153,18 +148,18 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
   },
   landing: () => setRole(undefined),
   openCase: (x) => openCase(x),
+  // The tour always starts from fresh data: reset first (it then opens Security, step 1).
   startGuide: () => {
     S.guided = true;
     S.mode = "demo";
     S.guideStep = 0;
-    return setRole("security");
+    return S.d.demoMode ? A.reset!() : setRole("security");
   },
   goStep: async () => {
     const s = STEPS[stepIdx()];
-    if (!s || s.jump || !s.role) return;
+    if (!s || !s.role) return;
     S.role = s.role;
     clearMsgs();
-    S.menu = false;
     await refresh();
     if (s.onCase) openCase(S.d.replayId ?? undefined);
     else {
@@ -172,30 +167,6 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
       render();
       window.scrollTo(0, 0);
     }
-  },
-  guide: () => {
-    S.guided = !S.guided;
-    S.menu = false;
-    render();
-  },
-  menu: () => {
-    S.menu = !S.menu;
-    render();
-  },
-  jump: async () => {
-    if (S.d.jumped) {
-      toast("The payment request has already arrived.");
-      return;
-    }
-    S.menu = false;
-    const r = await send<{ caseId: string }>("jump");
-    if (!r.ok) return fail(r);
-    render();
-    toast(
-      "Day 24: report and payment request merged into " +
-        r.data.caseId +
-        ". Payment held.",
-    );
   },
   caseTab: (x) => {
     S.caseTab = x === "log" ? "log" : "deadlines";
@@ -205,7 +176,7 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
     const r = await send("attach", { caseId: S.caseId, text: val("aTxt") });
     if (!r.ok) return fail(r);
     render();
-    toast("Email attached. R5 fired: payment demand.");
+    toast("Email attached. R5 fired: extortion demand.");
   },
   rec: async () => {
     const action = val("rAct"),
@@ -287,23 +258,6 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
     S.lastBlock = { what, why: r.error };
     render();
     window.scrollTo({ top: 0 });
-  },
-  release: async (x) => {
-    const r = await send("release", { paymentId: x });
-    if (r.ok)
-      S.finMsg = {
-        kind: "warn",
-        title: "Payment released",
-        text: "It was not linked to a high-risk case, so it was not frozen. The release is in the log.",
-      };
-    else if (r.status === 403)
-      S.finMsg = {
-        kind: "high",
-        title: "Payment held",
-        text: r.error + " This attempt is now in the log.",
-      };
-    else return fail(r);
-    render();
   },
   vote: async (x) => {
     if (!ck("v1")) {
@@ -431,7 +385,6 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
   showGuide: () => {
     if (S.view === "landing") return A.startGuide!();
     S.guided = true;
-    S.menu = false;
     S.scrolledKey = null;
     render();
   },
@@ -461,7 +414,6 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
   },
   reset: async () => {
     const g = S.guided && S.mode === "demo";
-    S.menu = false;
     const r = await act(S.role, "reset");
     if (!r.ok) return fail(r);
     Object.assign(S, {
@@ -533,13 +485,7 @@ async function run(
 function onClick(e: MouseEvent): void {
   const target = e.target as Element | null;
   const b = target?.closest<HTMLElement>("[data-a]");
-  if (!b) {
-    if (S.menu && !target?.closest(".menu")) {
-      S.menu = false;
-      render();
-    }
-    return;
-  }
+  if (!b) return;
   void run(b.dataset.a!, b.dataset.x);
 }
 

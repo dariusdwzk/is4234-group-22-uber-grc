@@ -4,6 +4,7 @@ import {
   char,
   check,
   customType,
+  doublePrecision,
   integer,
   jsonb,
   pgTable,
@@ -16,19 +17,18 @@ import type { Answers, Route } from "@/domain/questionnaire";
 import type {
   Facts,
   JsonValue,
-  PaymentStatus,
   RoleKey,
   Severity,
   SignalOrigin,
 } from "@/domain/types";
 
-// Every *_h column is whole hours relative to Day 0 (src/domain/demo-time.ts).
+// Every *_h column is hours (with minutes as a fraction) since the epoch in src/domain/demo-time.ts.
 
 export const settings = pgTable(
   "settings",
   {
     id: integer("id").primaryKey().default(1),
-    clockH: integer("clock_h").notNull().default(0),
+    clockH: doublePrecision("clock_h").notNull().default(0),
     regulatorInquiryOpen: boolean("regulator_inquiry_open")
       .notNull()
       .default(true),
@@ -41,25 +41,25 @@ export const cases = pgTable("cases", {
   title: text("title").notNull(),
   severity: text("severity").$type<Severity>().notNull(),
   status: text("status").notNull(),
-  detectedH: integer("detected_h").notNull(),
+  detectedH: doublePrecision("detected_h").notNull(),
   facts: jsonb("facts").$type<Facts>().notNull(),
-  clocksStartH: integer("clocks_start_h"),
+  clocksStartH: doublePrecision("clocks_start_h"),
   finding: text("finding"),
-  disclosedH: integer("disclosed_h"),
+  disclosedH: doublePrecision("disclosed_h"),
   // Staff reports (src/domain/questionnaire.ts). System cases keep the defaults.
   route: text("route").$type<Route>().notNull().default("NORMAL"),
   questionnaireAnswers: jsonb("questionnaire_answers").$type<Answers>(),
   /** Unrated at this hour: rated HIGH automatically. */
-  triageDueH: integer("triage_due_h"),
+  triageDueH: doublePrecision("triage_due_h"),
   /** LOW staff report not reviewed by Security at this hour: the board is told. */
-  reviewDueH: integer("review_due_h"),
+  reviewDueH: doublePrecision("review_due_h"),
 });
 
 export const signals = pgTable("signals", {
   id: text("id").primaryKey(),
   source: text("source").notNull(),
   origin: text("origin").$type<SignalOrigin>().notNull(),
-  detectedH: integer("detected_h").notNull(),
+  detectedH: doublePrecision("detected_h").notNull(),
   title: text("title").notNull(),
   entityKeys: text("entity_keys").array().notNull(),
   facts: jsonb("facts").$type<Partial<Facts>>().notNull(),
@@ -75,7 +75,7 @@ export const recommendations = pgTable("recommendations", {
   action: text("action").$type<"escalate" | "disclose">().notNull(),
   /** Why: required to escalate internally, optional to disclose. */
   reason: text("reason"),
-  createdH: integer("created_h").notNull(),
+  createdH: doublePrecision("created_h").notNull(),
 });
 
 export const decisions = pgTable("decisions", {
@@ -89,8 +89,8 @@ export const decisions = pgTable("decisions", {
     .$type<"Pending" | "Approved" | "Rejected">()
     .notNull()
     .default("Pending"),
-  createdH: integer("created_h").notNull(),
-  resolvedH: integer("resolved_h"),
+  createdH: doublePrecision("created_h").notNull(),
+  resolvedH: doublePrecision("resolved_h"),
 });
 
 export const approvals = pgTable(
@@ -103,22 +103,11 @@ export const approvals = pgTable(
     role: text("role").$type<"gc" | "cpo">().notNull(),
     vote: text("vote").$type<"approve" | "reject">().notNull(),
     reason: text("reason").notNull(),
-    createdH: integer("created_h").notNull(),
+    createdH: doublePrecision("created_h").notNull(),
   },
   // One vote per person, enforced by the database.
   (t) => [unique("approvals_case_role_uq").on(t.caseId, t.role)],
 );
-
-export const payments = pgTable("payments", {
-  id: text("id").primaryKey(),
-  caseId: text("case_id")
-    .notNull()
-    .references(() => cases.id),
-  payee: text("payee").notNull(),
-  amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
-  status: text("status").$type<PaymentStatus>().notNull(),
-  createdH: integer("created_h").notNull(),
-});
 
 /** A staff report's receipt code: the employee's only way back to their case. */
 export const receipts = pgTable("receipts", {
@@ -139,8 +128,8 @@ export const boardNotices = pgTable(
     tier: integer("tier").$type<1 | 2>().notNull(),
     kind: text("kind").notNull(),
     body: text("body").notNull(),
-    createdH: integer("created_h").notNull(),
-    ackH: integer("ack_h"),
+    createdH: doublePrecision("created_h").notNull(),
+    ackH: doublePrecision("ack_h"),
     allDirectors: boolean("all_directors").notNull().default(false),
   },
   // Each escalation fires once per case, enforced by the database.
@@ -165,7 +154,7 @@ export const evidence = pgTable("evidence", {
   fileSize: integer("file_size"),
   fileSha256: char("file_sha256", { length: 64 }),
   fileData: bytea("file_data"),
-  createdH: integer("created_h").notNull(),
+  createdH: doublePrecision("created_h").notNull(),
 });
 
 // ts_iso is text, not timestamptz: it is hashed byte for byte and a timestamptz
@@ -195,6 +184,6 @@ export const externalAnchors = pgTable("external_anchors", {
   id: serial("id").primaryKey(),
   seq: bigint("seq", { mode: "number" }).notNull(),
   headHash: char("head_hash", { length: 64 }).notNull(),
-  createdH: integer("created_h").notNull(),
+  createdH: doublePrecision("created_h").notNull(),
   reason: text("reason").notNull(),
 });

@@ -1,17 +1,15 @@
 import { z } from "zod";
 import pack from "../../rule-packs/v1.json";
-import { money } from "./money";
 import type { Facts, Severity } from "./types";
 
 const Condition = z.strictObject({
   fact: z.string(),
-  op: z.enum(["isTrue", "isFalse", "positive", "aboveCap", "nonEmpty"]),
+  op: z.enum(["isTrue", "isFalse", "nonEmpty"]),
 });
 
 export const RulePackSchema = z.strictObject({
   version: z.string(),
   owner: z.string(),
-  programMaxCents: z.number().int().positive(),
   rules: z.array(
     z.strictObject({
       id: z.string(),
@@ -45,21 +43,13 @@ export type Evaluation = {
 
 type Inputs = Facts & { regulatorInquiryOpen: boolean; anyHigh: boolean };
 
-function holds(
-  c: z.infer<typeof Condition>,
-  x: Inputs,
-  capCents: number,
-): boolean {
+function holds(c: z.infer<typeof Condition>, x: Inputs): boolean {
   const v = (x as Record<string, unknown>)[c.fact];
   switch (c.op) {
     case "isTrue":
       return v === true;
     case "isFalse":
       return v === false;
-    case "positive":
-      return typeof v === "number" && v > 0;
-    case "aboveCap":
-      return typeof v === "number" && v > capCents;
     case "nonEmpty":
       return Array.isArray(v) && v.length > 0;
   }
@@ -68,13 +58,10 @@ function holds(
 function evidence(
   r: Pick<RulePack["rules"][number], "evidence" | "unknownEvidence">,
   f: Facts,
-  capCents: number,
 ): string {
   const values: Record<string, string> = {
     objects: String(f.objects),
     records: f.records,
-    payment: money(f.paymentCents),
-    capMultiple: (f.paymentCents / capCents).toFixed(0),
     jurisdictions: f.jurisdictions.join(", "),
   };
   const used = [...r.evidence.matchAll(/\{(\w+)\}/g)].map((m) => values[m[1]!]);
@@ -93,12 +80,12 @@ export function evaluate(
   const run = (rules: RulePack["rules"], anyHigh: boolean) =>
     rules.map((r) => {
       const x = { ...facts, regulatorInquiryOpen, anyHigh };
-      const fired = r.when.every((c) => holds(c, x, p.programMaxCents));
+      const fired = r.when.every((c) => holds(c, x));
       return {
         id: r.id,
         name: r.name,
         fired,
-        ev: fired ? evidence(r, facts, p.programMaxCents) : "",
+        ev: fired ? evidence(r, facts) : "",
       };
     });
   const high = run(

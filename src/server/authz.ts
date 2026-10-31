@@ -15,14 +15,11 @@ export const POLICY = {
   confirmTriage: ["cpo"],
   closeCase: [],
   lowerSeverity: [],
-  releasePayment: ["finance"],
   acknowledgeNotice: ["board"],
   viewCases: ["security", "cso", "gc", "cpo", "ceo", "board"],
-  viewPayments: ["finance", "security", "cso", "gc", "cpo", "ceo", "board"],
   viewBoard: ["board"],
   viewNotices: ["security", "cso", "gc", "cpo", "ceo", "board"],
   advanceClock: [],
-  jumpToDay24: [],
   resetDemo: [],
 } as const satisfies Record<string, readonly RoleKey[]>;
 
@@ -31,7 +28,6 @@ export type Action = keyof typeof POLICY;
 // The demo menu works with or without a role, as in the mockup. Callers still assert DEMO_MODE.
 const DEMO_ACTIONS: ReadonlySet<Action> = new Set<Action>([
   "advanceClock",
-  "jumpToDay24",
   "resetDemo",
 ]);
 

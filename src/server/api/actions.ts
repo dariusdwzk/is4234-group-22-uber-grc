@@ -7,10 +7,8 @@ import { attemptAction } from "../commands/attempt-action";
 import { confirmTriage } from "../commands/confirm-triage";
 import { disclose } from "../commands/disclose";
 import { checkReceipt, reportIncident } from "../commands/employee";
-import { jumpToDay24 } from "../commands/jump-to-day24";
 import { recommend } from "../commands/recommend";
 import { recordFinding } from "../commands/record-finding";
-import { releasePayment } from "../commands/release-payment";
 import { resetDemo } from "../commands/reset-demo";
 import { castVote } from "../commands/vote";
 import { Conflict, Forbidden, NotFound, ValidationError } from "../errors";
@@ -27,11 +25,9 @@ export const ACTIONS: Record<string, Handler> = {
   vote: castVote,
   disclose,
   triage: confirmTriage,
-  release: releasePayment,
   ack: acknowledgeNotice,
   report: reportIncident,
   receipt: checkReceipt,
-  jump: jumpToDay24,
   reset: () => resetDemo(),
 };
 

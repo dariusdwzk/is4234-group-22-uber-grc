@@ -1,3 +1,4 @@
 # globals.css is the mockup's CSS byte-for-byte; additions.css follows its compact style.
 src/app/globals.css
 src/app/additions.css
+src/app/theme.css

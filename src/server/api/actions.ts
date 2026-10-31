@@ -6,7 +6,6 @@ import { advanceClock } from "../commands/advance-clock";
 import { attachContact } from "../commands/attach-contact";
 import { attemptAction } from "../commands/attempt-action";
 import { confirmTriage } from "../commands/confirm-triage";
-import { declareIncident } from "../commands/declare-incident";
 import { disclose } from "../commands/disclose";
 import { checkReceipt, reportIncident } from "../commands/employee";
 import { jumpToDay24 } from "../commands/jump-to-day24";
@@ -21,7 +20,6 @@ type Handler = (actor: Actor | null, body: unknown) => Promise<unknown>;
 
 /** POST /api/actions/<name>. Every handler checks the role itself, on the server. */
 export const ACTIONS: Record<string, Handler> = {
-  declare: declareIncident,
   finding: recordFinding,
   evidence: addEvidence,
   attach: attachContact,

@@ -77,8 +77,6 @@ export function plainEvent(e: LedgerView): PlainEvent | null {
     };
   if (a === "Out-of-band contact attached")
     return { cat: "work", text: "CSO added the hacker’s email to the case." };
-  if (a === "Incident declared")
-    return { cat: "work", text: who + " reported an incident." };
   if (a === "Recommendation sent")
     return {
       cat: "decision",

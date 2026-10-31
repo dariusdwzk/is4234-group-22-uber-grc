@@ -97,7 +97,6 @@ async function setRole(r: string | undefined): Promise<void> {
   S.role = isRoleKey(r) ? r : null;
   S.view = S.role ? ROLES[S.role].home : "landing";
   clearMsgs();
-  S.showDeclare = false;
   S.menu = false;
   await refresh();
   render();
@@ -205,21 +204,6 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
   caseTab: (x) => {
     S.caseTab = x === "log" ? "log" : "deadlines";
     render();
-  },
-  showDeclare: () => {
-    S.showDeclare = !S.showDeclare;
-    render();
-  },
-  declare: async () => {
-    const text = val("dTxt");
-    if (!text) {
-      toast("Describe what happened first.");
-      return;
-    }
-    const r = await send<{ caseId: string }>("declare", { text });
-    if (!r.ok) return fail(r);
-    S.showDeclare = false;
-    openCase(r.data.caseId);
   },
   attach: async () => {
     const r = await send("attach", { caseId: S.caseId, text: val("aTxt") });
@@ -494,7 +478,6 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
       boardOpen: {},
       logFilter: "all",
       logLow: false,
-      showDeclare: false,
       seenReplay: false,
       scrolledKey: null,
       guideStep: 0,

@@ -5,7 +5,6 @@ import type { Actor, RoleKey } from "@/domain/types";
 export const POLICY = {
   reportIncident: ["employee"],
   checkReceipt: ["employee"],
-  declareIncident: ["security", "cso"],
   // GC / CPO only on INDEPENDENT cases; the route check is in getCaseFor().
   recordFinding: ["security", "gc", "cpo"],
   addEvidence: ["gc", "cpo"],

@@ -8,7 +8,6 @@ import { attachContact } from "@/server/commands/attach-contact";
 import { attemptAction } from "@/server/commands/attempt-action";
 import { disclose } from "@/server/commands/disclose";
 import { checkReceipt, reportIncident } from "@/server/commands/employee";
-import { declareIncident } from "@/server/commands/declare-incident";
 import { jumpToDay24 } from "@/server/commands/jump-to-day24";
 import { recommend } from "@/server/commands/recommend";
 import { recordFinding } from "@/server/commands/record-finding";
@@ -247,7 +246,6 @@ describe("the guided tour, end to end on the server", () => {
         }),
       () => disclose(board, { caseId: "C-104" }),
       () => releasePayment(board, { paymentId: "PAY-1" }),
-      () => declareIncident(board, { text: "x" }),
       () =>
         reportIncident(board, { text: "x", anonymous: true, answers: ALL_NO }),
     ];
@@ -278,19 +276,6 @@ describe("the guided tour, end to end on the server", () => {
     ).toBe("Anonymous employee");
     // Employees cannot see the case list.
     expect((await getViewState(emp)).cases).toEqual([]);
-  });
-
-  it("a declared incident opens its own case and is logged as LOW", async () => {
-    const { caseId } = await declareIncident(as("security"), {
-      text: "Laptop lost",
-    });
-    expect(caseId).toBe("C-105");
-    const c = (await db.select().from(cases)).find((x) => x.id === caseId)!;
-    expect(c).toMatchObject({
-      severity: "LOW",
-      status: "Logged",
-      title: "Laptop lost",
-    });
   });
 
   it("state is filtered by role on the server", async () => {

@@ -119,12 +119,12 @@ describe("runCommand", () => {
   it("handler error rolls back state and ledger", async () => {
     const [headBefore] = await db.select().from(ledgerHead);
     const def: CommandDef<object, void> = {
-      action: "declareIncident",
-      blocked: "Blocked: Declare incident",
+      action: "recordFinding",
+      blocked: "Blocked: Add finding",
       schema: emptySchema,
       handler: async ({ tx, log }) => {
         await writeCase(tx, "C-leak");
-        await log("Incident declared", null, "SIG-1");
+        await log("Finding recorded", null, "SIG-1");
         throw new Error("boom");
       },
     };
@@ -136,8 +136,8 @@ describe("runCommand", () => {
 
   it("invalid input throws ValidationError and logs nothing, even for a forbidden role", async () => {
     const def: CommandDef<{ n: number }, void> = {
-      action: "declareIncident",
-      blocked: "Blocked: Declare incident",
+      action: "recordFinding",
+      blocked: "Blocked: Add finding",
       schema: z.strictObject({ n: z.number().int() }),
       handler: async () => {},
     };
@@ -157,12 +157,12 @@ describe("runCommand", () => {
   it("success: state and ledger entries commit together; actor, time and overrides from ctx", async () => {
     await ownerPool.query("UPDATE settings SET clock_h = 30 WHERE id = 1");
     const def: CommandDef<{ id: string }, string> = {
-      action: "declareIncident",
-      blocked: "Blocked: Declare incident",
+      action: "recordFinding",
+      blocked: "Blocked: Add finding",
       schema: z.strictObject({ id: z.string() }),
       handler: async ({ tx, log, now }, { id }) => {
         await writeCase(tx, id);
-        await log("Incident declared", null, "SIG-202");
+        await log("Finding recorded", null, "SIG-202");
         await log("Case opened automatically", id, "From SIG-202.", {
           actor: "System",
           t: now - 2,
@@ -175,7 +175,7 @@ describe("runCommand", () => {
     const rows = await ledger();
     expect(rows.slice(1).map((r) => [r.eventType, r.actorId, r.tsIso])).toEqual(
       [
-        ["Incident declared", "Security team", hoursToIso(30)],
+        ["Finding recorded", "Security team", hoursToIso(30)],
         ["Case opened automatically", "System", hoursToIso(28)],
       ],
     );
@@ -184,11 +184,11 @@ describe("runCommand", () => {
 
   it("20 concurrent commands keep the chain intact", async () => {
     const def: CommandDef<{ i: number }, void> = {
-      action: "declareIncident",
-      blocked: "Blocked: Declare incident",
+      action: "recordFinding",
+      blocked: "Blocked: Add finding",
       schema: z.strictObject({ i: z.number().int() }),
       handler: async ({ log }, { i }) =>
-        log("Incident declared", null, String(i)),
+        log("Finding recorded", null, String(i)),
     };
     await Promise.all(
       Array.from({ length: 20 }, (_, i) => runCommand(def, SECURITY, { i })),

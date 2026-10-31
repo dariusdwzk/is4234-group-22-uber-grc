@@ -20,7 +20,6 @@ export type UiState = {
   boardOpen: Record<string, boolean>;
   logFilter: string;
   logLow: boolean;
-  showDeclare: boolean;
   seenReplay: boolean;
   statusMsg: string | null;
   /** The last receipt checked on the Employee page, and its case timeline. */
@@ -71,7 +70,6 @@ export const S: UiState & { d: ViewState } = {
   boardOpen: {},
   logFilter: "all",
   logLow: false,
-  showDeclare: false,
   seenReplay: false,
   statusMsg: null,
   receipt: null,

@@ -6,10 +6,7 @@ import { caseTable } from "./components";
 export function vSecurity(): string {
   const unl = S.d.signals.filter((s) => !s.caseId).sort((a, b) => b.h - a.h);
   return (
-    '<div class="pagehead"><div><h1>Security</h1><p class="lede">Cases open by themselves from system signals. You investigate and recommend.</p></div><button class="btn" data-a="showDeclare">+ Declare incident</button></div>' +
-    (S.showDeclare
-      ? '<section class="panel action"><h2>Declare an incident</h2><div class="form"><label>What happened<textarea id="dTxt" rows="2" placeholder="For incidents no system has flagged"></textarea></label><div class="row"><button class="btn primary" data-a="declare">Declare</button><button class="btn" data-a="showDeclare">Cancel</button></div></div></section>'
-      : "") +
+    '<div class="pagehead"><div><h1>Security</h1><p class="lede">Cases open by themselves from system signals. You investigate and recommend.</p></div></div>' +
     '<div class="tabs"><button class="tab ' +
     (S.secTab === "cases" ? "on" : "") +
     '" data-a="secTab" data-x="cases">Cases (' +

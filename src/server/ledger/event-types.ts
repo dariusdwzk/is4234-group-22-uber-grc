@@ -17,7 +17,6 @@ export const LEDGER_EVENT_TYPES = [
   "Finding recorded",
   "Evidence added",
   "Out-of-band contact attached",
-  "Incident declared",
   "Staff report received",
   "Rated HIGH from questionnaire",
   "Rated LOW from questionnaire",

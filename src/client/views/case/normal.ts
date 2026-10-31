@@ -6,6 +6,19 @@ import type { CaseView } from "@/domain/view-state";
 import { esc } from "../../html";
 import { S } from "../../store";
 
+/**
+ * A text box. In the guided demo it is prefilled with the 2016 replay's words; when
+ * exploring it starts empty, with a hint.
+ */
+const box = (id: string, hint: string, demoText: string) =>
+  '<textarea id="' +
+  id +
+  '" rows="2" placeholder="' +
+  esc(hint) +
+  '">' +
+  (S.mode === "demo" ? esc(demoText) : "") +
+  "</textarea>";
+
 const isSec = () => S.role === "security" || S.role === "cso";
 const isAppr = () => S.role === "gc" || S.role === "cpo";
 
@@ -24,7 +37,13 @@ export function normalBox(c: CaseView): string {
     if (r === "security") {
       if (!c.finding)
         h =
-          '<h2>Investigation finding</h2><div class="form"><label>What the investigation confirmed<textarea id="fTxt" rows="2">Confirmed: 16 objects copied from rider-backup using an AWS key last rotated in 2013. Includes about 600,000 driver licence numbers.</textarea></label><div><button class="btn primary" data-a="finding">Add finding</button></div></div>';
+          '<h2>Investigation finding</h2><div class="form"><label>What the investigation confirmed' +
+          box(
+            "fTxt",
+            "What did the investigation confirm? What was accessed, how, and how much?",
+            "Confirmed: 16 objects copied from rider-backup using an AWS key last rotated in 2013. Includes about 600,000 driver licence numbers.",
+          ) +
+          '</label><div><button class="btn primary" data-a="finding">Add finding</button></div></div>';
       else
         h =
           '<h2>Finding recorded</h2><p class="muted" style="margin:0">' +
@@ -35,7 +54,13 @@ export function normalBox(c: CaseView): string {
             : "");
     } else if (c.id === S.d.replayId && !S.d.emailAttached)
       h =
-        '<h2>Attach out-of-band contact</h2><div class="form"><label>Message received outside monitored systems<textarea id="aTxt" rows="2">Email to the CSO from an anonymous sender: “We have your rider data. We expect a six-figure payment.”</textarea></label><div><button class="btn primary" data-a="attach">Attach to case</button></div></div>';
+        '<h2>Attach out-of-band contact</h2><div class="form"><label>Message received outside monitored systems' +
+        box(
+          "aTxt",
+          "Paste or summarise the message: who sent it, how it arrived, what it says.",
+          "Email to the CSO from an anonymous sender: “We have your rider data. We expect a six-figure payment.”",
+        ) +
+        '</label><div><button class="btn primary" data-a="attach">Attach to case</button></div></div>';
     else if (!c.rec)
       h =
         '<h2>Recommendation</h2><div class="form"><label>Recommended action<select id="rAct"><option value="escalate">' +
@@ -44,7 +69,13 @@ export function normalBox(c: CaseView): string {
         DISCLOSE_TYPE +
         "</option></select></label>" +
         // Prefilled for the replay: in 2016 the CSO kept it in-house as a "bug bounty".
-        '<label>Reason (required to escalate)<textarea id="rReason" rows="2">Treat it as a bug bounty and keep it in-house while we confirm the data was deleted.</textarea></label>' +
+        "<label>Reason (required to escalate)" +
+        box(
+          "rReason",
+          "Why do you recommend this? Required to escalate internally.",
+          "Treat it as a bug bounty and keep it in-house while we confirm the data was deleted.",
+        ) +
+        "</label>" +
         '<div><button class="btn primary" data-a="rec">Send for decision</button></div></div>';
     else
       h =

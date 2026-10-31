@@ -14,7 +14,6 @@ export type UiState = {
   /** The guided tour's current step; only moves forward (see guide.ts stepIdx). */
   guideStep: number;
   menu: boolean;
-  secTab: "cases" | "inbox";
   caseTab: "deadlines" | "log";
   boardTab: "overview" | "log";
   boardOpen: Record<string, boolean>;
@@ -64,7 +63,6 @@ export const S: UiState & { d: ViewState } = {
   mode: "explore",
   guideStep: 0,
   menu: false,
-  secTab: "cases",
   caseTab: "deadlines",
   boardTab: "overview",
   boardOpen: {},

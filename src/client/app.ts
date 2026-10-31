@@ -148,7 +148,6 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
     S.guided = true;
     S.mode = "demo";
     S.guideStep = 0;
-    S.secTab = "cases";
     return setRole("security");
   },
   goStep: async () => {
@@ -161,7 +160,6 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
     if (s.onCase) openCase(S.d.replayId ?? undefined);
     else {
       S.view = s.view!;
-      S.secTab = "cases";
       render();
       window.scrollTo(0, 0);
     }
@@ -196,10 +194,6 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
         r.data.caseId +
         ". Payment held.",
     );
-  },
-  secTab: (x) => {
-    S.secTab = x === "inbox" ? "inbox" : "cases";
-    render();
   },
   caseTab: (x) => {
     S.caseTab = x === "log" ? "log" : "deadlines";
@@ -472,7 +466,6 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
       role: g ? "security" : null,
       view: g ? "security" : "landing",
       caseId: null,
-      secTab: "cases",
       caseTab: "deadlines",
       boardTab: "overview",
       boardOpen: {},

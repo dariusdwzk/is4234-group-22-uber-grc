@@ -38,6 +38,8 @@ export function vSecurity(): string {
             "</ul>"
           : '<p class="muted">Every signal is in a case.</p>') +
         "</section>"
-      : '<section class="panel">' + caseTable(S.d.cases) + "</section>")
+      : '<section class="panel">' +
+        caseTable(S.d.cases, { action: true }) +
+        "</section>")
   );
 }

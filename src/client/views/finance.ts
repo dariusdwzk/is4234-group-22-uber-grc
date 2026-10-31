@@ -2,6 +2,7 @@
 import { dayOf } from "@/domain/demo-time";
 import { money } from "@/domain/money";
 import { esc } from "../html";
+import { paymentActionRequired, yesNo } from "../action-required";
 import { S } from "../store";
 import { payBadge } from "./components";
 
@@ -17,7 +18,7 @@ export function vFinance(): string {
         esc(S.finMsg.text) +
         "</div>"
       : "") +
-    '<section class="panel"><div class="scroll"><table class="tbl"><thead><tr><th>Payee</th><th>Amount</th><th>Case</th><th>Status</th><th></th></tr></thead><tbody>' +
+    '<section class="panel"><div class="scroll"><table class="tbl"><thead><tr><th>Payee</th><th>Amount</th><th>Case</th><th>Status</th><th>Action required</th><th></th></tr></thead><tbody>' +
     S.d.payments
       .slice()
       .reverse()
@@ -33,6 +34,8 @@ export function vFinance(): string {
           p.caseId +
           "</td><td>" +
           payBadge(p) +
+          "</td><td>" +
+          yesNo(paymentActionRequired(p)) +
           "</td><td>" +
           (p.status === "Released" || p.status === "Cancelled"
             ? ""

@@ -3,6 +3,7 @@ import { dayOf, fmtDur, fmtT } from "@/domain/demo-time";
 import type { CaseView, NoticeView, PaymentView } from "@/domain/view-state";
 import { CHK, esc } from "../html";
 import { ESCALATED_STATUS } from "@/domain/gate";
+import { actionRequired, yesNo } from "../action-required";
 import { S } from "../store";
 import { waitingOn } from "./case/timeline";
 
@@ -60,14 +61,23 @@ export const payBadge = (p: PaymentView): string =>
   p.status +
   "</span>";
 
-export function caseTable(list: CaseView[]): string {
+/** Cases, high-risk first. With `action`, adds "Action required" for the signed-in role and lists those first. */
+export function caseTable(
+  list: CaseView[],
+  opts: { action?: boolean } = {},
+): string {
   if (!list.length) return '<p class="muted">No cases yet.</p>';
+  const needs = (c: CaseView) =>
+    opts.action === true && actionRequired(c, S.role);
   return (
-    '<div class="scroll"><table class="tbl"><thead><tr><th>Case</th><th>Title</th><th>Risk</th><th>Status</th><th>Waiting on</th><th>Next deadline</th></tr></thead><tbody>' +
+    '<div class="scroll"><table class="tbl"><thead><tr><th>Case</th><th>Title</th><th>Risk</th><th>Status</th><th>Waiting on</th><th>Next deadline</th>' +
+    (opts.action ? "<th>Action required</th>" : "") +
+    "</tr></thead><tbody>" +
     list
       .slice()
       .sort(
         (a, b) =>
+          Number(needs(b)) - Number(needs(a)) ||
           Number(b.severity === "HIGH") - Number(a.severity === "HIGH") ||
           b.id.localeCompare(a.id),
       )
@@ -90,7 +100,9 @@ export function caseTable(list: CaseView[]): string {
           waitingOn(c) +
           "</td><td>" +
           nearest(c) +
-          "</td></tr>",
+          "</td>" +
+          (opts.action ? "<td>" + yesNo(needs(c)) + "</td>" : "") +
+          "</tr>",
       )
       .join("") +
     "</tbody></table></div>"

@@ -1,15 +1,21 @@
 import "server-only";
 import { eq } from "drizzle-orm";
+import { wallClockH } from "@/domain/demo-time";
 import { db, type DbClient } from "./db/client";
-import { demoSettings } from "./db/schema";
+import { settings } from "./db/schema";
 
-/** Real time, plus the demo offset when (and only when) DEMO_MODE=true. */
-export async function getNow(client: DbClient = db): Promise<Date> {
-  const real = Date.now();
-  if (process.env.DEMO_MODE !== "true") return new Date(real);
+/**
+ * The real time in demo hours. Tests set DEMO_FROZEN_CLOCK=true to pin it at 0, so the demo
+ * clock only moves when a test moves it.
+ */
+export const wallNow = (): number =>
+  process.env.DEMO_FROZEN_CLOCK === "true" ? 0 : wallClockH();
+
+/** Demo "now": the real time plus the offset in settings (tests move it with advanceClock). */
+export async function getNow(client: DbClient = db): Promise<number> {
   const [row] = await client
-    .select({ offsetMs: demoSettings.offsetMs })
-    .from(demoSettings)
-    .where(eq(demoSettings.id, 1));
-  return new Date(real + (row?.offsetMs ?? 0));
+    .select({ clockH: settings.clockH })
+    .from(settings)
+    .where(eq(settings.id, 1));
+  return wallNow() + (row?.clockH ?? 0);
 }

@@ -1,23 +1,94 @@
 {
-  "id": "bcf3d884-66d1-4c8c-9050-4f6dfa05d78d",
-  "prevId": "d0026ead-7963-471c-8690-89a4686731b9",
+  "id": "d815c67b-6946-431f-bdfe-a94a5b3de533",
+  "prevId": "7639449b-c181-451d-81ab-a9d91adcb6c2",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
-    "public.board_items": {
-      "name": "board_items",
+    "public.approvals": {
+      "name": "approvals",
       "schema": "",
       "columns": {
         "id": {
           "name": "id",
-          "type": "uuid",
+          "type": "serial",
           "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
+          "notNull": true
         },
         "case_id": {
           "name": "case_id",
-          "type": "uuid",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "vote": {
+          "name": "vote",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "reason": {
+          "name": "reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_h": {
+          "name": "created_h",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "approvals_case_id_decisions_case_id_fk": {
+          "name": "approvals_case_id_decisions_case_id_fk",
+          "tableFrom": "approvals",
+          "columnsFrom": [
+            "case_id"
+          ],
+          "tableTo": "decisions",
+          "columnsTo": [
+            "case_id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "approvals_case_role_uq": {
+          "name": "approvals_case_role_uq",
+          "columns": [
+            "case_id",
+            "role"
+          ],
+          "nullsNotDistinct": false
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.board_notices": {
+      "name": "board_notices",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "case_id": {
+          "name": "case_id",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
@@ -27,8 +98,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "reason_key": {
-          "name": "reason_key",
+        "kind": {
+          "name": "kind",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -39,37 +110,31 @@
           "primaryKey": false,
           "notNull": true
         },
-        "status": {
-          "name": "status",
-          "type": "text",
+        "created_h": {
+          "name": "created_h",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ack_h": {
+          "name": "ack_h",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "all_directors": {
+          "name": "all_directors",
+          "type": "boolean",
           "primaryKey": false,
           "notNull": true,
-          "default": "'open'"
-        },
-        "ack_note": {
-          "name": "ack_note",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "ack_by": {
-          "name": "ack_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "ack_at": {
-          "name": "ack_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
+          "default": false
         }
       },
       "indexes": {},
       "foreignKeys": {
-        "board_items_case_id_cases_id_fk": {
-          "name": "board_items_case_id_cases_id_fk",
-          "tableFrom": "board_items",
+        "board_notices_case_id_cases_id_fk": {
+          "name": "board_notices_case_id_cases_id_fk",
+          "tableFrom": "board_notices",
           "columnsFrom": [
             "case_id"
           ],
@@ -79,28 +144,15 @@
           ],
           "onUpdate": "no action",
           "onDelete": "no action"
-        },
-        "board_items_ack_by_users_id_fk": {
-          "name": "board_items_ack_by_users_id_fk",
-          "tableFrom": "board_items",
-          "columnsFrom": [
-            "ack_by"
-          ],
-          "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "board_items_case_reason_uq": {
-          "name": "board_items_case_reason_uq",
+        "board_notices_case_kind_uq": {
+          "name": "board_notices_case_kind_uq",
           "columns": [
             "case_id",
-            "reason_key"
+            "kind"
           ],
           "nullsNotDistinct": false
         }
@@ -115,128 +167,63 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "uuid",
+          "type": "text",
           "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
+          "notNull": true
         },
-        "ref": {
-          "name": "ref",
+        "title": {
+          "name": "title",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "correlation_key": {
-          "name": "correlation_key",
+        "severity": {
+          "name": "severity",
           "type": "text",
           "primaryKey": false,
           "notNull": true
-        },
-        "source": {
-          "name": "source",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "tier": {
-          "name": "tier",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'LOW'"
         },
         "status": {
           "name": "status",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
-          "default": "'open'"
+          "notNull": true
         },
-        "detected_at": {
-          "name": "detected_at",
-          "type": "timestamp with time zone",
+        "detected_h": {
+          "name": "detected_h",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
-        "high_since": {
-          "name": "high_since",
-          "type": "timestamp with time zone",
+        "facts": {
+          "name": "facts",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "clocks_start_h": {
+          "name": "clocks_start_h",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false
         },
-        "materiality_determined_at": {
-          "name": "materiality_determined_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "declared_by": {
-          "name": "declared_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "outcome": {
-          "name": "outcome",
+        "finding": {
+          "name": "finding",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "notify_by": {
-          "name": "notify_by",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "closed_at": {
-          "name": "closed_at",
-          "type": "timestamp with time zone",
+        "disclosed_h": {
+          "name": "disclosed_h",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false
         }
       },
-      "indexes": {
-        "cases_correlation_key_idx": {
-          "name": "cases_correlation_key_idx",
-          "columns": [
-            {
-              "expression": "correlation_key",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "with": {},
-          "method": "btree",
-          "concurrently": false
-        }
-      },
-      "foreignKeys": {
-        "cases_declared_by_users_id_fk": {
-          "name": "cases_declared_by_users_id_fk",
-          "tableFrom": "cases",
-          "columnsFrom": [
-            "declared_by"
-          ],
-          "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        }
-      },
+      "indexes": {},
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "cases_ref_unique": {
-          "name": "cases_ref_unique",
-          "columns": [
-            "ref"
-          ],
-          "nullsNotDistinct": false
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -247,20 +234,13 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "uuid",
+          "type": "text",
           "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
+          "notNull": true
         },
         "case_id": {
           "name": "case_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "raised_by": {
-          "name": "raised_by",
-          "type": "uuid",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
@@ -270,24 +250,24 @@
           "primaryKey": false,
           "notNull": true
         },
-        "status": {
-          "name": "status",
-          "type": "text",
+        "anonymous": {
+          "name": "anonymous",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "open": {
+          "name": "open",
+          "type": "boolean",
           "primaryKey": false,
           "notNull": true,
-          "default": "'open'"
+          "default": true
         },
-        "resolved_by": {
-          "name": "resolved_by",
-          "type": "uuid",
+        "created_h": {
+          "name": "created_h",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": false
-        },
-        "resolution": {
-          "name": "resolution",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
+          "notNull": true
         }
       },
       "indexes": {},
@@ -299,32 +279,6 @@
             "case_id"
           ],
           "tableTo": "cases",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        },
-        "challenge_flags_raised_by_users_id_fk": {
-          "name": "challenge_flags_raised_by_users_id_fk",
-          "tableFrom": "challenge_flags",
-          "columnsFrom": [
-            "raised_by"
-          ],
-          "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        },
-        "challenge_flags_resolved_by_users_id_fk": {
-          "name": "challenge_flags_resolved_by_users_id_fk",
-          "tableFrom": "challenge_flags",
-          "columnsFrom": [
-            "resolved_by"
-          ],
-          "tableTo": "users",
           "columnsTo": [
             "id"
           ],
@@ -342,54 +296,48 @@
       "name": "decisions",
       "schema": "",
       "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
         "case_id": {
           "name": "case_id",
-          "type": "uuid",
-          "primaryKey": false,
+          "type": "text",
+          "primaryKey": true,
           "notNull": true
         },
-        "approver_id": {
-          "name": "approver_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "approver_role": {
-          "name": "approver_role",
+        "type": {
+          "name": "type",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "outcome": {
-          "name": "outcome",
-          "type": "text",
+        "need": {
+          "name": "need",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
-        "notify_by": {
-          "name": "notify_by",
-          "type": "timestamp with time zone",
+        "disclose": {
+          "name": "disclose",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'Pending'"
+        },
+        "created_h": {
+          "name": "created_h",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resolved_h": {
+          "name": "resolved_h",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false
-        },
-        "reason_code": {
-          "name": "reason_code",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "checklist": {
-          "name": "checklist",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
         }
       },
       "indexes": {},
@@ -406,70 +354,16 @@
           ],
           "onUpdate": "no action",
           "onDelete": "no action"
-        },
-        "decisions_approver_id_users_id_fk": {
-          "name": "decisions_approver_id_users_id_fk",
-          "tableFrom": "decisions",
-          "columnsFrom": [
-            "approver_id"
-          ],
-          "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "decisions_case_role_uq": {
-          "name": "decisions_case_role_uq",
-          "columns": [
-            "case_id",
-            "approver_role"
-          ],
-          "nullsNotDistinct": false
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.demo_settings": {
-      "name": "demo_settings",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "default": 1
-        },
-        "offset_ms": {
-          "name": "offset_ms",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {
-        "demo_settings_single_row": {
-          "name": "demo_settings_single_row",
-          "value": "\"demo_settings\".\"id\" = 1"
-        }
-      },
-      "isRLSEnabled": false
-    },
-    "public.head_exports": {
-      "name": "head_exports",
+    "public.external_anchors": {
+      "name": "external_anchors",
       "schema": "",
       "columns": {
         "id": {
@@ -484,92 +378,27 @@
           "primaryKey": false,
           "notNull": true
         },
-        "hash": {
-          "name": "hash",
+        "head_hash": {
+          "name": "head_hash",
           "type": "char(64)",
           "primaryKey": false,
           "notNull": true
         },
-        "entry_count": {
-          "name": "entry_count",
+        "created_h": {
+          "name": "created_h",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
         },
-        "exported_at": {
-          "name": "exported_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "destination": {
-          "name": "destination",
+        "reason": {
+          "name": "reason",
           "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'simulated_auditor_inbox'"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.intake_events": {
-      "name": "intake_events",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "case_id": {
-          "name": "case_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "kind": {
-          "name": "kind",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "occurred_at": {
-          "name": "occurred_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "payload": {
-          "name": "payload",
-          "type": "jsonb",
           "primaryKey": false,
           "notNull": true
         }
       },
       "indexes": {},
-      "foreignKeys": {
-        "intake_events_case_id_cases_id_fk": {
-          "name": "intake_events_case_id_cases_id_fk",
-          "tableFrom": "intake_events",
-          "columnsFrom": [
-            "case_id"
-          ],
-          "tableTo": "cases",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        }
-      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -668,50 +497,183 @@
       },
       "isRLSEnabled": false
     },
-    "public.recommendations": {
-      "name": "recommendations",
+    "public.payments": {
+      "name": "payments",
       "schema": "",
       "columns": {
         "id": {
           "name": "id",
-          "type": "uuid",
+          "type": "text",
           "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
+          "notNull": true
         },
         "case_id": {
           "name": "case_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "author_id": {
-          "name": "author_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "proposed_outcome": {
-          "name": "proposed_outcome",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "data_taken": {
-          "name": "data_taken",
+        "payee": {
+          "name": "payee",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "treat_as": {
-          "name": "treat_as",
+        "amount_cents": {
+          "name": "amount_cents",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "text": {
-          "name": "text",
+        "created_h": {
+          "name": "created_h",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "payments_case_id_cases_id_fk": {
+          "name": "payments_case_id_cases_id_fk",
+          "tableFrom": "payments",
+          "columnsFrom": [
+            "case_id"
+          ],
+          "tableTo": "cases",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.receipts": {
+      "name": "receipts",
+      "schema": "",
+      "columns": {
+        "code": {
+          "name": "code",
           "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "signal_id": {
+          "name": "signal_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "case_id": {
+          "name": "case_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "flag_id": {
+          "name": "flag_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "receipts_signal_id_signals_id_fk": {
+          "name": "receipts_signal_id_signals_id_fk",
+          "tableFrom": "receipts",
+          "columnsFrom": [
+            "signal_id"
+          ],
+          "tableTo": "signals",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "receipts_case_id_cases_id_fk": {
+          "name": "receipts_case_id_cases_id_fk",
+          "tableFrom": "receipts",
+          "columnsFrom": [
+            "case_id"
+          ],
+          "tableTo": "cases",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        },
+        "receipts_flag_id_challenge_flags_id_fk": {
+          "name": "receipts_flag_id_challenge_flags_id_fk",
+          "tableFrom": "receipts",
+          "columnsFrom": [
+            "flag_id"
+          ],
+          "tableTo": "challenge_flags",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.recommendations": {
+      "name": "recommendations",
+      "schema": "",
+      "columns": {
+        "case_id": {
+          "name": "case_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "author_role": {
+          "name": "author_role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "claims": {
+          "name": "claims",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_h": {
+          "name": "created_h",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         }
@@ -730,19 +692,6 @@
           ],
           "onUpdate": "no action",
           "onDelete": "no action"
-        },
-        "recommendations_author_id_users_id_fk": {
-          "name": "recommendations_author_id_users_id_fk",
-          "tableFrom": "recommendations",
-          "columnsFrom": [
-            "author_id"
-          ],
-          "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -751,53 +700,110 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.rule_evaluations": {
-      "name": "rule_evaluations",
+    "public.settings": {
+      "name": "settings",
       "schema": "",
       "columns": {
         "id": {
           "name": "id",
-          "type": "uuid",
+          "type": "integer",
           "primaryKey": true,
           "notNull": true,
-          "default": "gen_random_uuid()"
+          "default": 1
         },
-        "case_id": {
-          "name": "case_id",
-          "type": "uuid",
+        "clock_h": {
+          "name": "clock_h",
+          "type": "integer",
           "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "regulator_inquiry_open": {
+          "name": "regulator_inquiry_open",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "settings_single_row": {
+          "name": "settings_single_row",
+          "value": "\"settings\".\"id\" = 1"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.signals": {
+      "name": "signals",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
           "notNull": true
         },
-        "rule_pack_version": {
-          "name": "rule_pack_version",
+        "source": {
+          "name": "source",
           "type": "text",
           "primaryKey": false,
           "notNull": true
         },
-        "fired_rule_ids": {
-          "name": "fired_rule_ids",
+        "origin": {
+          "name": "origin",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "detected_h": {
+          "name": "detected_h",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_keys": {
+          "name": "entity_keys",
           "type": "text[]",
           "primaryKey": false,
           "notNull": true
         },
-        "tier": {
-          "name": "tier",
-          "type": "text",
+        "facts": {
+          "name": "facts",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": true
         },
-        "evaluated_at": {
-          "name": "evaluated_at",
-          "type": "timestamp with time zone",
+        "case_id": {
+          "name": "case_id",
+          "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
+        },
+        "anonymous": {
+          "name": "anonymous",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         }
       },
       "indexes": {},
       "foreignKeys": {
-        "rule_evaluations_case_id_cases_id_fk": {
-          "name": "rule_evaluations_case_id_cases_id_fk",
-          "tableFrom": "rule_evaluations",
+        "signals_case_id_cases_id_fk": {
+          "name": "signals_case_id_cases_id_fk",
+          "tableFrom": "signals",
           "columnsFrom": [
             "case_id"
           ],
@@ -811,187 +817,6 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.rule_packs": {
-      "name": "rule_packs",
-      "schema": "",
-      "columns": {
-        "version": {
-          "name": "version",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "body": {
-          "name": "body",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "published_by": {
-          "name": "published_by",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "published_at": {
-          "name": "published_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "rule_packs_published_by_users_id_fk": {
-          "name": "rule_packs_published_by_users_id_fk",
-          "tableFrom": "rule_packs",
-          "columnsFrom": [
-            "published_by"
-          ],
-          "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.sessions": {
-      "name": "sessions",
-      "schema": "",
-      "columns": {
-        "token_sha256": {
-          "name": "token_sha256",
-          "type": "char(64)",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "expires_at": {
-          "name": "expires_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "sessions_user_id_users_id_fk": {
-          "name": "sessions_user_id_users_id_fk",
-          "tableFrom": "sessions",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.users": {
-      "name": "users",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "email": {
-          "name": "email",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "display_name": {
-          "name": "display_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "role": {
-          "name": "role",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "reports_to": {
-          "name": "reports_to",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "password_hash": {
-          "name": "password_hash",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "failed_logins": {
-          "name": "failed_logins",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "locked_until": {
-          "name": "locked_until",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "users_reports_to_users_id_fk": {
-          "name": "users_reports_to_users_id_fk",
-          "tableFrom": "users",
-          "columnsFrom": [
-            "reports_to"
-          ],
-          "tableTo": "users",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "users_email_unique": {
-          "name": "users_email_unique",
-          "columns": [
-            "email"
-          ],
-          "nullsNotDistinct": false
-        }
-      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

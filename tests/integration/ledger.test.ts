@@ -1,18 +1,17 @@
-import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
 import { GENESIS_PREV_HASH, entryHash } from "@/domain/hash";
 import { db } from "@/server/db/client";
 import { ledgerEntries, ledgerHead } from "@/server/db/schema";
 import { appendEntry } from "@/server/ledger/append";
-import { exportHead } from "@/server/ledger/export-head";
+import { anchorHead } from "@/server/ledger/anchor";
 import { writeGenesis } from "@/server/ledger/genesis";
 import { verifyChain } from "@/server/ledger/verify";
-import { demoPool, resetTestDb } from "./setup/db";
+import { appPool, resetTestDb, tamperAsOwner } from "./setup/db";
 
 const TS = "2026-10-27T00:00:00.000Z";
 const ev = (i: number) => ({
-  actorId: "u1",
-  eventType: "EVENT_INGESTED" as const,
+  actorId: "Cloud monitoring",
+  eventType: "Signal received" as const,
   payload: { i },
   ts: TS,
 });
@@ -28,7 +27,7 @@ async function seqs(): Promise<number[]> {
 describe("ledger", () => {
   beforeEach(async () => {
     await resetTestDb();
-    await db.transaction((tx) => writeGenesis(tx, TS, "v1"));
+    await db.transaction((tx) => writeGenesis(tx, TS));
   });
 
   it("genesis is seq 1 with the all-zero prev hash and is refused on a non-empty ledger", async () => {
@@ -39,10 +38,10 @@ describe("ledger", () => {
       eventType: "GENESIS",
       actorId: null,
     });
-    expect(g!.payload).toEqual({ rulePackVersion: "v1" });
-    await expect(
-      db.transaction((tx) => writeGenesis(tx, TS, "v1")),
-    ).rejects.toThrow(/genesis must be seq 1/);
+    expect(g!.payload).toEqual({});
+    await expect(db.transaction((tx) => writeGenesis(tx, TS))).rejects.toThrow(
+      /genesis must be seq 1/,
+    );
     expect(await seqs()).toEqual([1]);
   });
 
@@ -84,7 +83,7 @@ describe("ledger", () => {
       ),
     );
     await resetTestDb();
-    await db.transaction((tx) => writeGenesis(tx, TS, "v1"));
+    await db.transaction((tx) => writeGenesis(tx, TS));
     expect(await verifyChain()).toMatchObject({ ok: true, count: 1 });
   });
 
@@ -92,7 +91,7 @@ describe("ledger", () => {
     await db.transaction((tx) =>
       appendEntry(tx, {
         actorId: null,
-        eventType: "EVENT_INGESTED",
+        eventType: "Signal received",
         payload: {
           z: "Zoë 🚗",
           a: { y: 1, b: 2 },
@@ -118,16 +117,22 @@ describe("ledger", () => {
     expect(await verifyChain()).toMatchObject({ ok: true, count: 1051 });
   });
 
-  it("US-22: tamper via demo_admin then verify fails at that seq", async () => {
+  it("no database role can edit or delete a ledger entry", async () => {
+    await expect(
+      appPool.query(`UPDATE ledger_entries SET payload = '{}' WHERE seq = 1`),
+    ).rejects.toThrow(/permission denied/);
+  });
+
+  it("US-22: an edited entry is detected at that seq", async () => {
     await Promise.all(
       Array.from({ length: 6 }, (_, i) =>
         db.transaction((tx) => appendEntry(tx, ev(i))),
       ),
     );
-    await demoPool.query(
+    await tamperAsOwner(
       `UPDATE ledger_entries SET payload = '{"i":999}' WHERE seq = 4`,
     );
-    expect(await verifyChain()).toEqual({
+    expect(await verifyChain()).toMatchObject({
       ok: false,
       failedAtSeq: 4,
       reason: "hash_mismatch",
@@ -140,8 +145,8 @@ describe("ledger", () => {
         db.transaction((tx) => appendEntry(tx, ev(i))),
       ),
     );
-    await demoPool.query("DELETE FROM ledger_entries WHERE seq = 3");
-    expect(await verifyChain()).toEqual({
+    await tamperAsOwner("DELETE FROM ledger_entries WHERE seq = 3");
+    expect(await verifyChain()).toMatchObject({
       ok: false,
       failedAtSeq: 4,
       reason: "seq_gap",
@@ -176,51 +181,43 @@ describe("ledger", () => {
     expect(await seqs()).toEqual([1]);
   });
 
-  it("export head then append more → matches true; tamper that seq → matches false", async () => {
+  it("anchor then append more → anchors ok; a forged entry with recomputed hashes still breaks the anchor", async () => {
     await db.transaction((tx) => appendEntry(tx, ev(1)));
-    const exported = await db.transaction((tx) => exportHead(tx, "acc-1", TS));
-    expect(exported).toMatchObject({ seq: 2, entryCount: 2 });
+    await db.transaction((tx) => anchorHead(tx, 0, "After board notice"));
     await db.transaction((tx) => appendEntry(tx, ev(2)));
-
-    const ok = await verifyChain();
-    expect(ok).toMatchObject({ ok: true, count: 4 }); // genesis, 1, HEAD_EXPORTED, 2
-    expect(ok.exportedHead).toEqual({
-      seq: 2,
-      hash: exported.hash,
-      matches: true,
-    });
-    const [logged] = await db
-      .select()
-      .from(ledgerEntries)
-      .where(eq(ledgerEntries.seq, 3));
-    expect(logged).toMatchObject({
-      eventType: "HEAD_EXPORTED",
-      actorId: "acc-1",
+    expect(await verifyChain()).toMatchObject({
+      ok: true,
+      count: 3,
+      anchorsOk: true,
     });
 
-    // A tamperer who also recomputes this entry's hash passes the entry's own check; the next
-    // link breaks and the independently exported head no longer matches.
-    const [row] = await db
+    // A tamperer who rewrites seq 2 and recomputes every later hash passes the chain check;
+    // only the anchor, held outside the app, no longer matches.
+    const rows = await db
       .select()
       .from(ledgerEntries)
-      .where(eq(ledgerEntries.seq, 2));
-    const forged = entryHash({ ...row!, ts: row!.tsIso, payload: { i: 42 } });
-    await demoPool.query(
-      `UPDATE ledger_entries SET payload = '{"i":42}', hash = $1 WHERE seq = 2`,
-      [forged],
-    );
-    const bad = await verifyChain();
-    expect(bad).toMatchObject({
-      ok: false,
-      failedAtSeq: 3,
-      reason: "prev_link",
+      .orderBy(ledgerEntries.seq);
+    let prev = rows[0]!.hash;
+    for (const r of rows.slice(1)) {
+      const payload = r.seq === 2 ? { i: 42 } : r.payload;
+      const hash = entryHash({ ...r, ts: r.tsIso, prevHash: prev, payload });
+      await tamperAsOwner(
+        "UPDATE ledger_entries SET payload = $1, prev_hash = $2, hash = $3 WHERE seq = $4",
+        [JSON.stringify(payload), prev, hash, r.seq],
+      );
+      prev = hash;
+    }
+    expect(await verifyChain()).toMatchObject({
+      ok: true,
+      anchorsOk: false,
+      anchorMismatches: [2],
     });
   });
 
-  it("export head refuses an empty ledger", async () => {
+  it("anchor refuses an empty ledger", async () => {
     await resetTestDb();
     await expect(
-      db.transaction((tx) => exportHead(tx, "acc-1", TS)),
+      db.transaction((tx) => anchorHead(tx, 0, "Daily export")),
     ).rejects.toThrow(/empty/);
   });
 
@@ -230,6 +227,8 @@ describe("ledger", () => {
       ok: true,
       count: 0,
       headHash: GENESIS_PREV_HASH,
+      anchorsOk: true,
+      anchorMismatches: [],
     });
   });
 });

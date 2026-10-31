@@ -1,4 +1,4 @@
-// Seeds a freshly migrated database. Usage: npm run db:seed (needs DATABASE_URL and DEMO_PASSWORD).
+// Seeds a freshly migrated database. Usage: npm run db:seed (needs DATABASE_URL).
 try {
   process.loadEnvFile(".env.local");
 } catch {
@@ -9,10 +9,7 @@ async function main(): Promise<void> {
   // Imported after loadEnvFile: the db pool reads DATABASE_URL when the module loads.
   const { db } = await import("@/server/db/client");
   const { seed } = await import("@/server/seed/seed");
-  const demoPassword = process.env.DEMO_PASSWORD;
-  if (!demoPassword || demoPassword.length < 12)
-    throw new Error("DEMO_PASSWORD must be set and at least 12 characters");
-  await db.transaction((tx) => seed(tx, { demoPassword, now: new Date() }));
+  await db.transaction((tx) => seed(tx));
   console.log("seeded");
 }
 

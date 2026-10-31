@@ -7,8 +7,16 @@ const H1 = "1".repeat(64);
 async function insertEntry(pool = appPool, seq = 1): Promise<void> {
   await pool.query(
     `INSERT INTO ledger_entries (seq, ts_iso, actor_id, event_type, payload, prev_hash, hash)
-     VALUES ($1, '2026-10-27T00:00:00.000Z', NULL, 'GENESIS', '{"rulePackVersion":"v1"}', $2, $3)`,
+     VALUES ($1, '2026-11-16T09:00:00.000Z', NULL, 'GENESIS', '{}', $2, $3)`,
     [seq, GENESIS_PREV_HASH, H1],
+  );
+}
+
+async function insertCase(id = "C-104"): Promise<void> {
+  await ownerPool.query(
+    `INSERT INTO cases (id, title, severity, status, detected_h, facts)
+     VALUES ($1, 't', 'HIGH', 'Open', 0, '{}')`,
+    [id],
   );
 }
 
@@ -26,82 +34,62 @@ describe("DB roles, grants and the append-only trigger", () => {
     expect(rows.map((r) => Number(r.seq))).toEqual([1, 2]);
   });
 
-  it("app_rw cannot UPDATE ledger_entries", async () => {
-    await expect(
-      appPool.query("UPDATE ledger_entries SET payload = '{}' WHERE seq = 1"),
-    ).rejects.toThrow(/permission denied/);
-  });
-
-  it("app_rw cannot DELETE ledger_entries", async () => {
-    await expect(
-      appPool.query("DELETE FROM ledger_entries WHERE seq = 1"),
-    ).rejects.toThrow(/permission denied/);
-  });
-
-  it("app_rw cannot TRUNCATE ledger_entries", async () => {
+  it("app_rw and demo_admin cannot UPDATE, DELETE or TRUNCATE-and-edit ledger_entries", async () => {
+    for (const pool of [appPool, demoPool]) {
+      await expect(
+        pool.query("UPDATE ledger_entries SET payload = '{}' WHERE seq = 1"),
+      ).rejects.toThrow(/permission denied/);
+      await expect(
+        pool.query("DELETE FROM ledger_entries WHERE seq = 1"),
+      ).rejects.toThrow(/permission denied/);
+    }
     await expect(appPool.query("TRUNCATE ledger_entries")).rejects.toThrow(
       /permission denied/,
     );
   });
 
-  it("owner UPDATE ledger_entries blocked by trigger", async () => {
+  it("even the owner is stopped by the append-only trigger", async () => {
     await expect(
       ownerPool.query("UPDATE ledger_entries SET payload = '{}' WHERE seq = 1"),
     ).rejects.toThrow(/append-only/);
-  });
-
-  it("owner DELETE ledger_entries blocked by trigger", async () => {
     await expect(
       ownerPool.query("DELETE FROM ledger_entries WHERE seq = 1"),
     ).rejects.toThrow(/append-only/);
   });
 
-  it("demo_admin can UPDATE ledger_entries", async () => {
+  it("demo_admin can TRUNCATE everything (reset path)", async () => {
     await demoPool.query(
-      `UPDATE ledger_entries SET payload = '{"tampered":true}' WHERE seq = 1`,
+      "TRUNCATE ledger_entries, ledger_head, settings CASCADE",
     );
-    const { rows } = await appPool.query(
-      "SELECT payload FROM ledger_entries WHERE seq = 1",
-    );
-    expect(rows[0].payload).toEqual({ tampered: true });
-  });
-
-  it("demo_admin can TRUNCATE ledger_entries (reset path)", async () => {
-    await demoPool.query("TRUNCATE ledger_entries");
     const { rows } = await appPool.query(
       "SELECT count(*)::int AS n FROM ledger_entries",
     );
     expect(rows[0].n).toBe(0);
   });
 
-  it("app_rw can UPDATE mutable state but not append-only state tables", async () => {
+  it("app_rw can UPDATE moving state but not evidence tables", async () => {
+    await insertCase();
     await appPool.query(
       "UPDATE ledger_head SET seq = 1, hash = $1 WHERE id = 1",
       [H1],
     );
-    await appPool.query("UPDATE demo_settings SET offset_ms = 5 WHERE id = 1");
-    await expect(
-      appPool.query("UPDATE head_exports SET seq = 1"),
-    ).rejects.toThrow(/permission denied/);
-    await expect(
-      appPool.query("UPDATE intake_events SET kind = 'x'"),
-    ).rejects.toThrow(/permission denied/);
-    await expect(
-      appPool.query("UPDATE rule_evaluations SET tier = 'LOW'"),
-    ).rejects.toThrow(/permission denied/);
+    await appPool.query("UPDATE settings SET clock_h = 24 WHERE id = 1");
+    await appPool.query(
+      "UPDATE cases SET status = 'Disclosed' WHERE id = 'C-104'",
+    );
+    for (const stmt of [
+      "UPDATE approvals SET vote = 'approve'",
+      "UPDATE recommendations SET action = 'disclose'",
+      "UPDATE receipts SET case_id = 'C-104'",
+      "UPDATE external_anchors SET seq = 1",
+    ])
+      await expect(appPool.query(stmt)).rejects.toThrow(/permission denied/);
   });
 
-  it("app_rw can DELETE sessions but nothing else", async () => {
-    await appPool.query("DELETE FROM sessions");
-    await expect(appPool.query("DELETE FROM cases")).rejects.toThrow(
+  it("app_rw cannot DELETE, TRUNCATE or create objects", async () => {
+    await expect(appPool.query("DELETE FROM board_notices")).rejects.toThrow(
       /permission denied/,
     );
-    await expect(appPool.query("DELETE FROM board_items")).rejects.toThrow(
-      /permission denied/,
-    );
-  });
-
-  it("app_rw cannot TRUNCATE state tables or create objects", async () => {
     await expect(appPool.query("TRUNCATE cases CASCADE")).rejects.toThrow(
       /permission denied/,
     );
@@ -110,27 +98,36 @@ describe("DB roles, grants and the append-only trigger", () => {
     );
   });
 
-  it("the ledger_head and demo_settings tables hold at most one row", async () => {
+  it("ledger_head and settings hold at most one row", async () => {
     await expect(
       appPool.query(
         "INSERT INTO ledger_head (id, seq, hash) VALUES (2, 0, $1)",
         [GENESIS_PREV_HASH],
       ),
     ).rejects.toThrow(/ledger_head_single_row/);
+    await expect(
+      appPool.query("INSERT INTO settings (id, clock_h) VALUES (2, 0)"),
+    ).rejects.toThrow(/settings_single_row/);
   });
 
-  it("board_items rejects a second row for the same case and reason (US-19 exactly once)", async () => {
-    const { rows } = await ownerPool.query(
-      `INSERT INTO cases (ref, correlation_key, source, detected_at)
-       VALUES ('CASE-0001', 'k', 'manual', now()) RETURNING id`,
+  it("one vote per approver per decision, and one notice per case and kind", async () => {
+    await insertCase();
+    await ownerPool.query(
+      `INSERT INTO decisions (case_id, type, need, disclose, created_h) VALUES ('C-104', 'x', 2, false, 0)`,
     );
-    const caseId = rows[0].id as string;
-    const insert = () =>
+    const vote = () =>
       appPool.query(
-        `INSERT INTO board_items (case_id, tier, reason_key, body) VALUES ($1, 2, 'disagreement', 'b')`,
-        [caseId],
+        `INSERT INTO approvals (case_id, role, vote, reason, created_h) VALUES ('C-104', 'gc', 'approve', 'r', 0)`,
       );
-    await insert();
-    await expect(insert()).rejects.toThrow(/board_items_case_reason_uq/);
+    await vote();
+    await expect(vote()).rejects.toThrow(/approvals_case_role_uq/);
+
+    const notice = (id: string) =>
+      appPool.query(
+        `INSERT INTO board_notices (id, case_id, tier, kind, body, created_h) VALUES ($1, 'C-104', 2, 'deadline', 'b', 0)`,
+        [id],
+      );
+    await notice("N-1");
+    await expect(notice("N-2")).rejects.toThrow(/board_notices_case_kind_uq/);
   });
 });

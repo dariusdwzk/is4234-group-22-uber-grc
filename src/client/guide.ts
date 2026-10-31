@@ -1,0 +1,188 @@
+// The mockup's guided tour. Progress comes from the server (S.d.progress), so a step counts
+// as done whichever role is viewing. The current step only moves forward (S.guideStep): it
+// follows the user when they skip ahead, and the card has a Skip link.
+import type { RoleKey } from "@/domain/types";
+import { ROLES } from "@/domain/roles";
+import { S } from "./store";
+
+type Step = {
+  role?: RoleKey;
+  view?: string;
+  alsoCase?: boolean;
+  onCase?: boolean;
+  title: string | (() => string);
+  text: string | (() => string);
+  target?: () => string;
+  done: () => boolean;
+  /** False when the step can be done early just by looking around, so it is no sign of progress. */
+  showsProgress?: boolean;
+};
+
+const P = () => S.d.progress;
+const id = () => S.d.replayId ?? "";
+
+export const STEPS: Step[] = [
+  {
+    role: "security",
+    view: "security",
+    alsoCase: true,
+    title: () =>
+      S.view === "case" ? "Record what you found" : "A case opened by itself",
+    text: () =>
+      S.view === "case"
+        ? "Within a day, Uber’s security team confirmed what was taken. Record the finding with “Add finding”. "
+        : "Cloud monitoring flagged a mass download. Case " +
+          id() +
+          " opened, was rated HIGH and the board was told, with no one in Security acting. Click the case to open it.",
+    target: () =>
+      S.view === "case"
+        ? '[data-a="finding"]'
+        : '[data-a="openCase"][data-x="' + id() + '"]',
+    done: () => P().finding,
+  },
+  {
+    role: "cso",
+    onCase: true,
+    // Attaching is optional: once the recommendation is sent, the step moves on either way.
+    title: () =>
+      P().recommended
+        ? "Try to close the case"
+        : S.d.emailAttached
+          ? "Recommend keeping it internal"
+          : "Attach the hacker’s email, then recommend",
+    text: () =>
+      P().recommended
+        ? "Now try to make the case go away. Click “Close case” under Case actions. The CSO is not allowed to, and the attempt is logged."
+        : S.d.emailAttached
+          ? "Send the prefilled recommendation to escalate internally, as the CSO kept it in-house in 2016. The reason goes on the record."
+          : "The hacker emailed the CSO directly, so no system saw it. Attaching it is optional: click “Attach to case”, then send the prefilled recommendation below.",
+    target: () =>
+      P().recommended
+        ? '[data-a="blocked"][data-x="close"]'
+        : S.d.emailAttached
+          ? '[data-a="rec"]'
+          : '[data-a="attach"]',
+    done: () => P().recommended && P().csoBlocked,
+  },
+  {
+    role: "gc",
+    onCase: true,
+    title: "Approve as General Counsel",
+    text: "This is the first of two approvals. Read the CSO’s reason first. Then tick the checkbox and click Approve.",
+    target: () => "#actionbox",
+    done: () => P().gcDone,
+  },
+  {
+    role: "cpo",
+    onCase: true,
+    title: "Decide as Chief Privacy Officer",
+    text: "This is the second of two approvals. Reject: disclosure is required. Approve: the case stays internal and the board is told.",
+    target: () => "#actionbox",
+    done: () => P().cpoDone,
+  },
+  {
+    role: "board",
+    view: "board",
+    showsProgress: false, // notices can be acknowledged at any time
+    title: "Read the board’s view",
+    text: () =>
+      !S.boardOpen[id()]
+        ? "The board sees each serious incident in one card. Click “View details” to see the notices sent about it."
+        : "Acknowledge each notice. This records that the board has read it. Any decision is taken in a board meeting, not here.",
+    target: () =>
+      !S.boardOpen[id()]
+        ? '[data-a="expand"][data-x="' + id() + '"]'
+        : '[data-a="ack"]',
+    done: () => P().allAcked,
+  },
+  {
+    role: "board",
+    view: "board",
+    showsProgress: false, // the log filter can be clicked at any time
+    title: () =>
+      S.boardTab === "log"
+        ? "A record no one can change"
+        : "Open the evidence log",
+    text: () =>
+      S.boardTab === "log"
+        ? "Every action on a case is written here the moment it happens. No one, including IT staff, can change or delete an entry without it being detected. The record is checked automatically against copies held by the external auditor. Click “Blocked attempts” to see what people tried to do but were not allowed to."
+        : "Open the Evidence log tab to see the permanent record of everything that happened on this case.",
+    target: () =>
+      S.boardTab === "log"
+        ? '[data-a="logFilter"][data-x="blocked"]'
+        : '[data-a="boardTab"][data-x="log"]',
+    done: () => S.logFilter === "blocked",
+  },
+];
+
+/**
+ * The step to show, or -1 when the tour is complete. Never moves back: if a later step is
+ * already done, the tour carries on after it; then it passes over any step that is done.
+ */
+export function stepIdx(): number {
+  let i = S.guideStep;
+  for (let j = STEPS.length - 1; j >= i; j--)
+    if (STEPS[j]!.showsProgress !== false && STEPS[j]!.done()) {
+      i = j + 1;
+      break;
+    }
+  while (i < STEPS.length && STEPS[i]!.done()) i++;
+  S.guideStep = i;
+  return i < STEPS.length ? i : -1;
+}
+
+export function atStep(s: Step): boolean {
+  if (S.role !== s.role) return false;
+  if (s.alsoCase && S.view === "case" && S.caseId === S.d.replayId) return true;
+  if (s.onCase) return S.view === "case" && S.caseId === S.d.replayId;
+  return S.view === s.view;
+}
+
+const txt = (x: string | (() => string)) => (typeof x === "function" ? x() : x);
+
+export function guideCard(): string {
+  const i = stepIdx();
+  const dots =
+    '<div class="dots">' +
+    STEPS.map(
+      (_, j) =>
+        '<span class="dot ' +
+        (i === -1 || j < i ? "done" : j === i ? "now" : "") +
+        '"></span>',
+    ).join("") +
+    "</div>";
+  if (i === -1)
+    return (
+      '<aside class="guidecard" aria-label="Guide">' +
+      dots +
+      '<h3>Demo complete</h3><p>Reset and choose Approve as the Chief Privacy Officer to see the other ending. You can also try the Employee role to send an anonymous report.</p><div class="row"><button class="btn primary" data-a="reset">Reset and replay</button><button class="link" data-a="hideGuide">Close</button></div></aside>'
+    );
+  const s = STEPS[i]!,
+    here = atStep(s);
+  let act: string;
+  if (here)
+    act =
+      '<span class="gc-hint">Click the highlighted area on the page.</span>';
+  else
+    act =
+      '<button class="btn primary" data-a="goStep">Go as ' +
+      ROLES[s.role!].name +
+      "</button>";
+  return (
+    '<aside class="guidecard" aria-label="Guide">' +
+    dots +
+    '<div class="gc-top"><span>Step ' +
+    (i + 1) +
+    " of " +
+    STEPS.length +
+    (s.role ? ": " + ROLES[s.role].name : "") +
+    '</span><span class="row"><button class="link small" data-a="skipStep">Skip</button><button class="link small" data-a="hideGuide">Hide</button></span></div>' +
+    "<h3>" +
+    txt(s.title) +
+    "</h3><p>" +
+    txt(s.text) +
+    "</p>" +
+    act +
+    "</aside>"
+  );
+}

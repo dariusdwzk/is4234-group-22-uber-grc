@@ -1,0 +1,28 @@
+/* Styles the mockup does not have, written with its tokens and in its compact style.
+   globals.css stays byte-for-byte the mockup. */
+
+/* Staff report questionnaire: Yes / No / Not sure as the mockup's filter-chip pills. */
+.qlist{display:flex;flex-direction:column;gap:14px;margin:0;padding:0;list-style:none}
+.qlist li{display:flex;flex-direction:column;gap:6px}
+.qlist .qtext{font-size:.88rem;font-weight:500}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.form .seg label{flex-direction:row;font-weight:500}
+.seg label{position:relative;border:1px solid #DADADA;background:#FFFFFF;border-radius:999px;padding:5px 12px;font-size:.85rem;cursor:pointer}
+.seg input{position:absolute;opacity:0;width:1px;height:1px;margin:0}
+.seg label:has(input:checked){background:#000;color:#fff;border-color:#000}
+.seg label:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+.qanswers{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:.88rem}
+
+/* Board: three number tiles since staff challenges were removed (the mockup had four). */
+.kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:900px){.kpis{grid-template-columns:1fr}}
+
+/* Landing: name, promise, one call to action, then the roles. Centred, lots of white space. */
+main.landing{max-width:1120px;padding-left:32px;padding-right:32px}
+.lp{display:flex;flex-direction:column;align-items:center;text-align:center;padding:12vh 0 48px}
+.lp-name{font-size:clamp(3rem,9vw,6rem);font-weight:700;letter-spacing:-.05em;line-height:.95;margin:0 0 16px}
+.lp-tagline{font-size:clamp(1.15rem,2.6vw,1.6rem);font-weight:500;color:var(--muted);letter-spacing:-.01em;margin:0 0 36px}
+.lp-or{font-size:.85rem;color:var(--muted);margin:64px 0 16px;letter-spacing:.02em}
+.lp-roles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;width:100%}
+.lp-roles .btn{justify-content:center;white-space:normal;text-align:center}
+@media (max-width:800px){main.landing{padding-left:20px;padding-right:20px}.lp{padding-top:8vh}.lp-or{margin-top:48px}.lp-roles{grid-template-columns:repeat(2,minmax(0,1fr))}}

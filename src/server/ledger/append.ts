@@ -6,7 +6,7 @@ import type { Tx } from "../db/client";
 import { ledgerEntries, ledgerHead } from "../db/schema";
 import type { LedgerEventType } from "./event-types";
 
-export type { LedgerEventType } from "./event-types";
+export type { BlockedEventType, LedgerEventType } from "./event-types";
 
 export type AppendInput = {
   actorId: string | null;

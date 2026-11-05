@@ -1,6 +1,8 @@
 # Handover
 
-**State (5 Nov):** `main` still has the old app (login + Next pages + Darius's UX redesign, PR #17). Viviana's rebuild is on `viviana-dashboard1`, open as PR #18 (CI green, mergeable). These docs describe PR #18; this update sits on local branch `docs/viviana-update`, cut from her branch.
+**State (5 Nov, latest):** the workspace redesign (P6) is done on local branch `feat/workspace-redesign` (not pushed, not merged). PR #18 is still open. The client app now has a sign-in screen (pick a role, no menu), a dark sidebar shell (My work, All cases, role pages; counts equal the rows shown), a two-column case page (progress tracker, summary, "Waiting on you" action card), and restyled Board, CEO and Employee pages. The tour starts on My work and Help has per-role text. Only `src/client/*`, `src/app/globals.css` and tests changed; server, API, migrations and rule packs are untouched. Phone width (375 px) has an e2e check (`tests/e2e/phone.spec.ts`). Screens: `docs/evidence/screens/p6-*.png`.
+
+**Earlier state (5 Nov):** `main` still has the old app (login + Next pages + Darius's UX redesign, PR #17). Viviana's rebuild is on `viviana-dashboard1`, open as PR #18 (CI green, mergeable). These docs describe PR #18; this update sits on local branch `docs/viviana-update`, cut from her branch.
 
 **Changed by Viviana (PR #18, 28-31 Oct, 33 commits):**
 - Rebuilt toward her mockup ("Disclosure Gate", branded UberSecure). New schema (signals, cases, decisions, approvals, notices, receipts, evidence, external anchors); ledger tables unchanged. Migrations regenerated from `0000`, then `0001`-`0007`.

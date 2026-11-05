@@ -37,3 +37,18 @@ Hard-to-reverse decisions only. Seeded from spec §2 (26 Oct, Darius).
 | Banner | "Demonstration — synthetic data" banner dropped (Darius, 5 Nov). Data is still synthetic only. |
 | Ledger check in UI | Dropped (Darius, 5 Nov). Chain stays in code + tests. **Report/slides must explain it** (hash chain, append-only DB grants, `tests/unit/ledger-verify.test.ts`, `tests/integration/ledger.test.ts`) and must not claim the demo shows tamper detection. |
 | Payment hold | Stays dropped (Darius, 5 Nov). |
+
+## Workspace redesign (P6, 5 Nov)
+| Topic | Decision |
+|---|---|
+| Sign-in replaces role menu | Landing is a sign-in screen where each role is a button; it still sends `X-Role` (demo only, no passwords). |
+| Refusal-only buttons removed (server still refuses and logs) | The UI no longer shows buttons a role may not use; the server still refuses direct calls and logs "Blocked: <action>". |
+| Names deferred | Real person names are not shown; roles and titles only, so no personal data and no per-person identity yet. |
+| Tour optional | The guided tour is opt-in from Sign in and Help; it starts on My work and resets to the role's own home. |
+| Avatar initials | Strip any "(...)", keep an all-capitals word whole (CSO, CEO), else first letters of two words, else the first letter. |
+| Nearest legal deadline | The tile excludes internal clocks (`class`, `mat`) and shows "<clock name> . <case id>". |
+| Counts equal rows | One filter per All-cases view feeds both the list and the sidebar count; Security shows all cases. |
+| Board Overview count | The Overview item shows the number of unacknowledged notices. |
+| Tour wording | Log step is "Every action, in order" (no tamper claim, see 5 Nov); "Demo complete" names the other ending from the replay case outcome. |
+| Hash chain | Still dropped from the UI; **report/slides must explain the hash chain** (see 5 Nov). |
+

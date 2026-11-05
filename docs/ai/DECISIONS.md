@@ -46,9 +46,18 @@ Hard-to-reverse decisions only. Seeded from spec §2 (26 Oct, Darius).
 | Names deferred | Real person names are not shown; roles and titles only, so no personal data and no per-person identity yet. |
 | Tour optional | The guided tour is opt-in from Sign in and Help; it starts on My work and resets to the role's own home. |
 | Avatar initials | Strip any "(...)", keep an all-capitals word whole (CSO, CEO), else first letters of two words, else the first letter. |
-| Nearest legal deadline | The tile excludes internal clocks (`class`, `mat`) and shows "<clock name> . <case id>". |
+| Nearest legal deadline | The tile excludes internal clocks (`class`, `mat`) and shows "<clock name> · <case id>". |
 | Counts equal rows | One filter per All-cases view feeds both the list and the sidebar count; Security shows all cases. |
 | Board Overview count | The Overview item shows the number of unacknowledged notices. |
 | Tour wording | Log step is "Every action, in order" (no tamper claim, see 5 Nov); "Demo complete" names the other ending from the replay case outcome. |
+| My work help per role | Help on My work explains that role's queue (GC/CPO decisions; Security and CSO cases). |
+| CSO My work line | "Security's finding is in" only once a finding exists; otherwise "Review the case and recommend". |
+| Vote line | A case with no recommendation yet shows "A decision is waiting for your vote." on GC/CPO My work. |
+| Breadcrumb source | The case breadcrumb is the sidebar item marked current. |
+| Outcome sentence | One `outcomeText()` for Board, CEO, Security and CSO: pending, rejected (names the approver and the decision), escalated, disclosed. |
+| Illustrative everywhere | Every legal clock time carries "(illustrative)": summary, Deadlines tab, Next deadline column, Board, notice text. Internal clocks do not. The Next deadline column now shows the nearest legal clock only. |
+| Keyboard case rows | The case id in each row is a real button; the row stays clickable for the mouse. |
+| Tour mode resets | Closing the tour ("End tour", or Close on Demo complete) returns to explore mode: Help explains the page, forms start empty. |
+| Empty-state hints | An empty My work says what will arrive and from whom, per role. |
 | Hash chain | Still dropped from the UI; **report/slides must explain the hash chain** (see 5 Nov). |
 

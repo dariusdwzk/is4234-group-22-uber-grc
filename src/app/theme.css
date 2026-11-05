@@ -157,3 +157,6 @@ legend{font-size:.86rem;font-weight:500;padding:0;margin-bottom:6px}
 }
 nav[aria-label=Breadcrumb]{font-size:.88rem;color:var(--muted)}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.narrow{max-width:720px;margin:0 auto}
+.notice{flex-wrap:wrap}
+.notice .grow{flex:1 1 220px;min-width:0}

@@ -8,7 +8,6 @@ import { actionRequired } from "../../action-required";
 import { esc } from "../../html";
 import { navFor } from "../../nav";
 import { S } from "../../store";
-import { workItems } from "../../work";
 import { TRIAGE, remText, sev, statusBadge } from "../components";
 import { evidencePanel, independentBox } from "./independent";
 import { normalBox } from "./normal";
@@ -144,10 +143,7 @@ export function vCase(): string {
   if (S.role === "employee") return "<p>Employees cannot open cases.</p>";
   if (!c) return "<p>Case not found.</p>";
   const items = navFor(S.role!, S),
-    from =
-      (workItems(S.d.cases, S.role!).some((w) => w.c.id === c.id)
-        ? items.find((i) => i.x === "work")
-        : items.find((i) => i.x !== "work")) ?? items[0]!;
+    from = items.find((i) => i.current) ?? items[0]!;
   const o =
     '<nav aria-label="Breadcrumb"><button class="link" data-a="' +
     from.a +

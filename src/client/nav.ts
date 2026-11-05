@@ -13,6 +13,26 @@ export type NavItem = {
 
 export function navFor(
   role: RoleKey,
+  s: {
+    view: string;
+    boardTab: "overview" | "log";
+    d: ViewState;
+    caseId?: string | null;
+  },
+): NavItem[] {
+  const items = base(role, s);
+  if (s.view !== "case" || !s.caseId) return items;
+  // On a case page, the item the breadcrumb links to is the current one.
+  const inWork = workItems(s.d.cases, role).some((w) => w.c.id === s.caseId);
+  const from =
+    (inWork
+      ? items.find((i) => i.x === "work")
+      : items.find((i) => i.x !== "work")) ?? items[0];
+  return items.map((i) => ({ ...i, current: i === from }));
+}
+
+function base(
+  role: RoleKey,
   s: { view: string; boardTab: "overview" | "log"; d: ViewState },
 ): NavItem[] {
   const go = (label: string, x: string, count?: number): NavItem => ({
@@ -45,7 +65,15 @@ export function navFor(
       ];
     case "ceo":
       return [go("Overview", "ceo")];
-    case "board":
-      return [tab("Overview", "overview"), tab("Evidence log", "log")];
+    case "board": {
+      const unread = s.d.notices.filter((n) => n.ack === null).length;
+      return [
+        {
+          ...tab("Overview", "overview"),
+          ...(unread ? { count: unread } : {}),
+        },
+        tab("Evidence log", "log"),
+      ];
+    }
   }
 }

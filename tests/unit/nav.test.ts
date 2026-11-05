@@ -3,7 +3,7 @@ import { navFor } from "@/client/nav";
 import { loadRole, saveRole, emptyState } from "@/client/store";
 import { ROLES, ROLE_KEYS } from "@/domain/roles";
 import { initials } from "@/client/views/shell";
-import type { CaseView } from "@/domain/view-state";
+import type { CaseView, ViewState } from "@/domain/view-state";
 
 const d = emptyState();
 const three = { ...d, cases: [{}, {}, {}] as CaseView[] };
@@ -31,6 +31,36 @@ describe("navFor", () => {
     ).toEqual([
       { label: "Report an incident", a: "go", x: "employee", current: false },
     ]);
+  });
+  it("board: Overview counts notices not yet acknowledged, omitted at 0", () => {
+    const n = (ack: number | null) =>
+      ({ id: "N", ack }) as unknown as ViewState["notices"][number];
+    const w = (notices: ViewState["notices"]) =>
+      navFor("board", {
+        view: "board",
+        boardTab: "overview",
+        d: { ...d, notices },
+      })[0]!;
+    expect(w([n(null), n(5), n(null)]).count).toBe(2);
+    expect(w([n(5)])).not.toHaveProperty("count");
+  });
+  it("case page: the sidebar marks the item the breadcrumb links to", () => {
+    const pend = {
+      type: "T",
+      need: 2,
+      disclose: false,
+      status: "Pending",
+      votes: {},
+    };
+    const waiting = { id: "C-1", severity: "HIGH", decision: pend };
+    const other = { id: "C-2", severity: "HIGH", decision: null };
+    const dd = { ...d, cases: [waiting, other] as unknown as CaseView[] };
+    const cur = (caseId: string) =>
+      navFor("gc", { view: "case", boardTab: "overview", d: dd, caseId })
+        .filter((i) => i.current)
+        .map((i) => i.label);
+    expect(cur("C-1")).toEqual(["My work"]);
+    expect(cur("C-2")).toEqual(["All cases"]);
   });
   it("every role has at least one item", () => {
     for (const r of ROLE_KEYS)

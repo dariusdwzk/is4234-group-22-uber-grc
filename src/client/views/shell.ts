@@ -24,7 +24,7 @@ export function initials(name: string): string {
 export function shell(content: string): string {
   const r = S.role;
   const items = r
-    ? navFor(r, { view: S.view, boardTab: S.boardTab, d: S.d })
+    ? navFor(r, S)
         .map(
           (i) =>
             '<button class="nav-item" data-a="' +

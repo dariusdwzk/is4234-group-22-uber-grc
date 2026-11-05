@@ -24,7 +24,6 @@ export type UiState = {
   /** The last receipt checked on the Employee page, and its case timeline. */
   receipt: { code: string; track: ReceiptTrack | null } | null;
   empMsg: string | null;
-  lastBlock: { what: string; why: string } | null;
   scrolledKey: string | null;
   /** The case that was open when the user chose Switch account. */
   resumeCase: string | null;
@@ -68,7 +67,6 @@ export const S: UiState & { d: ViewState } = {
   statusMsg: null,
   receipt: null,
   empMsg: null,
-  lastBlock: null,
   scrolledKey: null,
   resumeCase: null,
   d: emptyState(),

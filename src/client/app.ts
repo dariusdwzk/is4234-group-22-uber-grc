@@ -1,6 +1,5 @@
 // The mockup's render() and action map (A), with every state change sent to the server.
 // The browser keeps only view state; rules, permissions and the ledger live on the server.
-import { ATTEMPT_LABELS, type Attempt } from "@/domain/blocked-reasons";
 import { fileProblem } from "@/domain/evidence";
 import { ESCALATED_STATUS } from "@/domain/gate";
 import type { ReceiptTrack } from "@/domain/view-state";
@@ -77,7 +76,6 @@ async function refresh(): Promise<void> {
 }
 
 const clearMsgs = () => {
-  S.lastBlock = null;
   S.empMsg = null;
   S.statusMsg = null;
   S.receipt = null;
@@ -109,7 +107,6 @@ function openCase(x: string | undefined): void {
   S.caseId = x ?? null;
   if (x === S.d.replayId) S.seenReplay = true;
   S.caseTab = "deadlines";
-  S.lastBlock = null;
   render();
   window.scrollTo(0, 0);
 }
@@ -141,7 +138,6 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
   },
   home: () => {
     S.view = S.role ? ROLES[S.role].home : "landing";
-    S.lastBlock = null;
     render();
   },
   openCase: (x) => openCase(x),
@@ -177,8 +173,14 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
     toast("Email attached. R5 fired: extortion demand.");
   },
   rec: async () => {
-    const action = val("rAct"),
-      reason = val("rReason");
+    const action = document.querySelector<HTMLInputElement>(
+      'input[name="rAct"]:checked',
+    )?.value;
+    const reason = val("rReason");
+    if (!action) {
+      toast("Choose a recommendation.");
+      return;
+    }
     if (action === "escalate" && !reason) {
       toast("Give a reason for escalating internally.");
       return;
@@ -249,14 +251,6 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
     a.click();
     URL.revokeObjectURL(url);
   },
-  blocked: async (x) => {
-    const what = ATTEMPT_LABELS[x as Attempt];
-    const r = await send("attempt", { caseId: S.caseId, action: x });
-    if (r.ok || r.status !== 403) return r.ok ? render() : fail(r);
-    S.lastBlock = { what, why: r.error };
-    render();
-    window.scrollTo({ top: 0 });
-  },
   vote: async (x) => {
     if (!ck("v1")) {
       toast("Tick the checkbox first.");
@@ -317,18 +311,6 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
         ? "Rated HIGH. The board has been told."
         : "Rated LOW. Security reviews it within 3 business days.",
     );
-  },
-  /** Security's "Confirm rating" button: always refused on the server, and logged. */
-  triageTry: async () => {
-    const r = await send("triage", {
-      caseId: S.caseId,
-      rating: "LOW",
-      reason: "Rated by Security",
-    });
-    if (r.ok || r.status !== 403) return r.ok ? render() : fail(r);
-    S.lastBlock = { what: "Confirm rating", why: r.error };
-    render();
-    window.scrollTo({ top: 0 });
   },
   boardTab: (x) => {
     S.boardTab = x === "log" ? "log" : "overview";

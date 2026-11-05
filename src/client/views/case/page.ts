@@ -4,8 +4,11 @@ import { ESCALATED_STATUS } from "@/domain/gate";
 import { fmtDur, fmtT } from "@/domain/demo-time";
 import { QUESTIONNAIRE } from "@/domain/questionnaire";
 import type { CaseView } from "@/domain/view-state";
+import { actionRequired } from "../../action-required";
 import { esc } from "../../html";
+import { navFor } from "../../nav";
 import { S } from "../../store";
+import { workItems } from "../../work";
 import { TRIAGE, remText, sev, statusBadge } from "../components";
 import { evidencePanel, independentBox } from "./independent";
 import { normalBox } from "./normal";
@@ -140,8 +143,21 @@ export function vCase(): string {
   const c = S.d.cases.find((x) => x.id === S.caseId);
   if (S.role === "employee") return "<p>Employees cannot open cases.</p>";
   if (!c) return "<p>Case not found.</p>";
-  let o =
-    '<button class="link" data-a="home">← Back</button>' +
+  const items = navFor(S.role!, S),
+    from =
+      (workItems(S.d.cases, S.role!).some((w) => w.c.id === c.id)
+        ? items.find((i) => i.x === "work")
+        : items.find((i) => i.x !== "work")) ?? items[0]!;
+  const o =
+    '<nav aria-label="Breadcrumb"><button class="link" data-a="' +
+    from.a +
+    '" data-x="' +
+    from.x +
+    '">' +
+    from.label +
+    "</button> / " +
+    c.id +
+    "</nav>" +
     '<div class="case-head"><span class="cid">' +
     c.id +
     "</span><h1>" +
@@ -151,23 +167,17 @@ export function vCase(): string {
     '<span class="badge">' +
     statusBadge(c) +
     "</span></div>";
+  let main = "";
   if (
     c.severity === "HIGH" ||
     c.status === TRIAGE ||
     c.route === "SECURITY_TRIAGE"
   )
-    o += tracker(c);
-  if (S.lastBlock)
-    o +=
-      '<div class="alert high"><b>Not allowed: ' +
-      esc(S.lastBlock.what) +
-      "</b>" +
-      esc(S.lastBlock.why) +
-      " This attempt has been logged.</div>";
+    main += tracker(c);
   if (c.status === ESCALATED_STATUS)
-    o +=
+    main +=
       '<div class="alert warn"><b>Escalated internally by both approvers</b>Disclosure has not been made and the deadlines keep running. The decision and every step before it are permanently on record.</div>';
-  o += caseSummary(c) + actionBox(c) + evidencePanel(c);
+  main += caseSummary(c) + evidencePanel(c);
   const tabs = (
     [
       ["deadlines", "Deadlines"],
@@ -175,7 +185,7 @@ export function vCase(): string {
     ] as const
   ).filter((t) => t[0] !== "deadlines" || c.clocks.length);
   if (!tabs.some((t) => t[0] === S.caseTab)) S.caseTab = tabs[0]![0];
-  o +=
+  main +=
     '<div class="tabs">' +
     tabs
       .map(
@@ -191,7 +201,7 @@ export function vCase(): string {
       .join("") +
     "</div>";
   if (S.caseTab === "deadlines") {
-    o +=
+    main +=
       '<section class="panel"><div class="scroll"><table class="tbl"><tbody>' +
       c.clocks
         .map((k) => {
@@ -217,7 +227,7 @@ export function vCase(): string {
       .filter((e) => e.caseId === c.id)
       .slice()
       .reverse();
-    o +=
+    main +=
       '<section class="panel"><ol class="tl">' +
       es
         .map(
@@ -241,5 +251,17 @@ export function vCase(): string {
         .join("") +
       "</ol></section>";
   }
-  return o;
+  const needs = actionRequired(c, S.role);
+  return (
+    o +
+    '<div class="case-grid"><div class="case-main">' +
+    main +
+    '</div><aside class="case-aside' +
+    (needs ? " needs" : "") +
+    '" aria-label="Your action"><div class="eyebrow' +
+    (needs ? '">Waiting on you' : ' muted">Status') +
+    "</div>" +
+    actionBox(c) +
+    "</aside></div>"
+  );
 }

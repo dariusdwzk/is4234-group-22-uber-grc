@@ -25,6 +25,18 @@ const hasAttachment = (c: CaseView) =>
     (id) => S.d.signals.find((x) => x.id === id)?.src === "Email to CSO",
   );
 
+/** A recommendation card. In the guided tour "escalate" starts selected (the 2016 choice). */
+const choice = (v: string, title: string, sub: string) =>
+  '<label class="choice"><input type="radio" name="rAct" value="' +
+  v +
+  '"' +
+  (S.mode === "demo" && v === "escalate" ? " checked" : "") +
+  "><span><b>" +
+  esc(title) +
+  '</b><span class="muted small">' +
+  sub +
+  "</span></span></label>";
+
 const isSec = () => S.role === "security" || S.role === "cso";
 const isAppr = () => S.role === "gc" || S.role === "cpo";
 
@@ -32,12 +44,6 @@ const isAppr = () => S.role === "gc" || S.role === "cpo";
 export function normalBox(c: CaseView): string {
   const r = S.role,
     d = c.decision;
-  const act = (x: string, l: string) =>
-    '<button class="btn sm" data-a="blocked" data-x="' +
-    x +
-    '">' +
-    l +
-    "</button>";
   let h = "";
   if (isSec()) {
     if (r === "security") {
@@ -71,11 +77,18 @@ export function normalBox(c: CaseView): string {
             ) +
             '</label><div><button class="btn" data-a="attach">Attach to case</button></div></div>' +
             '<div style="margin-top:22px"></div>') +
-        '<h2>Recommendation</h2><div class="form"><label>Recommended action<select id="rAct"><option value="escalate">' +
-        ESCALATE_TYPE +
-        '</option><option value="disclose">' +
-        DISCLOSE_TYPE +
-        "</option></select></label>" +
+        '<h2>Recommendation</h2><div class="form"><fieldset><legend>Recommendation</legend>' +
+        choice(
+          "escalate",
+          ESCALATE_TYPE,
+          "Needs both General Counsel and Chief Privacy Officer.",
+        ) +
+        choice(
+          "disclose",
+          DISCLOSE_TYPE,
+          "Needs General Counsel or Chief Privacy Officer.",
+        ) +
+        "</fieldset>" +
         // Prefilled for the replay: in 2016 the CSO kept it in-house as a "bug bounty".
         "<label>Reason (required to escalate)" +
         box(
@@ -84,16 +97,10 @@ export function normalBox(c: CaseView): string {
           "Treat it as a bug bounty and keep it in-house while we confirm the data was deleted.",
         ) +
         "</label>" +
-        '<div><button class="btn primary" data-a="rec">Send for decision</button></div></div>';
+        '<div><button class="btn primary" data-a="rec">Send to approvers</button><p class="muted small" style="margin:6px 0 0">The General Counsel and the Chief Privacy Officer are notified.</p></div></div>';
     else
       h =
         '<h2>Recommendation sent</h2><p class="muted" style="margin:0">Waiting for the General Counsel and the Chief Privacy Officer.</p>';
-    h +=
-      '<div class="caseacts"><span class="muted small">Case actions</span>' +
-      act("close", "Close case") +
-      act("downgrade", "Lower severity") +
-      (r === "cso" ? act("approve", "Approve") : "") +
-      "</div>";
   } else if (isAppr()) {
     const me = r as "gc" | "cpo";
     if (!d)
@@ -105,19 +112,14 @@ export function normalBox(c: CaseView): string {
     else {
       const v = (k: "gc" | "cpo") => {
         const x = d.votes[k];
-        return (
-          "<span>" +
-          ROLES[k].name +
-          ": " +
-          (x
-            ? '<span class="' +
-              (x.vote === "approve" ? "t-ok" : "t-high") +
-              '">' +
-              (x.vote === "approve" ? "Approved" : "Rejected") +
-              "</span>"
-            : '<span class="muted">Waiting</span>') +
-          "</span>"
-        );
+        const st = x
+          ? x.vote === "approve"
+            ? "approved"
+            : "rejected"
+          : k === S.role
+            ? "you"
+            : "pending";
+        return '<span class="badge">' + ROLES[k].name + " · " + st + "</span>";
       };
       h =
         "<h2>" +
@@ -150,10 +152,9 @@ export function normalBox(c: CaseView): string {
     }
   } else if (r === "ceo")
     h =
-      '<h2>Read-only access</h2><div class="caseacts"><span class="muted small">Case actions</span>' +
-      act("approve", "Approve") +
-      act("close", "Close case") +
-      "</div>";
+      '<h2>Status</h2><p style="margin:0">' +
+      esc(d ? "Decision: " + d.status : c.status) +
+      "</p>";
   else h = "<h2>Read-only access</h2>";
   return '<section class="panel action" id="actionbox">' + h + "</section>";
 }

@@ -28,9 +28,7 @@ export function triageBox(c: CaseView): string {
       : '<h2>Finding recorded</h2><p class="muted" style="margin:0">' +
         esc(c.finding) +
         '</p><p class="muted small" style="margin:8px 0 0">Waiting for the Chief Privacy Officer to confirm the rating.</p>';
-    h +=
-      due +
-      '<div class="caseacts"><span class="muted small">Case actions</span><button class="btn sm" data-a="triageTry">Confirm rating</button></div>';
+    h += due;
   } else if (S.role === "cpo") {
     h =
       "<h2>Confirm rating</h2>" +

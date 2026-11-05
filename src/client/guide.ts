@@ -24,7 +24,7 @@ const id = () => S.d.replayId ?? "";
 export const STEPS: Step[] = [
   {
     role: "security",
-    view: "security",
+    view: "work",
     alsoCase: true,
     title: () =>
       S.view === "case" ? "Record what you found" : "A case opened by itself",
@@ -33,7 +33,7 @@ export const STEPS: Step[] = [
         ? "Within a day, Uber’s security team confirmed what was taken. Record the finding with “Add finding”. "
         : "Cloud monitoring flagged a mass download. Case " +
           id() +
-          " opened, was rated HIGH and the board was told, with no one in Security acting. Click the case to open it.",
+          " opened, was rated HIGH and the board was told, with no one in Security acting. Open it from My work.",
     target: () =>
       S.view === "case"
         ? '[data-a="finding"]'

@@ -1,12 +1,12 @@
 // "My work": what is waiting on the signed-in role, plus three numbers.
 import { esc } from "../html";
 import { S } from "../store";
-import { nearestDeadlineH, workItems } from "../work";
+import { nearestDeadline, workItems } from "../work";
 import { remText, sev } from "./components";
 
 export function vWork(): string {
   const items = S.role ? workItems(S.d.cases, S.role) : [];
-  const h = nearestDeadlineH(S.d.cases, S.d.clockH);
+  const n = nearestDeadline(S.d.cases, S.d.clockH);
   const tile = (label: string, v: string) =>
     '<div class="tile"><div class="muted">' +
     label +
@@ -19,7 +19,15 @@ export function vWork(): string {
     tile("Waiting on you", String(items.length)) +
     tile(
       "Nearest legal deadline",
-      h === null ? "None running" : remText(h) + " (illustrative)",
+      n === null
+        ? "None running"
+        : remText(n.h) +
+            " (illustrative)" +
+            '<div class="muted">' +
+            esc(n.name) +
+            " · " +
+            esc(n.caseId) +
+            "</div>",
     ) +
     tile("Board notices", String(S.d.notices.length)) +
     "</div><h2>Waiting on you</h2>" +
@@ -28,7 +36,7 @@ export function vWork(): string {
           .map(
             ({ c, line, verb }) =>
               '<div class="work-item"><div><span class="mono">' +
-              c.id +
+              esc(c.id) +
               "</span> <strong>" +
               esc(c.title) +
               "</strong> " +
@@ -36,7 +44,7 @@ export function vWork(): string {
               '<div class="muted">' +
               esc(line) +
               '</div></div><button class="btn primary" data-a="openCase" data-x="' +
-              c.id +
+              esc(c.id) +
               '">' +
               verb +
               "</button></div>",

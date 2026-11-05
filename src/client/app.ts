@@ -417,7 +417,7 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
     if (!r.ok) return fail(r);
     Object.assign(S, {
       role: g ? "security" : null,
-      view: g ? "security" : "landing",
+      view: g ? ROLES.security.home : "landing",
       caseId: null,
       caseTab: "deadlines",
       boardTab: "overview",

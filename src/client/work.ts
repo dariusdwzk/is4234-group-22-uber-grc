@@ -41,11 +41,16 @@ function describe(c: CaseView, role: RoleKey): Omit<WorkItem, "c"> {
       verb: "Record finding",
       line: "Opened automatically from system signals.",
     };
-  const reason = c.rec?.reason;
+  if (!c.rec)
+    return {
+      verb: "Review and decide",
+      line: "A decision is waiting for your vote.",
+    };
+  const reason = c.rec.reason;
   return {
     verb: "Review and decide",
     line:
-      (c.rec ? ROLES[c.rec.author].name : "Someone") +
+      ROLES[c.rec.author].name +
       " recommends: " +
       (c.decision?.type ?? "") +
       (reason ? ` · “${reason}”` : ""),
@@ -64,15 +69,26 @@ export function workItems(cases: CaseView[], role: RoleKey): WorkItem[] {
     .map((c) => ({ c, ...describe(c, role) }));
 }
 
-/** Hours until the soonest running legal clock on an undisclosed case, or null. */
-export function nearestDeadlineH(
+/** The soonest running legal clock on an undisclosed case (internal clocks excluded), or null. */
+export function nearestDeadline(
   cases: CaseView[],
   clockH: number,
-): number | null {
-  const left = cases
+): { h: number; name: string; caseId: string } | null {
+  const all = cases
     .filter((c) => c.status !== "Disclosed")
-    .flatMap((c) => c.clocks)
-    .filter((k) => k.start !== null && k.dur !== null && !k.met)
-    .map((k) => k.start! + k.dur! - clockH);
-  return left.length ? Math.min(...left) : null;
+    .flatMap((c) => c.clocks.map((k) => ({ k, caseId: c.id })))
+    .filter(
+      ({ k }) =>
+        k.start !== null &&
+        k.dur !== null &&
+        !k.met &&
+        k.key !== "class" &&
+        k.key !== "mat",
+    )
+    .map(({ k, caseId }) => ({
+      h: k.start! + k.dur! - clockH,
+      name: k.name,
+      caseId,
+    }));
+  return all.length ? all.reduce((a, b) => (b.h < a.h ? b : a)) : null;
 }

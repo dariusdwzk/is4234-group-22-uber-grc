@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { STEPS, stepIdx } from "@/client/guide";
+import { STEPS, atStep, stepIdx } from "@/client/guide";
+import { ROLES } from "@/domain/roles";
 import { S, emptyState } from "@/client/store";
 
 const progress = (o: Partial<typeof S.d.progress>) => {
@@ -28,6 +29,12 @@ describe("guided tour: the current step", () => {
     progress({ allAcked: true });
     S.logFilter = "blocked";
     expect(stepIdx()).toBe(0);
+  });
+
+  it("step 1 is shown on Security's home, My work", () => {
+    S.role = "security";
+    S.view = ROLES.security.home;
+    expect(atStep(STEPS[0]!)).toBe(true);
   });
 
   it("never moves back", () => {

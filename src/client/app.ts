@@ -10,9 +10,9 @@ import {
 } from "@/domain/questionnaire";
 import { ROLES, isRoleKey } from "@/domain/roles";
 import { act, fetchState, type ApiResult } from "./api";
-import { STEPS, atStep, guideCard, stepIdx } from "./guide";
-import { helpCard } from "./help";
-import { ck, toast, val } from "./html";
+import { STEPS, atStep, endTour, stepIdx } from "./guide";
+import { guideOrHelp } from "./help";
+import { ck, clearToast, toast, val } from "./html";
 import { S, cur, loadRole, saveRole } from "./store";
 import { vBoard } from "./views/board";
 import { vCase } from "./views/case/page";
@@ -46,8 +46,7 @@ function render(): void {
   root.innerHTML =
     (S.view === "landing"
       ? '<main class="landing">' + page + "</main>"
-      : shell(page)) +
-    (guided ? (S.mode === "demo" ? guideCard() : helpCard()) : "");
+      : shell(page)) + (guided ? guideOrHelp() : "");
   if (!guided || S.mode !== "demo") return; // only the guided tour highlights the page
   const i = stepIdx();
   if (i === -1) return;
@@ -67,14 +66,21 @@ function render(): void {
     main.style.paddingBottom =
       Math.max(220, (card as HTMLElement).offsetHeight + 32) + "px";
   const first = S.scrolledKey !== key;
+  // A target in a sticky column (case action panel, sidebar) barely moves when the page
+  // scrolls: lift it once, never again on later renders, so the page does not keep jumping.
+  let sticky = false;
+  for (let e: Element | null = el; e && !sticky; e = e.parentElement)
+    sticky = getComputedStyle(e).position === "sticky";
+  if (sticky && !first) return;
   if (first) {
     S.scrolledKey = key;
-    el.scrollIntoView({
-      block: "center",
-      behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
-        ? "auto"
-        : "smooth",
-    });
+    if (!sticky)
+      el.scrollIntoView({
+        block: "center",
+        behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+      });
   }
   // Measure the real rects once scrolling has settled; lift the target clear of the card.
   const lift = () => {
@@ -90,7 +96,7 @@ function render(): void {
       window.scrollBy({ top: r.bottom - c.top + 16, behavior: "auto" });
   };
   requestAnimationFrame(() => requestAnimationFrame(lift));
-  if (first) setTimeout(lift, 600); // smooth scroll may still be running
+  if (first && !sticky) setTimeout(lift, 600); // smooth scroll may still be running
 }
 
 async function refresh(): Promise<void> {
@@ -116,6 +122,7 @@ async function setRole(
   S.role = isRoleKey(r) ? r : null;
   saveRole(S.role);
   clearMsgs();
+  clearToast();
   await refresh();
   const stay = !!onCase && S.d.cases.some((c) => c.id === onCase);
   if (stay) S.caseId = onCase;
@@ -373,6 +380,9 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
     if (!r.ok) return fail(r);
     S.empMsg = "Report sent. Receipt code: " + r.data.code;
     render();
+    // The confirmation sits next to the Send button; bring it into view.
+    document.querySelector(".alert.ok")?.scrollIntoView({ block: "center" });
+    toast(S.empMsg);
   },
   status: async () => {
     const code = val("sCode").toUpperCase();
@@ -412,7 +422,7 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
     render();
   },
   hideGuide: () => {
-    S.guided = false;
+    endTour();
     render();
   },
   reset: async () => {
@@ -463,17 +473,9 @@ function readAnswers(): Answers | null {
   return out as Answers;
 }
 
-async function run(
-  name: string,
-  x: string | undefined,
-  queue = false,
-): Promise<void> {
+async function run(name: string, x: string | undefined): Promise<void> {
   const f = A[name];
-  if (!f) return;
-  if (inFlight) {
-    if (!queue) return;
-    await inFlight; // a role change must never be lost: wait, then switch
-  }
+  if (!f || inFlight) return;
   const p = (async () => {
     try {
       await f(x);
@@ -499,10 +501,13 @@ export function mount(el: HTMLElement): () => void {
   document.addEventListener("click", onClick);
   S.role = loadRole();
   S.view = S.role ? ROLES[S.role].home : "landing";
-  render();
+  if (!S.role) render(); // a restored role waits for its data, so My work never flashes empty
   refresh()
     .then(render)
-    .catch(() => toast("Could not reach the server. Is it running?"));
+    .catch(() => {
+      render();
+      toast("Could not reach the server. Is it running?");
+    });
   return () => {
     document.removeEventListener("click", onClick);
     root = null;

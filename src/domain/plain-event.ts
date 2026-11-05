@@ -71,7 +71,7 @@ export function plainEvent(e: LedgerView): PlainEvent | null {
     return {
       cat: "decision",
       // The CSO line is the mockup's; on the independent path the GC or CPO recommends.
-      text: (who.startsWith("CSO") ? "CSO" : who) + " recommended: " + d + ".",
+      text: (who.startsWith("CSO") ? "CSO" : who) + " recommended: " + d.replace(/\.+$/, "") + ".",
     };
   if (a.startsWith("Blocked: ")) {
     const what = a.slice(9).toLowerCase();

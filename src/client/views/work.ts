@@ -2,7 +2,18 @@
 import { esc } from "../html";
 import { S } from "../store";
 import { nearestDeadline, workItems } from "../work";
-import { remText, sev } from "./components";
+import { caseTitle, legal, remText, sev } from "./components";
+
+/** What an empty My work is waiting for, per role. */
+const APPROVER_EMPTY =
+  "Nothing is waiting on you. A case appears here when the CSO sends a recommendation, or when a staff report is handled without Security.";
+const EMPTY: Record<string, string> = {
+  gc: APPROVER_EMPTY,
+  cpo: APPROVER_EMPTY,
+  cso: "Nothing is waiting on you. A case appears here when Security records a finding on a high-risk case.",
+  security:
+    "Nothing is waiting on you. New cases appear here when monitoring opens one or a staff report arrives.",
+};
 
 export function vWork(): string {
   const items = S.role ? workItems(S.d.cases, S.role) : [];
@@ -21,8 +32,7 @@ export function vWork(): string {
       "Nearest legal deadline",
       n === null
         ? "None running"
-        : remText(n.h) +
-            " (illustrative)" +
+        : legal(remText(n.h)) +
             '<div class="muted">' +
             esc(n.name) +
             " · " +
@@ -38,7 +48,7 @@ export function vWork(): string {
               '<div class="work-item"><div><span class="mono">' +
               esc(c.id) +
               "</span> <strong>" +
-              esc(c.title) +
+              esc(caseTitle(c)) +
               "</strong> " +
               sev(c) +
               '<div class="muted">' +
@@ -50,6 +60,8 @@ export function vWork(): string {
               "</button></div>",
           )
           .join("")
-      : '<p class="muted">Nothing is waiting on you.</p>')
+      : '<p class="muted">' +
+        esc(EMPTY[S.role ?? ""] ?? "Nothing is waiting on you.") +
+        "</p>")
   );
 }

@@ -29,5 +29,10 @@ export function toast(m: string): void {
   t.textContent = m;
   t.classList.add("on");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove("on"), 4200);
+  toastTimer = setTimeout(() => t.classList.remove("on"), 3500);
+}
+/** Hides any visible toast (sign-in, Switch account). */
+export function clearToast(): void {
+  clearTimeout(toastTimer);
+  document.getElementById("toast")?.classList.remove("on");
 }

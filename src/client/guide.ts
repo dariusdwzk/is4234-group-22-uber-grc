@@ -77,13 +77,17 @@ export const STEPS: Step[] = [
     showsProgress: false, // notices can be acknowledged at any time
     title: "Read the board’s view",
     text: () =>
-      !S.boardOpen[id()]
-        ? "The board sees each serious incident in one card. Click “View details” to see the notices sent about it."
-        : "Acknowledge each notice. This records that the board has read it. Any decision is taken in a board meeting, not here.",
+      S.boardTab === "log"
+        ? "Go back to Overview to acknowledge the notices."
+        : !S.boardOpen[id()]
+          ? "The board sees each serious incident in one card. Click “View details” to see the notices sent about it."
+          : "Acknowledge each notice. This records that the board has read it. Any decision is taken in a board meeting, not here.",
     target: () =>
-      !S.boardOpen[id()]
-        ? '[data-a="expand"][data-x="' + id() + '"]'
-        : '[data-a="ack"]',
+      S.boardTab === "log"
+        ? '[data-a="boardTab"][data-x="overview"]'
+        : !S.boardOpen[id()]
+          ? '[data-a="expand"][data-x="' + id() + '"]'
+          : '[data-a="ack"]',
     done: () => P().allAcked,
   },
   {
@@ -127,6 +131,12 @@ export function atStep(s: Step): boolean {
   return S.view === s.view;
 }
 
+/** Closes the card and leaves tour mode, so Help explains the page and forms start empty. */
+export function endTour(): void {
+  S.guided = false;
+  S.mode = "explore";
+}
+
 const txt = (x: string | (() => string)) => (typeof x === "function" ? x() : x);
 
 export function guideCard(): string {
@@ -141,9 +151,10 @@ export function guideCard(): string {
     ).join("") +
     "</div>";
   if (i === -1) {
+    // From the votes, not the status: after Reject then Approve disclosure the status is "Disclosed".
+    const votes = S.d.cases.find((c) => c.id === S.d.replayId)?.decision?.votes;
     const rejected =
-      S.d.cases.find((c) => c.id === S.d.replayId)?.status ===
-      "Disclosure required";
+      !!votes && Object.values(votes).some((v) => v?.vote === "reject");
     const other = rejected ? "Approve" : "Reject";
     return (
       '<aside class="guidecard" aria-label="Guide">' +
@@ -172,7 +183,7 @@ export function guideCard(): string {
     " of " +
     STEPS.length +
     (s.role ? ": " + ROLES[s.role].name : "") +
-    '</span><span class="row"><button class="link small" data-a="skipStep">Skip</button><button class="link small" data-a="hideGuide">Hide</button></span></div>' +
+    '</span><span class="row"><button class="link small" data-a="skipStep">Skip</button><button class="link small" data-a="hideGuide">End tour</button></span></div>' +
     "<h3>" +
     txt(s.title) +
     "</h3><p>" +

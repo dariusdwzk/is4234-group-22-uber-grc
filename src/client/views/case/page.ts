@@ -8,7 +8,15 @@ import { actionRequired } from "../../action-required";
 import { esc } from "../../html";
 import { navFor } from "../../nav";
 import { S } from "../../store";
-import { TRIAGE, remText, sev, statusBadge } from "../components";
+import {
+  TRIAGE,
+  caseTitle,
+  clip,
+  legal,
+  remText,
+  sev,
+  statusBadge,
+} from "../components";
 import { evidencePanel, independentBox } from "./independent";
 import { normalBox } from "./normal";
 import { reviewBox } from "./review";
@@ -16,6 +24,24 @@ import { tracker } from "./timeline";
 import { triageBox } from "./triage";
 
 const ANSWER_TEXT = { YES: "Yes", NO: "No", NOT_SURE: "Not sure" } as const;
+/** Short labels for the questionnaire's questions (full text stays in the tooltip). */
+const Q_LABEL: Record<string, string> = {
+  data: "Personal data",
+  money: "Money",
+  harm: "Harm",
+  handling: "How it is handled",
+  systems: "Systems affected",
+  outsiders: "Outsiders aware",
+  ongoing: "Still happening",
+};
+
+/** Signal titles the server cut: staff reports at 60 characters (after "Anonymous: "), emails at 80. */
+const sigTitle = (s: { src: string; title: string }): string =>
+  s.src === "Staff report"
+    ? clip(s.title, (s.title.startsWith("Anonymous: ") ? 11 : 0) + 60)
+    : s.src === "Email to CSO"
+      ? clip(s.title, 80)
+      : s.title;
 
 /** The reporter's answers, in the questionnaire's order. */
 export function answersList(c: CaseView): string {
@@ -29,7 +55,7 @@ export function answersList(c: CaseView): string {
           '<span title="' +
           esc(q.text) +
           '"><span class="muted">' +
-          q.id +
+          (Q_LABEL[q.id] ?? q.id) +
           ":</span> " +
           ANSWER_TEXT[a[q.id]] +
           "</span>",
@@ -81,7 +107,8 @@ function caseSummary(c: CaseView): string {
   if (c.severity === "HIGH") kv.push(["Regulator", "FTC inquiry open"]);
   if (t1) kv.push(["Board", "Notified " + fmtT(t1.t)]);
   if (g && g.start !== null && g.dur !== null && c.status !== "Disclosed")
-    kv.push(["GDPR deadline", remText(g.start + g.dur - S.d.clockH)]);
+    kv.push(["GDPR deadline", legal(remText(g.start + g.dur - S.d.clockH))]);
+  const unrated = c.severity === "PENDING";
   return (
     '<section class="panel summary"><div class="cols2"><div><h2>Case summary</h2>' +
     (kv.length
@@ -97,7 +124,11 @@ function caseSummary(c: CaseView): string {
           )
           .join("") +
         "</dl>"
-      : '<p class="muted">No personal data involved.</p>') +
+      : '<p class="muted">' +
+        (unrated
+          ? "Impact not yet confirmed — the Chief Privacy Officer rates this report."
+          : "No personal data involved.") +
+        "</p>") +
     '<h3 style="margin-top:14px">Signals</h3><ul class="list">' +
     sigs
       .map(
@@ -105,7 +136,7 @@ function caseSummary(c: CaseView): string {
           '<li><span class="muted small" style="width:8.5rem;flex:none">' +
           fmtT(s.h) +
           '</span><span class="grow">' +
-          esc(s.title) +
+          esc(sigTitle(s)) +
           ' <span class="badge ' +
           (s.origin === "system" ? "sys" : "warn") +
           '">' +
@@ -118,7 +149,11 @@ function caseSummary(c: CaseView): string {
     answersList(c) +
     "</div>" +
     "<div><h2>" +
-    (fired.length ? "Why it is high risk" : "Why it is low risk") +
+    (fired.length
+      ? "Why it is high risk"
+      : unrated
+        ? "Not yet rated"
+        : "Why it is low risk") +
     "</h2>" +
     (fired.length
       ? fired
@@ -133,14 +168,18 @@ function caseSummary(c: CaseView): string {
               "</div></span></div>",
           )
           .join("")
-      : '<p class="muted">No high-risk rule fired.</p>') +
+      : '<p class="muted">' +
+        (unrated
+          ? "The rules run again once the rating is confirmed."
+          : "No high-risk rule fired.") +
+        "</p>") +
     "</div></div></section>"
   );
 }
 
 export function vCase(): string {
   const c = S.d.cases.find((x) => x.id === S.caseId);
-  if (S.role === "employee") return "<p>Employees cannot open cases.</p>";
+  if (S.role === "employee") return "<p>This page is not available.</p>";
   if (!c) return "<p>Case not found.</p>";
   const items = navFor(S.role!, S),
     from = items.find((i) => i.current) ?? items[0]!;
@@ -157,7 +196,7 @@ export function vCase(): string {
     '<div class="case-head"><span class="cid">' +
     c.id +
     "</span><h1>" +
-    esc(c.title) +
+    esc(caseTitle(c)) +
     "</h1>" +
     sev(c) +
     '<span class="badge">' +
@@ -209,11 +248,13 @@ export function vCase(): string {
             st = '<span class="muted">Not started: ' + k.note + "</span>";
           else if (k.dur === null)
             st =
-              fmtDur(S.d.clockH - k.start) +
-              ' elapsed <span class="muted">(' +
+              legal(fmtDur(S.d.clockH - k.start) + " elapsed") +
+              ' <span class="muted">(' +
               k.note +
               ")</span>";
-          else st = remText(k.start + k.dur - S.d.clockH);
+          else if (k.key === "class" || k.key === "mat")
+            st = remText(k.start + k.dur - S.d.clockH);
+          else st = legal(remText(k.start + k.dur - S.d.clockH));
           return "<tr><td>" + k.name + "</td><td>" + st + "</td></tr>";
         })
         .join("") +

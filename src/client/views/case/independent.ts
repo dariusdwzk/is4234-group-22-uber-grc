@@ -68,7 +68,7 @@ export function independentBox(c: CaseView): string {
           esc(c.rec.reason) +
           "</p>"
         : "") +
-      '<div class="form"><label class="chk"><input type="checkbox" id="v1"> I have read the findings and the evidence</label><label>Reason<select id="vReason"><option>Facts support it</option><option>Facts contradict it</option><option>Regulator must be told</option></select></label><div class="row"><button class="btn primary" data-a="vote" data-x="approve">Approve</button><button class="btn danger" data-a="vote" data-x="reject">Reject</button></div></div>';
+      '<div class="form"><label class="chk"><input type="checkbox" id="v1"> I have read the findings and the evidence</label><label>Your reason<select id="vReason"><option>Facts support it</option><option>Facts contradict it</option><option>Regulator must be told</option></select></label><div class="row"><button class="btn primary" data-a="vote" data-x="approve">Approve</button><button class="btn danger" data-a="vote" data-x="reject">Reject</button></div></div>';
   } else {
     h =
       "<h2>Decision: " +

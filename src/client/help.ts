@@ -1,6 +1,7 @@
 // "About this page": the guide card while exploring on your own (not the guided tour).
 // It explains whatever page and role are on screen, in a sentence or two.
 import type { CaseView } from "@/domain/view-state";
+import { guideCard } from "./guide";
 import { esc } from "./html";
 import { S } from "./store";
 
@@ -85,7 +86,9 @@ function approvalsHelp(r: string | null): Help {
       (r === "cpo"
         ? "You also rate staff reports the reporter was unsure about. "
         : "") +
-      "Holding back disclosure needs both the General Counsel and the Chief Privacy Officer; notifying needs one. Cases involving Security come straight to CPO.",
+      "Holding back disclosure needs both the General Counsel and the Chief Privacy Officer; notifying needs one. Staff concerns about Security come to you and the " +
+      (r === "gc" ? "Chief Privacy Officer" : "General Counsel") +
+      " directly.",
   };
 }
 
@@ -109,7 +112,7 @@ export function pageHelp(): Help {
           }
         : {
             title: "Security’s cases",
-            text: "Cases open by themselves from cloud monitoring, HackerOne and secret scanning. Open one to investigate. Cases that involve Security handles an incident never appear here.",
+            text: "Cases open by themselves from cloud monitoring, HackerOne and secret scanning. Open one to investigate. Staff concerns about how Security handles an incident go to the General Counsel and the Chief Privacy Officer instead, so they never appear here.",
           };
     case "approvals":
       return approvalsHelp(r);
@@ -126,7 +129,7 @@ export function pageHelp(): Help {
           }
         : {
             title: "What the board is told",
-            text: "Dashboard shows serious incidents. Board's only action is acknowledging them; real decisions happen in board meetings.",
+            text: "This dashboard shows serious incidents. Your only action here is to acknowledge each notice; decisions are taken in a board meeting.",
           };
     case "case": {
       const c = S.d.cases.find((x) => x.id === S.caseId);
@@ -156,3 +159,7 @@ export function helpCard(): string {
     "</aside>"
   );
 }
+
+/** The card for the guide button: the tour while it runs, else this page's help. */
+export const guideOrHelp = (): string =>
+  S.mode === "demo" ? guideCard() : helpCard();

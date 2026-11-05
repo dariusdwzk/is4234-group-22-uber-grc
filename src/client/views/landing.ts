@@ -1,10 +1,13 @@
 // Sign-in: pick an account (a role), or take the guided tour.
 import { ROLES, ROLE_KEYS } from "@/domain/roles";
 import { S } from "../store";
-import { initials } from "./shell";
+import { LOGO, initials } from "./shell";
 
 export function vLanding(): string {
   return (
+    '<div class="signin-brand"><span class="logo">' +
+    LOGO +
+    "</span>UberSecure</div>" +
     '<section class="signin"><h1>Sign in</h1><p class="muted">Choose your account.</p>' +
     ROLE_KEYS.map(
       (k) =>

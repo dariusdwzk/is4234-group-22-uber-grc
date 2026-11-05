@@ -5,6 +5,7 @@ import { ROLES } from "@/domain/roles";
 import type { CaseView } from "@/domain/view-state";
 import { esc } from "../../html";
 import { S } from "../../store";
+import { outcomeText } from "../components";
 
 /**
  * A text box. In the guided tour it is prefilled with the 2016 replay's words; when
@@ -45,7 +46,10 @@ export function normalBox(c: CaseView): string {
   const r = S.role,
     d = c.decision;
   let h = "";
-  if (isSec()) {
+  const decided = (!!d && d.status !== "Pending") || c.status === "Disclosed";
+  if (isSec() && decided)
+    h = '<h2>Outcome</h2><p style="margin:0">' + esc(outcomeText(c)) + "</p>";
+  else if (isSec()) {
     if (r === "security") {
       if (!c.finding && c.rec)
         h =
@@ -110,7 +114,7 @@ export function normalBox(c: CaseView): string {
       h =
         '<h2>Decision</h2><p class="muted">No recommendation yet.</p>' +
         (c.status !== "Disclosed"
-          ? '<button class="btn" data-a="discl">Approve disclosure now</button>'
+          ? '<button class="btn" data-a="discl">Approve disclosure now</button><p class="muted small" style="margin:6px 0 0">You can approve disclosure at any time, without waiting for the CSO\'s recommendation.</p>'
           : "");
     else {
       const v = (k: "gc" | "cpo") => {
@@ -143,7 +147,7 @@ export function normalBox(c: CaseView): string {
         "</div>";
       if (d.status === "Pending" && !d.votes[me])
         h +=
-          '<div class="form"><label class="chk"><input type="checkbox" id="v1"> I have read the reason and the open FTC inquiry</label><label>Reason<select id="vReason"><option>Facts support it</option><option>Facts contradict it</option><option>Regulator must be told</option></select></label><div class="row"><button class="btn primary" data-a="vote" data-x="approve">Approve</button><button class="btn danger" data-a="vote" data-x="reject">Reject</button></div></div>';
+          '<div class="form"><label class="chk"><input type="checkbox" id="v1"> I have read the reason and the open FTC inquiry</label><label>Your reason<select id="vReason"><option>Facts support it</option><option>Facts contradict it</option><option>Regulator must be told</option></select></label><div class="row"><button class="btn primary" data-a="vote" data-x="approve">Approve</button><button class="btn danger" data-a="vote" data-x="reject">Reject</button></div></div>';
       else if (c.status === "Disclosed")
         h +=
           '<p class="t-ok" style="margin:0">Disclosure approved ' +
@@ -156,7 +160,7 @@ export function normalBox(c: CaseView): string {
   } else
     h =
       '<p style="margin:0">' +
-      esc(d ? "Decision: " + d.status : c.status) +
+      esc(d || decided ? outcomeText(c) : c.status) +
       "</p>";
   return '<section class="panel action" id="actionbox">' + h + "</section>";
 }

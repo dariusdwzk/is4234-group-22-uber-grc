@@ -5,7 +5,14 @@ import { ESCALATED_STATUS } from "@/domain/gate";
 import { CATS, plainEvent, type EventCat } from "@/domain/plain-event";
 import { CHK, esc } from "../html";
 import { S, rep } from "../store";
-import { discStatus, noticeRow, remText } from "./components";
+import {
+  caseTitle,
+  discStatus,
+  legal,
+  noticeRow,
+  noticeText,
+  remText,
+} from "./components";
 import { miniTrack, waitingOn } from "./case/timeline";
 
 function logBody(): string {
@@ -261,7 +268,7 @@ export function vBoard(): string {
               '<div class="inc2-top"><div class="inc-main"><b>' +
               x.id +
               "</b> " +
-              esc(x.title) +
+              esc(caseTitle(x)) +
               '<div class="muted small">' +
               (x.facts.dataAccessed
                 ? knownScale(x.facts)
@@ -279,7 +286,7 @@ export function vBoard(): string {
                 ? '<span class="muted">None</span>'
                 : x.status === "Disclosed"
                   ? '<span class="t-ok">Met</span>'
-                  : remText(g.start + g.dur - now)) +
+                  : legal(remText(g.start + g.dur - now))) +
               "</div>" +
               '<div class="inc-col"><span class="muted small">Disclosure</span>' +
               discStatus(x) +
@@ -288,7 +295,7 @@ export function vBoard(): string {
                 ? '<div class="inc2-latest"><span class="badge ' +
                   (latest.tier === 2 ? "high" : "") +
                   '">Latest notice</span><span class="grow">' +
-                  esc(latest.body) +
+                  esc(noticeText(latest.body)) +
                   "</span></div>"
                 : "") +
               '<div class="inc2-foot">' +

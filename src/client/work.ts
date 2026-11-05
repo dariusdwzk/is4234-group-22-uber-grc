@@ -41,7 +41,10 @@ function describe(c: CaseView, role: RoleKey): Omit<WorkItem, "c"> {
   if (role === "security")
     return {
       verb: "Record finding",
-      line: "Opened automatically from system signals.",
+      line:
+        c.route !== "NORMAL" || c.answers
+          ? "Staff report — record what you find."
+          : "Opened automatically from system signals.",
     };
   if (!c.rec)
     return {

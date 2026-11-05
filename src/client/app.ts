@@ -48,7 +48,7 @@ function render(): void {
       ? '<main class="landing">' + page + "</main>"
       : shell(page)) +
     (guided ? (S.mode === "demo" ? guideCard() : helpCard()) : "");
-  if (!guided || S.mode !== "demo") return; // only the guided demo highlights the page
+  if (!guided || S.mode !== "demo") return; // only the guided tour highlights the page
   const i = stepIdx();
   if (i === -1) return;
   const s = STEPS[i]!;
@@ -62,12 +62,21 @@ function render(): void {
   const key = i + sel;
   if (S.scrolledKey !== key) {
     S.scrolledKey = key;
-    el.scrollIntoView({
-      block: "center",
-      behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
-        ? "auto"
-        : "smooth",
-    });
+    const behavior = matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? "auto"
+      : "smooth";
+    el.scrollIntoView({ block: "center", behavior });
+    // If the centred target would sit under the fixed guide card, stop 16px above the card instead.
+    const r = el.getBoundingClientRect(),
+      c = root.querySelector(".guidecard")?.getBoundingClientRect();
+    if (c && r.right > c.left && r.left < c.right) {
+      const endTop = (innerHeight - r.height) / 2;
+      if (endTop + r.height > c.top - 16 && endTop < c.bottom)
+        window.scrollTo({
+          top: scrollY + r.top - (c.top - 16 - r.height),
+          behavior,
+        });
+    }
   }
 }
 

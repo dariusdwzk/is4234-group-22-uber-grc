@@ -37,13 +37,16 @@ describe("guided tour: the current step", () => {
   });
 
   it("tour copy makes no auditor or tamper-detection claim", () => {
-    S.boardTab = "log";
-    const all = STEPS.map((s) =>
-      typeof s.text === "string" ? s.text : "",
-    ).join(" ");
-    const last = STEPS[STEPS.length - 1]!;
-    const t = typeof last.text === "function" ? last.text() : last.text;
-    expect(all + t).not.toMatch(/auditor|detected/);
+    const all: string[] = [];
+    for (const tab of ["overview", "log"] as const) {
+      S.boardTab = tab;
+      for (const st of STEPS)
+        for (const x of [st.title, st.text])
+          all.push(typeof x === "function" ? x() : x);
+    }
+    expect(all.join(" ")).not.toMatch(
+      /auditor|detect|tamper|no one can change/i,
+    );
   });
 
   it("step 1 is shown on Security's home, My work", () => {

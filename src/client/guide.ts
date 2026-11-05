@@ -91,9 +91,7 @@ export const STEPS: Step[] = [
     view: "board",
     showsProgress: false, // the log filter can be clicked at any time
     title: () =>
-      S.boardTab === "log"
-        ? "A record no one can change"
-        : "Open the evidence log",
+      S.boardTab === "log" ? "Every action, in order" : "Open the evidence log",
     text: () =>
       S.boardTab === "log"
         ? "Every action on a case is added here the moment it happens. Entries are only ever added, never edited, and each one is linked to the one before it. Click “Decisions” to see who decided what, and why."
@@ -142,12 +140,19 @@ export function guideCard(): string {
         '"></span>',
     ).join("") +
     "</div>";
-  if (i === -1)
+  if (i === -1) {
+    const rejected =
+      S.d.cases.find((c) => c.id === S.d.replayId)?.status ===
+      "Disclosure required";
+    const other = rejected ? "Approve" : "Reject";
     return (
       '<aside class="guidecard" aria-label="Guide">' +
       dots +
-      '<h3>Demo complete</h3><p>Reset and choose Approve as the Chief Privacy Officer to see the other ending. You can also try the Employee role to send an anonymous report.</p><div class="row"><button class="btn primary" data-a="reset">Reset and replay</button><button class="link" data-a="hideGuide">Close</button></div></aside>'
+      "<h3>Demo complete</h3><p>Reset and choose " +
+      other +
+      ' as the Chief Privacy Officer to see the other ending. You can also try the Employee role to send an anonymous report.</p><div class="row"><button class="btn primary" data-a="reset">Reset and replay</button><button class="link" data-a="hideGuide">Close</button></div></aside>'
     );
+  }
   const s = STEPS[i]!,
     here = atStep(s);
   let act: string;

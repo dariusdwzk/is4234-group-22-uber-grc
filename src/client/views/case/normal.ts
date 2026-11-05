@@ -7,7 +7,7 @@ import { esc } from "../../html";
 import { S } from "../../store";
 
 /**
- * A text box. In the guided demo it is prefilled with the 2016 replay's words; when
+ * A text box. In the guided tour it is prefilled with the 2016 replay's words; when
  * exploring it starts empty, with a hint.
  */
 const box = (id: string, hint: string, demoText: string) =>

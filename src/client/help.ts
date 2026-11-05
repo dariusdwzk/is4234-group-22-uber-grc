@@ -78,6 +78,17 @@ function caseHelp(c: CaseView): Help {
   }
 }
 
+function approvalsHelp(r: string | null): Help {
+  return {
+    title: "Your decisions",
+    text:
+      (r === "cpo"
+        ? "You also rate staff reports the reporter was unsure about. "
+        : "") +
+      "Holding back disclosure needs both the General Counsel and the Chief Privacy Officer; notifying needs one. Cases involving Security come straight to CPO.",
+  };
+}
+
 /** Help for the page on screen. */
 export function pageHelp(): Help {
   const r = S.role;
@@ -87,6 +98,9 @@ export function pageHelp(): Help {
         title: "Speak up",
         text: "Employees report anything that worries them here, anonymously if they like. Seven quick questions decide who the report goes to. ",
       };
+    case "work":
+      if (r === "gc" || r === "cpo") return approvalsHelp(r);
+    // falls through: Security and CSO share the Security cases wording
     case "security":
       return r === "cso"
         ? {
@@ -98,14 +112,7 @@ export function pageHelp(): Help {
             text: "Cases open by themselves from cloud monitoring, HackerOne and secret scanning. Open one to investigate. Cases that involve Security handles an incident never appear here.",
           };
     case "approvals":
-      return {
-        title: "Your decisions",
-        text:
-          (r === "cpo"
-            ? "You also rate staff reports the reporter was unsure about. "
-            : "") +
-          "Holding back disclosure needs both the General Counsel and the Chief Privacy Officer; notifying needs one. Cases involving Security come straight to CPO.",
-      };
+      return approvalsHelp(r);
     case "ceo":
       return {
         title: "Overview",
@@ -135,7 +142,7 @@ export function pageHelp(): Help {
   }
 }
 
-/** The guide card while exploring: explains this page; offers the guided demo instead. */
+/** The guide card while exploring: explains this page; offers the guided tour instead. */
 export function helpCard(): string {
   const h = pageHelp();
   return (

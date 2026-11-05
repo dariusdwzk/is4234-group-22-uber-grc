@@ -133,14 +133,9 @@ export function vBoard(): string {
   const un = S.d.notices.filter((n) => n.ack === null);
   const now = S.d.clockH;
   let o =
-    '<div class="pagehead"><div><h1>Cyber and privacy risk</h1><p class="lede">Audit Committee view. Read-only: decisions are taken in board meetings.</p></div></div>' +
-    '<div class="tabs"><button class="tab ' +
-    (tab === "overview" ? "on" : "") +
-    '" data-a="boardTab" data-x="overview">Overview' +
-    (un.length ? " (" + un.length + " new)" : "") +
-    '</button><button class="tab ' +
-    (tab === "log" ? "on" : "") +
-    '" data-a="boardTab" data-x="log">Evidence log</button></div>';
+    '<div class="pagehead"><div><h1>' +
+    (tab === "log" ? "Evidence log" : "Overview") +
+    '</h1><p class="lede">Audit Committee view. Read-only: decisions are taken in board meetings.</p></div></div>';
   if (tab === "log") return o + logBody();
 
   const gdprOf = (x: (typeof hi)[number]) =>

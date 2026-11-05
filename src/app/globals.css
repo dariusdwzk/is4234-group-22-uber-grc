@@ -27,12 +27,6 @@ button,input,select,textarea{font:inherit;color:inherit}
 .muted{color:var(--muted)} .small{font-size:.85rem}
 .lede{color:var(--muted);margin:.25rem 0 0}
 
-/* header */
-header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:#FFFFFF;border-bottom:1px solid var(--line);
-  display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:10px 20px}
-.brand{font-weight:600;margin-right:auto;background:none;border:0;padding:0;cursor:pointer}
-.rolepick{display:flex;gap:6px;align-items:center;font-size:.88rem;color:var(--muted)}
-.rolepick select{padding:7px 12px;border:0;border-radius:999px;background:var(--accent-soft);color:var(--ink);font-weight:500}
 .clock{font-size:.85rem;color:var(--muted);white-space:nowrap}
 .menu{position:absolute;top:calc(100% + 6px);right:20px;width:280px;background:#FFFFFF;border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:14px;display:flex;flex-direction:column;gap:14px}
 .menu h3{font-size:.8rem;font-weight:500;color:var(--muted);margin:0 0 6px}
@@ -174,9 +168,6 @@ details[open]>summary{margin-bottom:10px}
 @media (prefers-reduced-motion:reduce){#toast{transition:none}}
 .day{font-weight:600;color:var(--ink)}
 .pay-held{color:var(--warn);font-weight:600}
-.guide-fab{position:fixed;right:20px;bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:40;display:inline-flex;align-items:center;gap:8px;padding:10px 16px 10px 10px;border:0;border-radius:999px;background:#000;color:#fff;font-weight:600;font-size:.9rem;cursor:pointer;box-shadow:var(--shadow)}
-.guide-fab span{width:22px;height:22px;border-radius:50%;background:#fff;color:#000;display:grid;place-items:center;font-size:.8rem;font-weight:700}
-.guide-fab:hover{background:#333}
 .fchips{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
 .fchip{border:1px solid #DADADA;background:#FFFFFF;border-radius:999px;padding:6px 12px;font-weight:500;font-size:.85rem;cursor:pointer}
 .fchip span{color:var(--muted);margin-left:2px}

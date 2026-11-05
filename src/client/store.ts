@@ -1,3 +1,4 @@
+import { isRoleKey } from "@/domain/roles";
 import type { RoleKey } from "@/domain/types";
 import type { CaseView, ReceiptTrack, ViewState } from "@/domain/view-state";
 
@@ -25,6 +26,8 @@ export type UiState = {
   empMsg: string | null;
   lastBlock: { what: string; why: string } | null;
   scrolledKey: string | null;
+  /** The case that was open when the user chose Switch account. */
+  resumeCase: string | null;
 };
 
 export const emptyState = (): ViewState => ({
@@ -67,6 +70,7 @@ export const S: UiState & { d: ViewState } = {
   empMsg: null,
   lastBlock: null,
   scrolledKey: null,
+  resumeCase: null,
   d: emptyState(),
 };
 
@@ -74,3 +78,22 @@ export const cur = (): CaseView | undefined =>
   S.d.cases.find((c) => c.id === S.caseId);
 export const rep = (): CaseView | undefined =>
   S.d.cases.find((c) => c.id === S.d.replayId);
+
+const ROLE_KEY = "ubersecure.role";
+/** The signed-in role for this browser tab, if any. Storage can be blocked, so never throw. */
+export function loadRole(): RoleKey | null {
+  try {
+    const r = sessionStorage.getItem(ROLE_KEY);
+    return isRoleKey(r) ? r : null;
+  } catch {
+    return null;
+  }
+}
+export function saveRole(r: RoleKey | null): void {
+  try {
+    if (r) sessionStorage.setItem(ROLE_KEY, r);
+    else sessionStorage.removeItem(ROLE_KEY);
+  } catch {
+    /* storage blocked: the role just is not remembered */
+  }
+}

@@ -7,33 +7,33 @@ export const ROLES: Record<RoleKey, RoleInfo> = {
   employee: {
     name: "Employee",
     home: "employee",
-    short: "Reports incidents, anonymously",
+    short: "Report an incident, anonymously if you like",
   },
   security: {
     name: "Security team",
     home: "security",
-    short: "Investigates. Cannot close cases.",
+    short: "Investigate incidents and record findings",
   },
   cso: {
     name: "CSO (also Deputy GC)",
     home: "security",
-    short: "Leads Security and recommends. Cannot approve.",
+    short: "Lead Security and recommend what to do",
   },
   gc: {
     name: "General Counsel",
     home: "approvals",
-    short: "Approver 1 of 2 on disclosure decisions",
+    short: "Approve disclosure decisions",
   },
   cpo: {
     name: "Chief Privacy Officer",
     home: "approvals",
-    short: "Approver 2 of 2 on disclosure decisions",
+    short: "Approve disclosure decisions and rate staff reports",
   },
-  ceo: { name: "CEO", home: "ceo", short: "Views cases. Cannot decide." },
+  ceo: { name: "CEO", home: "ceo", short: "Follow serious incidents" },
   board: {
     name: "Board (Audit Committee)",
     home: "board",
-    short: "Told automatically. Oversees.",
+    short: "Receive incident notices and oversee",
   },
 };
 

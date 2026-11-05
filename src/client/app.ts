@@ -14,15 +14,15 @@ import { act, fetchState, type ApiResult } from "./api";
 import { STEPS, atStep, guideCard, stepIdx } from "./guide";
 import { helpCard } from "./help";
 import { ck, toast, val } from "./html";
-import { S, cur } from "./store";
+import { S, cur, loadRole, saveRole } from "./store";
 import { vBoard } from "./views/board";
 import { vCase } from "./views/case/page";
 import { vCeo } from "./views/ceo";
 import { vApprovals } from "./views/decisions";
 import { vEmployee } from "./views/employee";
-import { header } from "./views/header";
 import { vLanding } from "./views/landing";
 import { vSecurity } from "./views/security";
+import { shell } from "./views/shell";
 
 let root: HTMLElement | null = null;
 /** The action in flight, if any. Clicks during it are dropped (no double submits). */
@@ -41,22 +41,12 @@ const VIEWS: Record<string, () => string> = {
 function render(): void {
   if (!root) return;
   const guided = S.guided && S.view !== "landing";
+  const page = (VIEWS[S.view] ?? vLanding)();
   root.innerHTML =
-    header() +
-    '<main class="' +
-    [guided ? "guided" : "", S.view === "landing" ? "landing" : ""]
-      .join(" ")
-      .trim() +
-    '">' +
-    (VIEWS[S.view] ?? vLanding)() +
-    "</main>" +
-    (guided
-      ? S.mode === "demo"
-        ? guideCard()
-        : helpCard()
-      : '<button class="guide-fab" data-a="showGuide"><span>?</span>' +
-        (S.view === "landing" ? "Start guide" : "Show guide") +
-        "</button>");
+    (S.view === "landing"
+      ? '<main class="landing">' + page + "</main>"
+      : shell(page)) +
+    (guided ? (S.mode === "demo" ? guideCard() : helpCard()) : "");
   if (!guided || S.mode !== "demo") return; // only the guided demo highlights the page
   const i = stepIdx();
   if (i === -1) return;
@@ -64,7 +54,8 @@ function render(): void {
   if (!atStep(s) || !s.target) return;
   const sel = s.target(),
     el =
-      root.querySelector("main " + sel) || root.querySelector("header " + sel);
+      root.querySelector("main " + sel) ||
+      root.querySelector("nav.side " + sel);
   if (!el) return;
   el.classList.add("pulse");
   const key = i + sel;
@@ -98,11 +89,14 @@ async function setRole(
   r: string | undefined,
   opts: { keepCase?: boolean } = {},
 ): Promise<void> {
-  const onCase = opts.keepCase === true && S.view === "case" && S.caseId;
+  const onCase = opts.keepCase === true ? S.resumeCase : null;
+  if (opts.keepCase) S.resumeCase = null; // Switch account keeps it for the next sign-in
   S.role = isRoleKey(r) ? r : null;
+  saveRole(S.role);
   clearMsgs();
   await refresh();
-  const stay = onCase && S.d.cases.some((c) => c.id === S.caseId);
+  const stay = !!onCase && S.d.cases.some((c) => c.id === onCase);
+  if (stay) S.caseId = onCase;
   S.view = stay ? "case" : S.role ? ROLES[S.role].home : "landing";
   render();
   if (!stay) window.scrollTo(0, 0);
@@ -133,20 +127,21 @@ const fail = (r: { ok: false; error: string }) => {
 };
 
 const A: Record<string, (x?: string) => void | Promise<void>> = {
-  role: (x) => {
-    // Picking a role from the start page means exploring: the card explains each page.
-    if (S.view === "landing") {
-      S.mode = "explore";
-      S.guided = true;
-    }
-    return setRole(x, { keepCase: true });
+  role: (x) => setRole(x, { keepCase: true }),
+  go: (x) => {
+    S.view = x ?? "landing";
+    render();
+    window.scrollTo(0, 0);
+  },
+  switchAccount: () => {
+    S.resumeCase = S.view === "case" ? S.caseId : null;
+    return setRole(undefined);
   },
   home: () => {
     S.view = S.role ? ROLES[S.role].home : "landing";
     S.lastBlock = null;
     render();
   },
-  landing: () => setRole(undefined),
   openCase: (x) => openCase(x),
   // The tour always starts from fresh data: reset first (it then opens Security, step 1).
   startGuide: () => {
@@ -159,6 +154,7 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
     const s = STEPS[stepIdx()];
     if (!s || !s.role) return;
     S.role = s.role;
+    saveRole(S.role);
     clearMsgs();
     await refresh();
     if (s.onCase) openCase(S.d.replayId ?? undefined);
@@ -334,6 +330,7 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
   },
   boardTab: (x) => {
     S.boardTab = x === "log" ? "log" : "overview";
+    S.view = "board";
     render();
   },
   discl: async () => {
@@ -429,6 +426,7 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
       scrolledKey: null,
       guideStep: 0,
     });
+    saveRole(S.role);
     clearMsgs();
     await refresh();
     render();
@@ -489,23 +487,18 @@ function onClick(e: MouseEvent): void {
   void run(b.dataset.a!, b.dataset.x);
 }
 
-function onChange(e: Event): void {
-  const t = e.target as HTMLSelectElement | null;
-  if (t?.id === "roleSel") void run("role", t.value, true);
-}
-
 /** Mounts the app into `el` and returns a cleanup for React's effect. */
 export function mount(el: HTMLElement): () => void {
   root = el;
   document.addEventListener("click", onClick);
-  document.addEventListener("change", onChange);
+  S.role = loadRole();
+  S.view = S.role ? ROLES[S.role].home : "landing";
   render();
   refresh()
     .then(render)
     .catch(() => toast("Could not reach the server. Is it running?"));
   return () => {
     document.removeEventListener("click", onClick);
-    document.removeEventListener("change", onChange);
     root = null;
   };
 }

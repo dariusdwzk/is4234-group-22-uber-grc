@@ -1,15 +1,27 @@
 import { expect, test, type Page } from "@playwright/test";
+import { ROLES } from "@/domain/roles";
+import type { RoleKey } from "@/domain/types";
 
 // The mockup's guided tour, clicked through in the browser, for both endings.
 // Reduced motion: the guide then jumps (not smooth-scrolls) to the highlighted control.
 test.use({ contextOptions: { reducedMotion: "reduce" } });
 
 async function asRole(page: Page, role: string): Promise<void> {
-  await page.selectOption("#roleSel", role);
+  const out = page.getByRole("button", { name: "Switch account" });
+  if (await out.isVisible()) await out.click();
+  await page
+    .getByRole("button", {
+      name: new RegExp(
+        "^" + ROLES[role as RoleKey].name.replace(/[()]/g, "\\$&"),
+      ),
+    })
+    .click();
 }
 
 async function reset(page: Page): Promise<void> {
-  await page.getByRole("button", { name: "Reset data" }).click();
+  const out = page.getByRole("button", { name: "Switch account" });
+  if (await out.isVisible()) await out.click();
+  await page.getByRole("button", { name: "Reset demo data" }).click();
   await expect(page.locator("#toast")).toHaveText("Demo reset.");
 }
 
@@ -17,7 +29,7 @@ async function reset(page: Page): Promise<void> {
 async function playToCpo(page: Page): Promise<void> {
   await page.goto("/");
   await reset(page);
-  await page.getByRole("button", { name: "Start guided demo" }).click();
+  await page.getByRole("button", { name: "Take the guided tour" }).click();
   await page.locator('[data-a="openCase"][data-x="C-104"]').click();
   await page.getByRole("button", { name: "Add finding" }).click();
   await expect(page.locator("#toast")).toHaveText("Finding added to the case.");

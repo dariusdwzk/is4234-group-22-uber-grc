@@ -22,6 +22,7 @@ import { vApprovals } from "./views/decisions";
 import { vEmployee } from "./views/employee";
 import { vLanding } from "./views/landing";
 import { vSecurity } from "./views/security";
+import { vWork } from "./views/work";
 import { shell } from "./views/shell";
 
 let root: HTMLElement | null = null;
@@ -36,6 +37,7 @@ const VIEWS: Record<string, () => string> = {
   approvals: vApprovals,
   ceo: vCeo,
   board: vBoard,
+  work: vWork,
 };
 
 function render(): void {

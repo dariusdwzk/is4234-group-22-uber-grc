@@ -1,6 +1,7 @@
 // What the sidebar lists for each role.
 import type { RoleKey } from "@/domain/types";
 import type { ViewState } from "@/domain/view-state";
+import { workItems } from "./work";
 
 export type NavItem = {
   label: string;
@@ -32,10 +33,16 @@ export function navFor(
       return [go("Report an incident", "employee")];
     case "security":
     case "cso":
-      return [go("All cases", "security", s.d.cases.length)];
+      return [
+        go("My work", "work", workItems(s.d.cases, role).length),
+        go("All cases", "security", s.d.cases.length),
+      ];
     case "gc":
     case "cpo":
-      return [go("All cases", "approvals", s.d.cases.length)];
+      return [
+        go("My work", "work", workItems(s.d.cases, role).length),
+        go("All cases", "approvals", s.d.cases.length),
+      ];
     case "ceo":
       return [go("Overview", "ceo")];
     case "board":

@@ -14,13 +14,14 @@ describe("navFor", () => {
     expect(n.map((i) => i.label)).toEqual(["Overview", "Evidence log"]);
     expect(n.map((i) => i.current)).toEqual([false, true]);
   });
-  it("gc: All cases with the case count", () => {
+  it("gc: My work first, then All cases with the case count", () => {
     const n = navFor("gc", {
       view: "approvals",
       boardTab: "overview",
       d: three,
     });
     expect(n).toEqual([
+      { label: "My work", a: "go", x: "work", count: 0, current: false },
       { label: "All cases", a: "go", x: "approvals", count: 3, current: true },
     ]);
   });

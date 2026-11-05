@@ -18,6 +18,11 @@ async function asRole(page: Page, role: string): Promise<void> {
     .click();
 }
 
+/** Sidebar item, e.g. "All cases" (the sign-in home is now "My work"). */
+async function sideTo(page: Page, name: string): Promise<void> {
+  await page.locator("nav.side").getByRole("button", { name }).click();
+}
+
 async function reset(page: Page): Promise<void> {
   const out = page.getByRole("button", { name: "Switch account" });
   if (await out.isVisible()) await out.click();
@@ -175,6 +180,7 @@ test("unsure reporter → triage; Security cannot rate, the CPO can", async ({
   await expect(page.locator(".alert.ok")).toBeVisible();
 
   await asRole(page, "security");
+  await sideTo(page, "All cases");
   await expect(page.locator("tr", { hasText: "C-105" })).toContainText(
     "Needs triage",
   );
@@ -204,9 +210,11 @@ test("a concern about how Security handles a case never reaches Security", async
   await expect(page.locator(".alert.ok")).toBeVisible();
 
   await asRole(page, "security");
+  await sideTo(page, "All cases");
   await expect(page.locator('[data-x="C-104"]').first()).toBeVisible(); // Security's list has loaded
   await expect(page.locator('[data-x="C-105"]')).toHaveCount(0);
   await asRole(page, "gc");
+  await sideTo(page, "All cases");
   await expect(
     page.locator("section", { hasText: "Handled independently of Security" }),
   ).toContainText("C-105");

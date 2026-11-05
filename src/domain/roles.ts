@@ -11,22 +11,22 @@ export const ROLES: Record<RoleKey, RoleInfo> = {
   },
   security: {
     name: "Security team",
-    home: "security",
+    home: "work",
     short: "Investigate incidents and record findings",
   },
   cso: {
     name: "CSO (also Deputy GC)",
-    home: "security",
+    home: "work",
     short: "Lead Security and recommend what to do",
   },
   gc: {
     name: "General Counsel",
-    home: "approvals",
+    home: "work",
     short: "Approve disclosure decisions",
   },
   cpo: {
     name: "Chief Privacy Officer",
-    home: "approvals",
+    home: "work",
     short: "Approve disclosure decisions and rate staff reports",
   },
   ceo: { name: "CEO", home: "ceo", short: "Follow serious incidents" },

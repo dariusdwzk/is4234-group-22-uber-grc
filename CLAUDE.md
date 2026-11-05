@@ -21,7 +21,6 @@ Next.js (App Router, TS strict) + Drizzle/Postgres demonstrator: a decision gate
 - Synthetic data only; amounts as integer cents; secrets only in env vars.
 - TDD for `src/domain/**`, `src/server/ledger/**`, `authz.ts`, gate and command code; paste real verification output in PRs.
 - Exact dependency versions, lockfile committed, 5-line intake check for any new dependency.
-- Every page shows the banner `Demonstration — synthetic data`.
 
 ## Never
 - Real personal data, real credentials or connection strings anywhere (code, logs, chat).

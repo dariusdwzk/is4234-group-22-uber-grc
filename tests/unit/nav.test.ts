@@ -1,7 +1,8 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { navFor } from "@/client/nav";
 import { loadRole, saveRole, emptyState } from "@/client/store";
-import { ROLE_KEYS } from "@/domain/roles";
+import { ROLES, ROLE_KEYS } from "@/domain/roles";
+import { initials } from "@/client/views/shell";
 import type { CaseView } from "@/domain/view-state";
 
 const d = emptyState();
@@ -38,27 +39,54 @@ describe("navFor", () => {
   });
 });
 
+describe("initials", () => {
+  it("gives sensible initials for every role", () => {
+    expect(ROLE_KEYS.map((k) => initials(ROLES[k].name))).toEqual([
+      "E",
+      "ST",
+      "CSO",
+      "GC",
+      "CP",
+      "CEO",
+      "B",
+    ]);
+  });
+});
+
 describe("loadRole / saveRole", () => {
   afterEach(() => {
     // @ts-expect-error remove the stub
     delete globalThis.sessionStorage;
   });
+  const stub = (o: Partial<Storage>) => {
+    globalThis.sessionStorage = o as Storage;
+  };
+  const boom = () => {
+    throw new Error("blocked");
+  };
   it("returns null when sessionStorage throws", () => {
-    globalThis.sessionStorage = {
-      getItem: () => {
-        throw new Error("blocked");
-      },
-    } as unknown as Storage;
+    const getItem = vi.fn(boom);
+    stub({ getItem });
     expect(loadRole()).toBeNull();
+    expect(getItem).toHaveBeenCalled();
   });
   it("round-trips a role", () => {
     const m = new Map<string, string>();
-    globalThis.sessionStorage = {
-      getItem: (k: string) => m.get(k) ?? null,
-      setItem: (k: string, v: string) => void m.set(k, v),
-      removeItem: (k: string) => void m.delete(k),
-    } as unknown as Storage;
+    stub({
+      getItem: (k) => m.get(k) ?? null,
+      setItem: (k, v) => void m.set(k, v),
+      removeItem: (k) => void m.delete(k),
+    });
     saveRole("cso");
     expect(loadRole()).toBe("cso");
+  });
+  it("saveRole does not throw when storage is blocked", () => {
+    const setItem = vi.fn(boom);
+    const removeItem = vi.fn(boom);
+    stub({ setItem, removeItem });
+    expect(() => saveRole("cso")).not.toThrow();
+    expect(() => saveRole(null)).not.toThrow();
+    expect(setItem).toHaveBeenCalled();
+    expect(removeItem).toHaveBeenCalled();
   });
 });

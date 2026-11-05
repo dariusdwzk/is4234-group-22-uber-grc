@@ -7,14 +7,19 @@ import { S } from "../store";
 export const LOGO =
   '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" d="M12 2.8 4.5 5.6v5.9c0 4.6 3.1 8.4 7.5 9.7 4.4-1.3 7.5-5.1 7.5-9.7V5.6L12 2.8Z"/><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="m8.6 12.2 2.4 2.4 4.5-4.7"/></svg>';
 
-/** First letters of the first two words: "General Counsel" -> "GC". */
-export const initials = (name: string): string =>
-  name
-    .split(" ")
+/** "CSO (also Deputy GC)" -> "CSO", "General Counsel" -> "GC", "Board" -> "B". */
+export function initials(name: string): string {
+  const w = name
+    .replace(/\(.*?\)/g, "")
+    .trim()
+    .split(/\s+/);
+  if (w.length === 1 && /^[A-Z]+$/.test(w[0]!)) return w[0]!;
+  return w
     .slice(0, 2)
-    .map((w) => w[0])
+    .map((x) => x[0])
     .join("")
     .toUpperCase();
+}
 
 export function shell(content: string): string {
   const r = S.role;

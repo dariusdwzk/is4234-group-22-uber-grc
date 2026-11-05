@@ -103,9 +103,17 @@ test("Ending B: both approve escalating internally, board told", async ({
     page.getByText("Escalated internally by both approvers"),
   ).toBeVisible();
 
-  await asRole(page, "board");
-  // The role menu keeps the open case; the breadcrumb goes to the board's overview.
-  await page.locator("nav[aria-label=Breadcrumb] button").click();
+  await page.getByRole("button", { name: "Go as Board" }).click();
+  await page.waitForTimeout(1000);
+  const tb = await page.locator(".pulse").boundingBox();
+  const cb = await page.locator(".guidecard").boundingBox();
+  expect(tb && cb).toBeTruthy();
+  expect(
+    tb!.x + tb!.width <= cb!.x ||
+      cb!.x + cb!.width <= tb!.x ||
+      tb!.y + tb!.height <= cb!.y ||
+      cb!.y + cb!.height <= tb!.y,
+  ).toBe(true);
   await expect(page.locator(".brief")).toContainText(
     "Management chose to investigate internally before disclosing.",
   );

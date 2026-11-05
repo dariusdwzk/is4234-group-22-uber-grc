@@ -59,25 +59,38 @@ function render(): void {
       root.querySelector("nav.side " + sel);
   if (!el) return;
   el.classList.add("pulse");
-  const key = i + sel;
-  if (S.scrolledKey !== key) {
+  const key = i + sel,
+    card = root.querySelector(".guidecard"),
+    main = root.querySelector("main") as HTMLElement | null;
+  // Room to lift a target near the bottom above the fixed card.
+  if (card && main)
+    main.style.paddingBottom =
+      Math.max(220, (card as HTMLElement).offsetHeight + 32) + "px";
+  const first = S.scrolledKey !== key;
+  if (first) {
     S.scrolledKey = key;
-    const behavior = matchMedia("(prefers-reduced-motion: reduce)").matches
-      ? "auto"
-      : "smooth";
-    el.scrollIntoView({ block: "center", behavior });
-    // If the centred target would sit under the fixed guide card, stop 16px above the card instead.
-    const r = el.getBoundingClientRect(),
-      c = root.querySelector(".guidecard")?.getBoundingClientRect();
-    if (c && r.right > c.left && r.left < c.right) {
-      const endTop = (innerHeight - r.height) / 2;
-      if (endTop + r.height > c.top - 16 && endTop < c.bottom)
-        window.scrollTo({
-          top: scrollY + r.top - (c.top - 16 - r.height),
-          behavior,
-        });
-    }
+    el.scrollIntoView({
+      block: "center",
+      behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "auto"
+        : "smooth",
+    });
   }
+  // Measure the real rects once scrolling has settled; lift the target clear of the card.
+  const lift = () => {
+    const r = el.getBoundingClientRect(),
+      c = card?.getBoundingClientRect();
+    if (
+      c &&
+      r.right > c.left &&
+      r.left < c.right &&
+      r.bottom > c.top &&
+      r.top < c.bottom
+    )
+      window.scrollBy({ top: r.bottom - c.top + 16, behavior: "auto" });
+  };
+  requestAnimationFrame(() => requestAnimationFrame(lift));
+  if (first) setTimeout(lift, 600); // smooth scroll may still be running
 }
 
 async function refresh(): Promise<void> {

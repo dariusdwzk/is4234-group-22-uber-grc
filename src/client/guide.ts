@@ -96,13 +96,13 @@ export const STEPS: Step[] = [
         : "Open the evidence log",
     text: () =>
       S.boardTab === "log"
-        ? "Every action on a case is written here the moment it happens. No one, including IT staff, can change or delete an entry without it being detected. The record is checked automatically against copies held by the external auditor. Click “Blocked attempts” to see what people tried to do but were not allowed to."
+        ? "Every action on a case is added here the moment it happens. Entries are only ever added, never edited, and each one is linked to the one before it. Click “Decisions” to see who decided what, and why."
         : "Open the Evidence log tab to see the permanent record of everything that happened on this case.",
     target: () =>
       S.boardTab === "log"
-        ? '[data-a="logFilter"][data-x="blocked"]'
+        ? '[data-a="logFilter"][data-x="decision"]'
         : '[data-a="boardTab"][data-x="log"]',
-    done: () => S.logFilter === "blocked",
+    done: () => S.logFilter === "decision",
   },
 ];
 

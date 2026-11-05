@@ -27,8 +27,23 @@ describe("guided tour: the current step", () => {
 
   it("acknowledging notices or filtering the log early does not skip the tour ahead", () => {
     progress({ allAcked: true });
-    S.logFilter = "blocked";
+    S.logFilter = "decision";
     expect(stepIdx()).toBe(0);
+  });
+
+  it("step 2 no longer waits for a refused attempt", () => {
+    progress({ finding: true, recommended: true });
+    expect(STEPS[stepIdx()]!.title).toBe("Approve as General Counsel");
+  });
+
+  it("tour copy makes no auditor or tamper-detection claim", () => {
+    S.boardTab = "log";
+    const all = STEPS.map((s) =>
+      typeof s.text === "string" ? s.text : "",
+    ).join(" ");
+    const last = STEPS[STEPS.length - 1]!;
+    const t = typeof last.text === "function" ? last.text() : last.text;
+    expect(all + t).not.toMatch(/auditor|detected/);
   });
 
   it("step 1 is shown on Security's home, My work", () => {

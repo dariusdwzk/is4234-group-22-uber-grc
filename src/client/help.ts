@@ -1,4 +1,4 @@
-// "About this page": the guide card while exploring on your own (not the guided demo).
+// "About this page": the guide card while exploring on your own (not the guided tour).
 // It explains whatever page and role are on screen, in a sentence or two.
 import type { CaseView } from "@/domain/view-state";
 import { esc } from "./html";
@@ -17,7 +17,7 @@ function caseHelp(c: CaseView): Help {
       : r === "security"
         ? {
             title: "Establish the facts",
-            text: "The reporter was unsure about the impact. Record what you found. Only the Chief Privacy Officer can rate it: try “Confirm rating” and see it refused and logged.",
+            text: "The reporter was unsure about the impact. Record what you found; the Chief Privacy Officer then confirms the rating.",
           }
         : {
             title: "Waiting for triage",
@@ -52,12 +52,12 @@ function caseHelp(c: CaseView): Help {
     case "security":
       return {
         title: "Investigate",
-        text: "This case opened by itself and the board was already told. Record what the investigation found. You can recommend, but never close the case or lower its risk: try “Case actions” to see.",
+        text: "This case opened by itself and the board was already told. Record what the investigation found.",
       };
     case "cso":
       return {
         title: "Recommend",
-        text: "Attach messages no system saw, then recommend: escalate internally (needs a reason) or notify regulators. You report to Security, so you cannot approve. Try “Case actions”.",
+        text: "Attach any message no system saw, then recommend: escalate internally (needs a reason) or notify regulators.",
       };
     case "gc":
     case "cpo":
@@ -68,7 +68,7 @@ function caseHelp(c: CaseView): Help {
     case "ceo":
       return {
         title: "Read-only",
-        text: "You can follow every step of the case, but you cannot approve or close it. Those buttons are refused and logged.",
+        text: "You can follow every step of the case and see what the board has been told.",
       };
     default:
       return {
@@ -91,7 +91,7 @@ export function pageHelp(): Help {
       return r === "cso"
         ? {
             title: "Security’s cases",
-            text: "As CSO you lead Security. Open a case to attach messages no system saw and to recommend what to do. Your reporting line is Security, so you cannot approve.",
+            text: "As CSO you lead Security. Open a case to attach messages no system saw and to recommend what to do.",
           }
         : {
             title: "Security’s cases",
@@ -115,7 +115,7 @@ export function pageHelp(): Help {
       return S.boardTab === "log"
         ? {
             title: "The evidence log",
-            text: "Every action is written here the moment it happens, and nobody can change it. Filter by “Blocked attempts” to see what people tried but were not allowed to do.",
+            text: "Every action is added here the moment it happens. Filter by type to see decisions and board notices.",
           }
         : {
             title: "What the board is told",
@@ -130,7 +130,7 @@ export function pageHelp(): Help {
     default:
       return {
         title: "UberSecure",
-        text: "Pick a role to explore, or start the guided demo.",
+        text: "Choose your account, or take the guided tour.",
       };
   }
 }
@@ -145,7 +145,7 @@ export function helpCard(): string {
     esc(h.title) +
     "</h3><p>" +
     esc(h.text) +
-    '</p><button class="link" data-a="startGuide">Take the guided demo instead</button>' +
+    '</p><button class="link" data-a="startGuide">Take the guided tour instead</button>' +
     "</aside>"
   );
 }

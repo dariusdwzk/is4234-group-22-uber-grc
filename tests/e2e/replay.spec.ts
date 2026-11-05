@@ -87,7 +87,7 @@ test("Ending A: the CPO rejects; disclosure required, board told", async ({
   }
 
   await page.getByRole("button", { name: "Evidence log" }).click();
-  await page.locator('[data-a="logFilter"][data-x="blocked"]').click();
+  await page.locator('[data-a="logFilter"][data-x="decision"]').click();
   await expect(page.locator(".guidecard h3")).toHaveText("Demo complete");
 });
 

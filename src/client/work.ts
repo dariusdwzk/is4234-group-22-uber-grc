@@ -34,7 +34,9 @@ function describe(c: CaseView, role: RoleKey): Omit<WorkItem, "c"> {
   if (role === "cso")
     return {
       verb: "Recommend",
-      line: "Security's finding is in. Recommend what to do.",
+      line: c.finding
+        ? "Security's finding is in. Recommend what to do."
+        : "Review the case and recommend what to do.",
     };
   if (role === "security")
     return {

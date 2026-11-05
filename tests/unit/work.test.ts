@@ -86,6 +86,15 @@ describe("workItems rows", () => {
       "Opened automatically from system signals.",
     );
   });
+  it("CSO line depends on whether Security's finding is in", () => {
+    const f = { finding: { t: 1 } } as never;
+    expect(workItems([mk(f)], "cso")[0]!.line).toBe(
+      "Security's finding is in. Recommend what to do.",
+    );
+    expect(workItems([mk({})], "cso")[0]!.line).toBe(
+      "Review the case and recommend what to do.",
+    );
+  });
   it("no reason: no suffix; no recommendation: plain line", () => {
     const rec = { author: "cso", act: "escalate", reason: null, t: 1 } as const;
     const w = workItems([mk({ rec, decision: pend("Escalate") })], "gc")[0]!;

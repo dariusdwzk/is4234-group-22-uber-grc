@@ -160,3 +160,14 @@ nav[aria-label=Breadcrumb]{font-size:.88rem;color:var(--muted)}
 .narrow{max-width:720px;margin:0 auto}
 .notice{flex-wrap:wrap}
 .notice .grow{flex:1 1 220px;min-width:0}
+/* P6 final fixes */
+.tk-text b{overflow-wrap:normal;word-break:normal;hyphens:auto;font-size:.76rem}
+/* Phone: whole words need ~76px a step, so a long route scrolls inside its own box. */
+@media (max-width:600px){.tracker{overflow-x:auto}.tk{flex:0 0 76px}}
+main.landing{align-content:center;gap:16px}
+.signin-brand{display:flex;align-items:center;gap:10px;font-size:1.25rem;font-weight:650;color:var(--ink)}
+@media (max-width:900px){
+  .profile .who{display:block;max-width:9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.8rem}
+}
+/* Toast near the top edge: clear of the Sign in heading and the case title. */
+#toast{top:calc(12px + env(safe-area-inset-top,0px))}

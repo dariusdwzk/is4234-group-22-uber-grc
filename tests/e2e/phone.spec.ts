@@ -50,7 +50,11 @@ test.describe("phone width (375 px)", () => {
     expect(await fits(page)).toBe(true);
 
     await signIn(page, /^Board/);
-    await expect(page.locator("nav.side")).toBeVisible();
+    await page
+      .locator("nav.side")
+      .getByRole("button", { name: "Overview" })
+      .click();
+    await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible();
     expect(await fits(page)).toBe(true);
   });
 });

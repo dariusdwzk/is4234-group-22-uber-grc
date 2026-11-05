@@ -104,16 +104,21 @@ test("Ending B: both approve escalating internally, board told", async ({
   ).toBeVisible();
 
   await page.getByRole("button", { name: "Go as Board" }).click();
-  await page.waitForTimeout(1000);
-  const tb = await page.locator(".pulse").boundingBox();
-  const cb = await page.locator(".guidecard").boundingBox();
-  expect(tb && cb).toBeTruthy();
-  expect(
-    tb!.x + tb!.width <= cb!.x ||
-      cb!.x + cb!.width <= tb!.x ||
-      tb!.y + tb!.height <= cb!.y ||
-      cb!.y + cb!.height <= tb!.y,
-  ).toBe(true);
+  // The highlighted control ends up clear of the guide card once scrolling settles.
+  await expect
+    .poll(async () => {
+      const tb = await page.locator(".pulse").boundingBox();
+      const cb = await page.locator(".guidecard").boundingBox();
+      return (
+        !!tb &&
+        !!cb &&
+        (tb.x + tb.width <= cb.x ||
+          cb.x + cb.width <= tb.x ||
+          tb.y + tb.height <= cb.y ||
+          cb.y + cb.height <= tb.y)
+      );
+    })
+    .toBe(true);
   await expect(page.locator(".brief")).toContainText(
     "Management chose to investigate internally before disclosing.",
   );
@@ -186,7 +191,7 @@ test("unsure reporter → triage; Security cannot rate, the CPO can", async ({
   await expect(page.locator("tr", { hasText: "C-105" })).toContainText(
     "Needs triage",
   );
-  await page.locator('[data-a="openCase"][data-x="C-105"]').click();
+  await page.locator('[data-a="openCase"][data-x="C-105"]').first().click();
 
   await asRole(page, "cpo"); // the case stays open when the new role may see it
   await expect(page.locator(".case-head")).toContainText("C-105");

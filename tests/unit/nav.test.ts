@@ -6,7 +6,16 @@ import { initials } from "@/client/views/shell";
 import type { CaseView, ViewState } from "@/domain/view-state";
 
 const d = emptyState();
-const three = { ...d, cases: [{}, {}, {}] as CaseView[] };
+const c = (o: object) => ({ route: "NORMAL", status: "Open", ...o });
+// Two shown on the GC page (independent, high-risk), one filtered out (low-risk, normal route).
+const three = {
+  ...d,
+  cases: [
+    c({ route: "INDEPENDENT", severity: "LOW" }),
+    c({ severity: "HIGH" }),
+    c({ severity: "LOW" }),
+  ] as CaseView[],
+};
 
 describe("navFor", () => {
   it("board: two items, the evidence log current", () => {
@@ -14,15 +23,15 @@ describe("navFor", () => {
     expect(n.map((i) => i.label)).toEqual(["Overview", "Evidence log"]);
     expect(n.map((i) => i.current)).toEqual([false, true]);
   });
-  it("gc: My work first, then All cases with the case count", () => {
+  it("gc: All cases counts only the cases its page lists (not all three)", () => {
     const n = navFor("gc", {
       view: "approvals",
       boardTab: "overview",
       d: three,
     });
     expect(n).toEqual([
-      { label: "My work", a: "go", x: "work", count: 0, current: false },
-      { label: "All cases", a: "go", x: "approvals", count: 3, current: true },
+      { label: "My work", a: "go", x: "work", count: 1, current: false },
+      { label: "All cases", a: "go", x: "approvals", count: 2, current: true },
     ]);
   });
   it("employee: report an incident", () => {

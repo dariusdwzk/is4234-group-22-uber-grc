@@ -95,7 +95,7 @@ export const STEPS: Step[] = [
     text: () =>
       S.boardTab === "log"
         ? "Every action on a case is added here the moment it happens. Entries are only ever added, never edited, and each one is linked to the one before it. Click “Decisions” to see who decided what, and why."
-        : "Open the Evidence log tab to see the permanent record of everything that happened on this case.",
+        : "Open “Evidence log” in the sidebar to see the permanent record of everything that happened on this case.",
     target: () =>
       S.boardTab === "log"
         ? '[data-a="logFilter"][data-x="decision"]'

@@ -14,7 +14,7 @@ export function vWork(): string {
     v +
     "</div></div>";
   return (
-    "<h1>My work</h1>" +
+    '<div class="pagehead"><div><h1>My work</h1><p class="lede">Cases that need you now.</p></div></div>' +
     '<div class="tiles">' +
     tile("Waiting on you", String(items.length)) +
     tile(

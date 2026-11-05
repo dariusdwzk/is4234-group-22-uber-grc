@@ -1,6 +1,6 @@
 // What the sidebar lists for each role.
 import type { RoleKey } from "@/domain/types";
-import type { ViewState } from "@/domain/view-state";
+import type { CaseView, ViewState } from "@/domain/view-state";
 import { workItems } from "./work";
 
 export type NavItem = {
@@ -10,6 +10,21 @@ export type NavItem = {
   count?: number;
   current: boolean;
 };
+
+/** The cases the GC/CPO "All cases" page lists, in its two sections. */
+export function approvalsCases(cases: CaseView[]): {
+  independent: CaseView[];
+  other: CaseView[];
+} {
+  return {
+    independent: cases.filter((c) => c.route === "INDEPENDENT"),
+    other: cases.filter(
+      (c) =>
+        c.route !== "INDEPENDENT" &&
+        (c.severity === "HIGH" || c.status === "Needs triage"),
+    ),
+  };
+}
 
 export function navFor(
   role: RoleKey,
@@ -58,11 +73,13 @@ function base(
         go("All cases", "security", s.d.cases.length),
       ];
     case "gc":
-    case "cpo":
+    case "cpo": {
+      const a = approvalsCases(s.d.cases);
       return [
         go("My work", "work", workItems(s.d.cases, role).length),
-        go("All cases", "approvals", s.d.cases.length),
+        go("All cases", "approvals", a.independent.length + a.other.length),
       ];
+    }
     case "ceo":
       return [go("Overview", "ceo")];
     case "board": {

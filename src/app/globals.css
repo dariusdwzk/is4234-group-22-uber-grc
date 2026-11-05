@@ -130,8 +130,6 @@ details[open]>summary{margin-bottom:10px}
 .action{background:#FFFFFF;border:2px solid #000000}
 .action h2{color:#000000}
 .action h2{color:var(--accent)}
-.blockedrow{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
-.blockedrow p{font-size:.84rem;color:var(--muted);margin-bottom:6px}
 .approvers{display:flex;gap:16px;flex-wrap:wrap;font-size:.9rem;margin:6px 0 12px}
 .rule-fired{display:flex;gap:10px;padding:6px 0}
 .rule-fired .rid{font-weight:600;color:var(--high);width:2rem;flex:none}
@@ -242,7 +240,7 @@ details[open]>summary{margin-bottom:10px}
 
 /* tracker */
 .tracker{display:flex;align-items:flex-start;background:var(--surface);border-radius:14px;padding:20px 8px 16px;margin-bottom:16px}
-.tk{position:relative;flex:1 1 0;min-width:112px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:0 6px}
+.tk{position:relative;flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;text-align:center;gap:8px;padding:0 6px}
 .tk::before,.tk::after{content:"";position:absolute;top:13px;height:2px;background:#BDBDBD;z-index:0}
 .tk::before{left:0;right:50%}
 .tk::after{left:50%;right:0}
@@ -257,8 +255,8 @@ details[open]>summary{margin-bottom:10px}
 .tk.warn .tk-dot{border-color:#C98A00;color:#C98A00}
 .tk.skip .tk-dot{border-color:#BDBDBD;color:#BDBDBD}
 .tk-text{display:flex;flex-direction:column;align-items:center;line-height:1.3}
-.tk-text b{font-size:.86rem;font-weight:500}
-.tk-text span{font-size:.75rem;color:var(--muted)}
+.tk-text b{font-size:.8rem;font-weight:500;overflow-wrap:anywhere}
+.tk-text span{font-size:.72rem;color:var(--muted)}
 .tk.todo .tk-text b{color:var(--muted)}
 .tk.now .tk-text b{font-weight:700}
 .tk.fail .tk-text b{color:var(--high)}
@@ -272,8 +270,6 @@ details[open]>summary{margin-bottom:10px}
 .tk-vote.no{color:var(--high);border-color:var(--high)}
 .tk-you{position:absolute;top:-14px;left:50%;transform:translateX(18px);font-style:normal;font-size:.62rem;font-weight:600;background:#2F6FB4;color:#fff;padding:1px 6px;border-radius:999px;z-index:2}
 
-.caseacts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
-.caseacts .muted{margin-right:4px}
 .summary h3{font-size:.9rem;color:var(--muted);font-weight:500;margin:0 0 4px}
 tr.pulse{outline:none;animation:none}
 tr.pulse td{background:#FFFFFF;border-top:2px solid #000;border-bottom:2px solid #000;animation:rowpulse 1.3s ease-in-out infinite}

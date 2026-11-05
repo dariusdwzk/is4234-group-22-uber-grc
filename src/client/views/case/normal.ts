@@ -1,6 +1,6 @@
 // The mockup's actionBox() for the demo flow.
 import { fmtT } from "@/domain/demo-time";
-import { DISCLOSE_TYPE, ESCALATE_TYPE } from "@/domain/gate";
+import { DISCLOSE_TYPE } from "@/domain/gate";
 import { ROLES } from "@/domain/roles";
 import type { CaseView } from "@/domain/view-state";
 import { esc } from "../../html";
@@ -47,7 +47,10 @@ export function normalBox(c: CaseView): string {
   let h = "";
   if (isSec()) {
     if (r === "security") {
-      if (!c.finding)
+      if (!c.finding && c.rec)
+        h =
+          '<h2>Recommendation sent</h2><p class="muted" style="margin:0">Waiting for the General Counsel and the Chief Privacy Officer.</p>';
+      else if (!c.finding)
         h =
           '<h2>Investigation finding</h2><div class="form"><label>What the investigation confirmed' +
           box(
@@ -77,10 +80,10 @@ export function normalBox(c: CaseView): string {
             ) +
             '</label><div><button class="btn" data-a="attach">Attach to case</button></div></div>' +
             '<div style="margin-top:22px"></div>') +
-        '<h2>Recommendation</h2><div class="form"><fieldset><legend>Recommendation</legend>' +
+        '<h2>Recommendation</h2><div class="form"><fieldset><legend class="sr-only">Recommendation</legend>' +
         choice(
           "escalate",
-          ESCALATE_TYPE,
+          "Escalate internally",
           "Needs both General Counsel and Chief Privacy Officer.",
         ) +
         choice(
@@ -150,11 +153,10 @@ export function normalBox(c: CaseView): string {
         h +=
           '<button class="btn primary" data-a="discl">Approve disclosure</button>';
     }
-  } else if (r === "ceo")
+  } else
     h =
-      '<h2>Status</h2><p style="margin:0">' +
+      '<p style="margin:0">' +
       esc(d ? "Decision: " + d.status : c.status) +
       "</p>";
-  else h = "<h2>Read-only access</h2>";
   return '<section class="panel action" id="actionbox">' + h + "</section>";
 }

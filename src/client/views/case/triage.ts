@@ -8,9 +8,9 @@ import { remText } from "../components";
 export function triageBox(c: CaseView): string {
   const left = c.triageDueH !== null ? remText(c.triageDueH - S.d.clockH) : "";
   const due =
-    '<p class="muted small" style="margin:8px 0 0">Rated HIGH automatically in ' +
+    '<p class="muted small" style="margin:8px 0 0">Becomes HIGH automatically if not rated: ' +
     left +
-    " if no rating is confirmed.</p>";
+    "</p>";
   let h: string;
   if (S.role === "security") {
     h = !c.finding
@@ -28,9 +28,7 @@ export function triageBox(c: CaseView): string {
       : '<h2>Finding recorded</h2><p class="muted" style="margin:0">' +
         esc(c.finding) +
         '</p><p class="muted small" style="margin:8px 0 0">Waiting for the Chief Privacy Officer to confirm the rating.</p>';
-    h +=
-      due +
-      '<div class="caseacts"><span class="muted small">Case actions</span><button class="btn sm" data-a="triageTry">Confirm rating</button></div>';
+    h += due;
   } else if (S.role === "cpo") {
     h =
       "<h2>Confirm rating</h2>" +

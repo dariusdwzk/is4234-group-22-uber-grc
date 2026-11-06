@@ -31,6 +31,20 @@ describe("guide while exploring: about this page", () => {
     expect(pageHelp().text).toMatch(/rate staff reports/);
   });
 
+  it("explains My work for the roles that have it", () => {
+    Object.assign(S, { view: "work" });
+    for (const role of ["security", "cso", "gc", "cpo"] as const) {
+      S.role = role;
+      expect(pageHelp().title).not.toBe("UberSecure");
+    }
+    S.role = "security";
+    expect(pageHelp().text).toMatch(/Open one to investigate/);
+    S.role = "gc";
+    expect(pageHelp().title).toBe("Your decisions");
+    S.role = "cso";
+    expect(pageHelp().text).toMatch(/As CSO/);
+  });
+
   it("follows the board's tab", () => {
     Object.assign(S, { role: "board", view: "board" });
     expect(pageHelp().title).toBe("What the board is told");

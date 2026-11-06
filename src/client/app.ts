@@ -1,6 +1,5 @@
 // The mockup's render() and action map (A), with every state change sent to the server.
 // The browser keeps only view state; rules, permissions and the ledger live on the server.
-import { ATTEMPT_LABELS, type Attempt } from "@/domain/blocked-reasons";
 import { fileProblem } from "@/domain/evidence";
 import { ESCALATED_STATUS } from "@/domain/gate";
 import type { ReceiptTrack } from "@/domain/view-state";
@@ -11,18 +10,19 @@ import {
 } from "@/domain/questionnaire";
 import { ROLES, isRoleKey } from "@/domain/roles";
 import { act, fetchState, type ApiResult } from "./api";
-import { STEPS, atStep, guideCard, stepIdx } from "./guide";
-import { helpCard } from "./help";
-import { ck, toast, val } from "./html";
-import { S, cur } from "./store";
+import { STEPS, atStep, endTour, stepIdx } from "./guide";
+import { guideOrHelp } from "./help";
+import { ck, clearToast, toast, val } from "./html";
+import { S, cur, loadRole, saveRole } from "./store";
 import { vBoard } from "./views/board";
 import { vCase } from "./views/case/page";
 import { vCeo } from "./views/ceo";
 import { vApprovals } from "./views/decisions";
 import { vEmployee } from "./views/employee";
-import { header } from "./views/header";
 import { vLanding } from "./views/landing";
 import { vSecurity } from "./views/security";
+import { vWork } from "./views/work";
+import { shell } from "./views/shell";
 
 let root: HTMLElement | null = null;
 /** The action in flight, if any. Clicks during it are dropped (no double submits). */
@@ -36,47 +36,67 @@ const VIEWS: Record<string, () => string> = {
   approvals: vApprovals,
   ceo: vCeo,
   board: vBoard,
+  work: vWork,
 };
 
 function render(): void {
   if (!root) return;
   const guided = S.guided && S.view !== "landing";
+  const page = (VIEWS[S.view] ?? vLanding)();
   root.innerHTML =
-    header() +
-    '<main class="' +
-    [guided ? "guided" : "", S.view === "landing" ? "landing" : ""]
-      .join(" ")
-      .trim() +
-    '">' +
-    (VIEWS[S.view] ?? vLanding)() +
-    "</main>" +
-    (guided
-      ? S.mode === "demo"
-        ? guideCard()
-        : helpCard()
-      : '<button class="guide-fab" data-a="showGuide"><span>?</span>' +
-        (S.view === "landing" ? "Start guide" : "Show guide") +
-        "</button>");
-  if (!guided || S.mode !== "demo") return; // only the guided demo highlights the page
+    (S.view === "landing"
+      ? '<main class="landing">' + page + "</main>"
+      : shell(page)) + (guided ? guideOrHelp() : "");
+  if (!guided || S.mode !== "demo") return; // only the guided tour highlights the page
   const i = stepIdx();
   if (i === -1) return;
   const s = STEPS[i]!;
   if (!atStep(s) || !s.target) return;
   const sel = s.target(),
     el =
-      root.querySelector("main " + sel) || root.querySelector("header " + sel);
+      root.querySelector("main " + sel) ||
+      root.querySelector("nav.side " + sel);
   if (!el) return;
   el.classList.add("pulse");
-  const key = i + sel;
-  if (S.scrolledKey !== key) {
+  const key = i + sel,
+    card = root.querySelector(".guidecard"),
+    main = root.querySelector("main") as HTMLElement | null;
+  // Room to lift a target near the bottom above the fixed card.
+  if (card && main)
+    main.style.paddingBottom =
+      Math.max(220, (card as HTMLElement).offsetHeight + 32) + "px";
+  const first = S.scrolledKey !== key;
+  // A target in a sticky column (case action panel, sidebar) barely moves when the page
+  // scrolls: lift it once, never again on later renders, so the page does not keep jumping.
+  let sticky = false;
+  for (let e: Element | null = el; e && !sticky; e = e.parentElement)
+    sticky = getComputedStyle(e).position === "sticky";
+  if (sticky && !first) return;
+  if (first) {
     S.scrolledKey = key;
-    el.scrollIntoView({
-      block: "center",
-      behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
-        ? "auto"
-        : "smooth",
-    });
+    if (!sticky)
+      el.scrollIntoView({
+        block: "center",
+        behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+      });
   }
+  // Measure the real rects once scrolling has settled; lift the target clear of the card.
+  const lift = () => {
+    const r = el.getBoundingClientRect(),
+      c = card?.getBoundingClientRect();
+    if (
+      c &&
+      r.right > c.left &&
+      r.left < c.right &&
+      r.bottom > c.top &&
+      r.top < c.bottom
+    )
+      window.scrollBy({ top: r.bottom - c.top + 16, behavior: "auto" });
+  };
+  requestAnimationFrame(() => requestAnimationFrame(lift));
+  if (first && !sticky) setTimeout(lift, 600); // smooth scroll may still be running
 }
 
 async function refresh(): Promise<void> {
@@ -84,7 +104,6 @@ async function refresh(): Promise<void> {
 }
 
 const clearMsgs = () => {
-  S.lastBlock = null;
   S.empMsg = null;
   S.statusMsg = null;
   S.receipt = null;
@@ -98,11 +117,15 @@ async function setRole(
   r: string | undefined,
   opts: { keepCase?: boolean } = {},
 ): Promise<void> {
-  const onCase = opts.keepCase === true && S.view === "case" && S.caseId;
+  const onCase = opts.keepCase === true ? S.resumeCase : null;
+  if (opts.keepCase) S.resumeCase = null; // Switch account keeps it for the next sign-in
   S.role = isRoleKey(r) ? r : null;
+  saveRole(S.role);
   clearMsgs();
+  clearToast();
   await refresh();
-  const stay = onCase && S.d.cases.some((c) => c.id === S.caseId);
+  const stay = !!onCase && S.d.cases.some((c) => c.id === onCase);
+  if (stay) S.caseId = onCase;
   S.view = stay ? "case" : S.role ? ROLES[S.role].home : "landing";
   render();
   if (!stay) window.scrollTo(0, 0);
@@ -113,7 +136,6 @@ function openCase(x: string | undefined): void {
   S.caseId = x ?? null;
   if (x === S.d.replayId) S.seenReplay = true;
   S.caseTab = "deadlines";
-  S.lastBlock = null;
   render();
   window.scrollTo(0, 0);
 }
@@ -133,20 +155,20 @@ const fail = (r: { ok: false; error: string }) => {
 };
 
 const A: Record<string, (x?: string) => void | Promise<void>> = {
-  role: (x) => {
-    // Picking a role from the start page means exploring: the card explains each page.
-    if (S.view === "landing") {
-      S.mode = "explore";
-      S.guided = true;
-    }
-    return setRole(x, { keepCase: true });
+  role: (x) => setRole(x, { keepCase: true }),
+  go: (x) => {
+    S.view = x ?? "landing";
+    render();
+    window.scrollTo(0, 0);
+  },
+  switchAccount: () => {
+    S.resumeCase = S.view === "case" ? S.caseId : null;
+    return setRole(undefined);
   },
   home: () => {
     S.view = S.role ? ROLES[S.role].home : "landing";
-    S.lastBlock = null;
     render();
   },
-  landing: () => setRole(undefined),
   openCase: (x) => openCase(x),
   // The tour always starts from fresh data: reset first (it then opens Security, step 1).
   startGuide: () => {
@@ -159,6 +181,7 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
     const s = STEPS[stepIdx()];
     if (!s || !s.role) return;
     S.role = s.role;
+    saveRole(S.role);
     clearMsgs();
     await refresh();
     if (s.onCase) openCase(S.d.replayId ?? undefined);
@@ -179,8 +202,14 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
     toast("Email attached. R5 fired: extortion demand.");
   },
   rec: async () => {
-    const action = val("rAct"),
-      reason = val("rReason");
+    const action = document.querySelector<HTMLInputElement>(
+      'input[name="rAct"]:checked',
+    )?.value;
+    const reason = val("rReason");
+    if (!action) {
+      toast("Choose a recommendation.");
+      return;
+    }
     if (action === "escalate" && !reason) {
       toast("Give a reason for escalating internally.");
       return;
@@ -251,14 +280,6 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
     a.click();
     URL.revokeObjectURL(url);
   },
-  blocked: async (x) => {
-    const what = ATTEMPT_LABELS[x as Attempt];
-    const r = await send("attempt", { caseId: S.caseId, action: x });
-    if (r.ok || r.status !== 403) return r.ok ? render() : fail(r);
-    S.lastBlock = { what, why: r.error };
-    render();
-    window.scrollTo({ top: 0 });
-  },
   vote: async (x) => {
     if (!ck("v1")) {
       toast("Tick the checkbox first.");
@@ -320,20 +341,9 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
         : "Rated LOW. Security reviews it within 3 business days.",
     );
   },
-  /** Security's "Confirm rating" button: always refused on the server, and logged. */
-  triageTry: async () => {
-    const r = await send("triage", {
-      caseId: S.caseId,
-      rating: "LOW",
-      reason: "Rated by Security",
-    });
-    if (r.ok || r.status !== 403) return r.ok ? render() : fail(r);
-    S.lastBlock = { what: "Confirm rating", why: r.error };
-    render();
-    window.scrollTo({ top: 0 });
-  },
   boardTab: (x) => {
     S.boardTab = x === "log" ? "log" : "overview";
+    S.view = "board";
     render();
   },
   discl: async () => {
@@ -370,6 +380,9 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
     if (!r.ok) return fail(r);
     S.empMsg = "Report sent. Receipt code: " + r.data.code;
     render();
+    // The confirmation sits next to the Send button; bring it into view.
+    document.querySelector(".alert.ok")?.scrollIntoView({ block: "center" });
+    toast(S.empMsg);
   },
   status: async () => {
     const code = val("sCode").toUpperCase();
@@ -409,7 +422,7 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
     render();
   },
   hideGuide: () => {
-    S.guided = false;
+    endTour();
     render();
   },
   reset: async () => {
@@ -418,7 +431,7 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
     if (!r.ok) return fail(r);
     Object.assign(S, {
       role: g ? "security" : null,
-      view: g ? "security" : "landing",
+      view: g ? ROLES.security.home : "landing",
       caseId: null,
       caseTab: "deadlines",
       boardTab: "overview",
@@ -429,6 +442,7 @@ const A: Record<string, (x?: string) => void | Promise<void>> = {
       scrolledKey: null,
       guideStep: 0,
     });
+    saveRole(S.role);
     clearMsgs();
     await refresh();
     render();
@@ -459,17 +473,9 @@ function readAnswers(): Answers | null {
   return out as Answers;
 }
 
-async function run(
-  name: string,
-  x: string | undefined,
-  queue = false,
-): Promise<void> {
+async function run(name: string, x: string | undefined): Promise<void> {
   const f = A[name];
-  if (!f) return;
-  if (inFlight) {
-    if (!queue) return;
-    await inFlight; // a role change must never be lost: wait, then switch
-  }
+  if (!f || inFlight) return;
   const p = (async () => {
     try {
       await f(x);
@@ -489,23 +495,21 @@ function onClick(e: MouseEvent): void {
   void run(b.dataset.a!, b.dataset.x);
 }
 
-function onChange(e: Event): void {
-  const t = e.target as HTMLSelectElement | null;
-  if (t?.id === "roleSel") void run("role", t.value, true);
-}
-
 /** Mounts the app into `el` and returns a cleanup for React's effect. */
 export function mount(el: HTMLElement): () => void {
   root = el;
   document.addEventListener("click", onClick);
-  document.addEventListener("change", onChange);
-  render();
+  S.role = loadRole();
+  S.view = S.role ? ROLES[S.role].home : "landing";
+  if (!S.role) render(); // a restored role waits for its data, so My work never flashes empty
   refresh()
     .then(render)
-    .catch(() => toast("Could not reach the server. Is it running?"));
+    .catch(() => {
+      render();
+      toast("Could not reach the server. Is it running?");
+    });
   return () => {
     document.removeEventListener("click", onClick);
-    document.removeEventListener("change", onChange);
     root = null;
   };
 }

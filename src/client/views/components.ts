@@ -3,8 +3,10 @@ import { fmtDay, fmtDur, fmtT } from "@/domain/demo-time";
 import type { CaseView, NoticeView } from "@/domain/view-state";
 import { CHK, esc } from "../html";
 import { ESCALATED_STATUS } from "@/domain/gate";
+import { ROLES } from "@/domain/roles";
 import { actionRequired, yesNo } from "../action-required";
 import { S } from "../store";
+import { nearestDeadline } from "../work";
 import { waitingOn } from "./case/timeline";
 
 export const TRIAGE = "Needs triage";
@@ -32,6 +34,47 @@ export function remText(r: number): string {
       : fmtDur(r) + " left";
 }
 
+/** A legal clock time: the clocks post-date 2016 and are illustrative. */
+export const legal = (h: string): string => h + " (illustrative)";
+
+/** Board notice text, with its GDPR deadline time marked illustrative. */
+export const noticeText = (body: string): string =>
+  body.replace(/(GDPR deadline [^.]*\d:\d\d)\./, "$1 (illustrative).");
+
+/**
+ * Text the server cut at `max` characters, ending at a word boundary with "…".
+ * shortcut: assumes text exactly `max` long was cut; upgrade if the server sends the full text.
+ */
+export function clip(s: string, max: number): string {
+  if (s.length < max) return s;
+  const sp = s.lastIndexOf(" ");
+  return (sp > 0 ? s.slice(0, sp) : s).replace(/[\s,.;:]+$/, "") + "…";
+}
+
+/** Case title; staff-report titles are the report text cut at 70 characters on the server. */
+export const caseTitle = (c: CaseView): string =>
+  c.answers ? clip(c.title, 70) : c.title;
+
+/** One plain sentence for where the decision stands (Board, CEO, Security, CSO). */
+export function outcomeText(c: CaseView): string {
+  const d = c.decision;
+  if (c.status === "Disclosed")
+    return "Disclosure approved " + fmtT(c.disclosedH ?? 0) + ".";
+  const rejecter = d
+    ? (["gc", "cpo"] as const).find((k) => d.votes[k]?.vote === "reject")
+    : undefined;
+  if (d && (rejecter || c.status === "Disclosure required"))
+    return (
+      (rejecter ? "The " + ROLES[rejecter].name : "An approver") +
+      " rejected the recommendation to " +
+      d.type.toLowerCase() +
+      ". Disclosure to regulators and affected people is now required."
+    );
+  if (c.status === ESCALATED_STATUS)
+    return "Both approvers agreed to escalate internally. Disclosure has not been made; the legal deadlines keep running.";
+  return "Waiting for the General Counsel and the Chief Privacy Officer to decide.";
+}
+
 function nearest(c: CaseView): string {
   if (c.status === "Disclosed") return '<span class="t-ok">Met</span>';
   if (c.status === TRIAGE && c.triageDueH !== null)
@@ -44,10 +87,8 @@ function nearest(c: CaseView): string {
       remText(c.reviewDueH - S.d.clockH) +
       ' <span class="muted small">to review</span>'
     );
-  const r = c.clocks
-    .filter((k) => k.dur && !k.met && k.start !== null)
-    .map((k) => k.start! + k.dur! - S.d.clockH);
-  return r.length ? remText(Math.min(...r)) : '<span class="muted">None</span>';
+  const n = nearestDeadline([c], S.d.clockH);
+  return n ? legal(remText(n.h)) : '<span class="muted">None</span>';
 }
 
 /** Cases, high-risk first. With `action`, adds "Action required" for the signed-in role and lists those first. */
@@ -74,10 +115,12 @@ export function caseTable(
         (c) =>
           '<tr class="clickrow" data-a="openCase" data-x="' +
           c.id +
-          '"><td><b>' +
+          '"><td><button class="link" data-a="openCase" data-x="' +
           c.id +
-          "</b></td><td>" +
-          esc(c.title) +
+          '"><b>' +
+          c.id +
+          "</b></button></td><td>" +
+          esc(caseTitle(c)) +
           (c.id === S.d.replayId && !S.seenReplay
             ? ' <span class="badge sys">New</span>'
             : "") +
@@ -117,7 +160,7 @@ export function noticeRow(n: NoticeView, canAck: boolean): string {
     '">' +
     (n.tier === 1 ? "For information" : "Needs board attention") +
     '</span><div class="grow">' +
-    esc(n.body) +
+    esc(noticeText(n.body)) +
     '<div class="muted small">' +
     fmtT(n.t) +
     (n.allDirs

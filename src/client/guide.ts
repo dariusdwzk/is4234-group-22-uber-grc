@@ -24,7 +24,7 @@ const id = () => S.d.replayId ?? "";
 export const STEPS: Step[] = [
   {
     role: "security",
-    view: "security",
+    view: "work",
     alsoCase: true,
     title: () =>
       S.view === "case" ? "Record what you found" : "A case opened by itself",
@@ -33,7 +33,7 @@ export const STEPS: Step[] = [
         ? "Within a day, Uber’s security team confirmed what was taken. Record the finding with “Add finding”. "
         : "Cloud monitoring flagged a mass download. Case " +
           id() +
-          " opened, was rated HIGH and the board was told, with no one in Security acting. Click the case to open it.",
+          " opened, was rated HIGH and the board was told, with no one in Security acting. Open it from My work.",
     target: () =>
       S.view === "case"
         ? '[data-a="finding"]'
@@ -45,24 +45,15 @@ export const STEPS: Step[] = [
     onCase: true,
     // Attaching is optional: once the recommendation is sent, the step moves on either way.
     title: () =>
-      P().recommended
-        ? "Try to close the case"
-        : S.d.emailAttached
-          ? "Recommend keeping it internal"
-          : "Attach the hacker’s email, then recommend",
+      S.d.emailAttached
+        ? "Recommend keeping it internal"
+        : "Attach the hacker’s email, then recommend",
     text: () =>
-      P().recommended
-        ? "Now try to make the case go away. Click “Close case” under Case actions. The CSO is not allowed to, and the attempt is logged."
-        : S.d.emailAttached
-          ? "Send the prefilled recommendation to escalate internally, as the CSO kept it in-house in 2016. The reason goes on the record."
-          : "The hacker emailed the CSO directly, so no system saw it. Attaching it is optional: click “Attach to case”, then send the prefilled recommendation below.",
-    target: () =>
-      P().recommended
-        ? '[data-a="blocked"][data-x="close"]'
-        : S.d.emailAttached
-          ? '[data-a="rec"]'
-          : '[data-a="attach"]',
-    done: () => P().recommended && P().csoBlocked,
+      S.d.emailAttached
+        ? "Send the prefilled recommendation to escalate internally, as the CSO kept it in-house in 2016. The reason goes on the record."
+        : "The hacker emailed the CSO directly, so no system saw it. Attaching it is optional: click “Attach to case”, then send the prefilled recommendation below.",
+    target: () => (S.d.emailAttached ? '[data-a="rec"]' : '[data-a="attach"]'),
+    done: () => P().recommended,
   },
   {
     role: "gc",
@@ -86,13 +77,17 @@ export const STEPS: Step[] = [
     showsProgress: false, // notices can be acknowledged at any time
     title: "Read the board’s view",
     text: () =>
-      !S.boardOpen[id()]
-        ? "The board sees each serious incident in one card. Click “View details” to see the notices sent about it."
-        : "Acknowledge each notice. This records that the board has read it. Any decision is taken in a board meeting, not here.",
+      S.boardTab === "log"
+        ? "Go back to Overview to acknowledge the notices."
+        : !S.boardOpen[id()]
+          ? "The board sees each serious incident in one card. Click “View details” to see the notices sent about it."
+          : "Acknowledge each notice. This records that the board has read it. Any decision is taken in a board meeting, not here.",
     target: () =>
-      !S.boardOpen[id()]
-        ? '[data-a="expand"][data-x="' + id() + '"]'
-        : '[data-a="ack"]',
+      S.boardTab === "log"
+        ? '[data-a="boardTab"][data-x="overview"]'
+        : !S.boardOpen[id()]
+          ? '[data-a="expand"][data-x="' + id() + '"]'
+          : '[data-a="ack"]',
     done: () => P().allAcked,
   },
   {
@@ -100,18 +95,16 @@ export const STEPS: Step[] = [
     view: "board",
     showsProgress: false, // the log filter can be clicked at any time
     title: () =>
-      S.boardTab === "log"
-        ? "A record no one can change"
-        : "Open the evidence log",
+      S.boardTab === "log" ? "Every action, in order" : "Open the evidence log",
     text: () =>
       S.boardTab === "log"
-        ? "Every action on a case is written here the moment it happens. No one, including IT staff, can change or delete an entry without it being detected. The record is checked automatically against copies held by the external auditor. Click “Blocked attempts” to see what people tried to do but were not allowed to."
-        : "Open the Evidence log tab to see the permanent record of everything that happened on this case.",
+        ? "Every action on a case is added here the moment it happens. Entries are only ever added, never edited, and each one is linked to the one before it. Click “Decisions” to see who decided what, and why."
+        : "Open “Evidence log” in the sidebar to see the permanent record of everything that happened on this case.",
     target: () =>
       S.boardTab === "log"
-        ? '[data-a="logFilter"][data-x="blocked"]'
+        ? '[data-a="logFilter"][data-x="decision"]'
         : '[data-a="boardTab"][data-x="log"]',
-    done: () => S.logFilter === "blocked",
+    done: () => S.logFilter === "decision",
   },
 ];
 
@@ -138,6 +131,12 @@ export function atStep(s: Step): boolean {
   return S.view === s.view;
 }
 
+/** Closes the card and leaves tour mode, so Help explains the page and forms start empty. */
+export function endTour(): void {
+  S.guided = false;
+  S.mode = "explore";
+}
+
 const txt = (x: string | (() => string)) => (typeof x === "function" ? x() : x);
 
 export function guideCard(): string {
@@ -151,12 +150,20 @@ export function guideCard(): string {
         '"></span>',
     ).join("") +
     "</div>";
-  if (i === -1)
+  if (i === -1) {
+    // From the votes, not the status: after Reject then Approve disclosure the status is "Disclosed".
+    const votes = S.d.cases.find((c) => c.id === S.d.replayId)?.decision?.votes;
+    const rejected =
+      !!votes && Object.values(votes).some((v) => v?.vote === "reject");
+    const other = rejected ? "Approve" : "Reject";
     return (
       '<aside class="guidecard" aria-label="Guide">' +
       dots +
-      '<h3>Demo complete</h3><p>Reset and choose Approve as the Chief Privacy Officer to see the other ending. You can also try the Employee role to send an anonymous report.</p><div class="row"><button class="btn primary" data-a="reset">Reset and replay</button><button class="link" data-a="hideGuide">Close</button></div></aside>'
+      "<h3>Demo complete</h3><p>Reset and choose " +
+      other +
+      ' as the Chief Privacy Officer to see the other ending. You can also try the Employee role to send an anonymous report.</p><div class="row"><button class="btn primary" data-a="reset">Reset and replay</button><button class="link" data-a="hideGuide">Close</button></div></aside>'
     );
+  }
   const s = STEPS[i]!,
     here = atStep(s);
   let act: string;
@@ -176,7 +183,7 @@ export function guideCard(): string {
     " of " +
     STEPS.length +
     (s.role ? ": " + ROLES[s.role].name : "") +
-    '</span><span class="row"><button class="link small" data-a="skipStep">Skip</button><button class="link small" data-a="hideGuide">Hide</button></span></div>' +
+    '</span><span class="row"><button class="link small" data-a="skipStep">Skip</button><button class="link small" data-a="hideGuide">End tour</button></span></div>' +
     "<h3>" +
     txt(s.title) +
     "</h3><p>" +

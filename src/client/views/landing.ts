@@ -1,23 +1,31 @@
-// Landing: the app's name and promise, the guided demo, and a button for every role.
+// Sign-in: pick an account (a role), or take the guided tour.
 import { ROLES, ROLE_KEYS } from "@/domain/roles";
-import { LOGO } from "./header";
+import { S } from "../store";
+import { LOGO, initials } from "./shell";
 
 export function vLanding(): string {
   return (
-    '<section class="lp">' +
-    '<h1 class="lp-name">UberSecure</h1>' +
-    '<p class="lp-tagline">No incident goes undetected.</p>' +
-    '<button class="btn primary big" data-a="startGuide">Start guided demo</button>' +
-    '<p class="lp-or">or explore as</p>' +
-    '<div class="lp-roles">' +
+    '<div class="signin-brand"><span class="logo">' +
+    LOGO +
+    "</span>UberSecure</div>" +
+    '<section class="signin"><h1>Sign in</h1><p class="muted">Choose your account.</p>' +
     ROLE_KEYS.map(
       (k) =>
-        '<button class="btn primary big" data-a="role" data-x="' +
+        '<button class="acct" data-a="role" data-x="' +
         k +
-        '">' +
+        '"><span class="av" aria-hidden="true">' +
+        initials(ROLES[k].name) +
+        "</span><span><b>" +
         ROLES[k].name +
-        "</button>",
+        "</b><small>" +
+        ROLES[k].short +
+        "</small></span></button>",
     ).join("") +
-    "</div></section>"
+    '<button class="btn" data-a="startGuide">Take the guided tour</button>' +
+    '<p class="muted small">Demo environment · all data is fictional' +
+    (S.d.demoMode
+      ? ' <button class="link" data-a="reset">Reset demo data</button>'
+      : "") +
+    "</p></section>"
   );
 }

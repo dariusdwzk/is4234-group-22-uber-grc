@@ -55,21 +55,25 @@ function questionList(): string {
 
 export function vEmployee(): string {
   return (
-    '<div class="pagehead"><div><h1>Report an Incident</h1><p class="lede"></p></div></div>' +
-    (S.empMsg ? '<div class="alert ok">' + esc(S.empMsg) + "</div>" : "") +
-    '<section class="panel"><h2></h2><div class="form"><label>What happened<textarea id="eTxt" rows="3" placeholder="What did you see or hear?"></textarea></label>' +
+    '<div class="narrow"><div class="pagehead"><div><h1>Report an incident</h1><p class="lede">Tell us what happened. You can stay anonymous.</p></div></div>' +
+    '<section class="panel"><div class="form"><label>What happened<textarea id="eTxt" rows="3" placeholder="What did you see or hear?"></textarea></label>' +
     questionList() +
-    '<label class="chk"><input type="checkbox" id="eAnon" checked> Submit anonymously</label><div><button class="btn primary" data-a="report">Send report</button></div></div></section>' +
+    '<label class="chk"><input type="checkbox" id="eAnon" checked> Submit anonymously</label>' +
+    // The confirmation sits by the Send button, where the user is looking.
+    (S.empMsg
+      ? '<div class="alert ok" role="status">' + esc(S.empMsg) + "</div>"
+      : "") +
+    '<div><button class="btn primary" data-a="report">Send report</button></div></div></section>' +
     // Stays open after a check so the answer and the case timeline are visible.
     '<details class="panel"' +
     (S.statusMsg ? " open" : "") +
-    '><summary>Check a receipt code</summary><div class="row"><div class="form" style="flex:1"><input id="sCode" placeholder="RC-XXXX" value="' +
+    '><summary>Check a report</summary><div class="row"><div class="form" style="flex:1"><input id="sCode" placeholder="RC-XXXX" value="' +
     esc(S.receipt?.code ?? "") +
     '"></div><button class="btn" data-a="status">Check</button></div>' +
     (S.statusMsg
       ? '<p style="margin:10px 0 0">' + esc(S.statusMsg) + "</p>"
       : "") +
     receiptTimeline() +
-    "</details>"
+    "</details></div>"
   );
 }

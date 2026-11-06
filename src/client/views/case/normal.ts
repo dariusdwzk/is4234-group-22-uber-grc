@@ -1,13 +1,14 @@
 // The mockup's actionBox() for the demo flow.
 import { fmtT } from "@/domain/demo-time";
-import { DISCLOSE_TYPE, ESCALATE_TYPE } from "@/domain/gate";
+import { DISCLOSE_TYPE } from "@/domain/gate";
 import { ROLES } from "@/domain/roles";
 import type { CaseView } from "@/domain/view-state";
 import { esc } from "../../html";
 import { S } from "../../store";
+import { outcomeText } from "../components";
 
 /**
- * A text box. In the guided demo it is prefilled with the 2016 replay's words; when
+ * A text box. In the guided tour it is prefilled with the 2016 replay's words; when
  * exploring it starts empty, with a hint.
  */
 const box = (id: string, hint: string, demoText: string) =>
@@ -25,6 +26,18 @@ const hasAttachment = (c: CaseView) =>
     (id) => S.d.signals.find((x) => x.id === id)?.src === "Email to CSO",
   );
 
+/** A recommendation card. In the guided tour "escalate" starts selected (the 2016 choice). */
+const choice = (v: string, title: string, sub: string) =>
+  '<label class="choice"><input type="radio" name="rAct" value="' +
+  v +
+  '"' +
+  (S.mode === "demo" && v === "escalate" ? " checked" : "") +
+  "><span><b>" +
+  esc(title) +
+  '</b><span class="muted small">' +
+  sub +
+  "</span></span></label>";
+
 const isSec = () => S.role === "security" || S.role === "cso";
 const isAppr = () => S.role === "gc" || S.role === "cpo";
 
@@ -32,16 +45,16 @@ const isAppr = () => S.role === "gc" || S.role === "cpo";
 export function normalBox(c: CaseView): string {
   const r = S.role,
     d = c.decision;
-  const act = (x: string, l: string) =>
-    '<button class="btn sm" data-a="blocked" data-x="' +
-    x +
-    '">' +
-    l +
-    "</button>";
   let h = "";
-  if (isSec()) {
+  const decided = (!!d && d.status !== "Pending") || c.status === "Disclosed";
+  if (isSec() && decided)
+    h = '<h2>Outcome</h2><p style="margin:0">' + esc(outcomeText(c)) + "</p>";
+  else if (isSec()) {
     if (r === "security") {
-      if (!c.finding)
+      if (!c.finding && c.rec)
+        h =
+          '<h2>Recommendation sent</h2><p class="muted" style="margin:0">Waiting for the General Counsel and the Chief Privacy Officer.</p>';
+      else if (!c.finding)
         h =
           '<h2>Investigation finding</h2><div class="form"><label>What the investigation confirmed' +
           box(
@@ -71,11 +84,18 @@ export function normalBox(c: CaseView): string {
             ) +
             '</label><div><button class="btn" data-a="attach">Attach to case</button></div></div>' +
             '<div style="margin-top:22px"></div>') +
-        '<h2>Recommendation</h2><div class="form"><label>Recommended action<select id="rAct"><option value="escalate">' +
-        ESCALATE_TYPE +
-        '</option><option value="disclose">' +
-        DISCLOSE_TYPE +
-        "</option></select></label>" +
+        '<h2>Recommendation</h2><div class="form"><fieldset><legend class="sr-only">Recommendation</legend>' +
+        choice(
+          "escalate",
+          "Escalate internally",
+          "Needs both General Counsel and Chief Privacy Officer.",
+        ) +
+        choice(
+          "disclose",
+          DISCLOSE_TYPE,
+          "Needs General Counsel or Chief Privacy Officer.",
+        ) +
+        "</fieldset>" +
         // Prefilled for the replay: in 2016 the CSO kept it in-house as a "bug bounty".
         "<label>Reason (required to escalate)" +
         box(
@@ -84,40 +104,29 @@ export function normalBox(c: CaseView): string {
           "Treat it as a bug bounty and keep it in-house while we confirm the data was deleted.",
         ) +
         "</label>" +
-        '<div><button class="btn primary" data-a="rec">Send for decision</button></div></div>';
+        '<div><button class="btn primary" data-a="rec">Send to approvers</button><p class="muted small" style="margin:6px 0 0">The General Counsel and the Chief Privacy Officer are notified.</p></div></div>';
     else
       h =
         '<h2>Recommendation sent</h2><p class="muted" style="margin:0">Waiting for the General Counsel and the Chief Privacy Officer.</p>';
-    h +=
-      '<div class="caseacts"><span class="muted small">Case actions</span>' +
-      act("close", "Close case") +
-      act("downgrade", "Lower severity") +
-      (r === "cso" ? act("approve", "Approve") : "") +
-      "</div>";
   } else if (isAppr()) {
     const me = r as "gc" | "cpo";
     if (!d)
       h =
         '<h2>Decision</h2><p class="muted">No recommendation yet.</p>' +
         (c.status !== "Disclosed"
-          ? '<button class="btn" data-a="discl">Approve disclosure now</button>'
+          ? '<button class="btn" data-a="discl">Approve disclosure now</button><p class="muted small" style="margin:6px 0 0">You can approve disclosure at any time, without waiting for the CSO\'s recommendation.</p>'
           : "");
     else {
       const v = (k: "gc" | "cpo") => {
         const x = d.votes[k];
-        return (
-          "<span>" +
-          ROLES[k].name +
-          ": " +
-          (x
-            ? '<span class="' +
-              (x.vote === "approve" ? "t-ok" : "t-high") +
-              '">' +
-              (x.vote === "approve" ? "Approved" : "Rejected") +
-              "</span>"
-            : '<span class="muted">Waiting</span>') +
-          "</span>"
-        );
+        const st = x
+          ? x.vote === "approve"
+            ? "approved"
+            : "rejected"
+          : k === S.role
+            ? "you"
+            : "pending";
+        return '<span class="badge">' + ROLES[k].name + " · " + st + "</span>";
       };
       h =
         "<h2>" +
@@ -138,7 +147,7 @@ export function normalBox(c: CaseView): string {
         "</div>";
       if (d.status === "Pending" && !d.votes[me])
         h +=
-          '<div class="form"><label class="chk"><input type="checkbox" id="v1"> I have read the reason and the open FTC inquiry</label><label>Reason<select id="vReason"><option>Facts support it</option><option>Facts contradict it</option><option>Regulator must be told</option></select></label><div class="row"><button class="btn primary" data-a="vote" data-x="approve">Approve</button><button class="btn danger" data-a="vote" data-x="reject">Reject</button></div></div>';
+          '<div class="form"><label class="chk"><input type="checkbox" id="v1"> I have read the reason and the open FTC inquiry</label><label>Your reason<select id="vReason"><option>Facts support it</option><option>Facts contradict it</option><option>Regulator must be told</option></select></label><div class="row"><button class="btn primary" data-a="vote" data-x="approve">Approve</button><button class="btn danger" data-a="vote" data-x="reject">Reject</button></div></div>';
       else if (c.status === "Disclosed")
         h +=
           '<p class="t-ok" style="margin:0">Disclosure approved ' +
@@ -148,12 +157,10 @@ export function normalBox(c: CaseView): string {
         h +=
           '<button class="btn primary" data-a="discl">Approve disclosure</button>';
     }
-  } else if (r === "ceo")
+  } else
     h =
-      '<h2>Read-only access</h2><div class="caseacts"><span class="muted small">Case actions</span>' +
-      act("approve", "Approve") +
-      act("close", "Close case") +
-      "</div>";
-  else h = "<h2>Read-only access</h2>";
+      '<p style="margin:0">' +
+      esc(d || decided ? outcomeText(c) : c.status) +
+      "</p>";
   return '<section class="panel action" id="actionbox">' + h + "</section>";
 }

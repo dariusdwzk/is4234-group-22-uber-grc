@@ -23,3 +23,41 @@ Hard-to-reverse decisions only. Seeded from spec §2 (26 Oct, Darius).
 - Vercel Node version: 24.x. Hobby + private personal repo: works (production deploy live).
 - Neon: Postgres 18 (local compose is 16); project `is4234-uber-grc`, db `grc`, branch `preview`. Keep migrations portable across 16 and 18.
 - `next` pinned 16.4.1 (16.4.0 has critical advisories); dependabot major bumps (eslint 10, typescript 7) rejected for now.
+
+## Disclosure Gate rebuild (Viviana, PR #18, 28-31 Oct; recorded 5 Nov)
+| Topic | Decision |
+|---|---|
+| Login | Replaced: no login; role picker sends `X-Role`, server checks permissions per role. Independence is per role, not per person. Demo only. |
+| Roles | Employee, Security, CSO (also Deputy GC), GC, CPO, CEO, Board. Finance removed. |
+| Decision outcomes | "Escalate internally" (GC and CPO, reason required) or "Notify regulators and affected people" (GC or CPO). Replaces notify_now / notify_later / withhold. |
+| Payments | Removed, including the US$100k held payment; R5 becomes "Extortion demand". |
+| Demo time | Real clock (Singapore time); no +N h or Day 24 jump in the UI. |
+| Staff reports | Questionnaire routes to INDEPENDENT, NORMAL, TRIAGE or SECURITY_TRIAGE. |
+| Tamper / verify | Tamper demo and `/api/ledger/verify` removed; ledger code and tests remain. |
+| Banner | "Demonstration — synthetic data" banner dropped (Darius, 5 Nov). Data is still synthetic only. |
+| Ledger check in UI | Dropped (Darius, 5 Nov). Chain stays in code + tests. **Report/slides must explain it** (hash chain, append-only DB grants, `tests/unit/ledger-verify.test.ts`, `tests/integration/ledger.test.ts`) and must not claim the demo shows tamper detection. |
+| Payment hold | Stays dropped (Darius, 5 Nov). |
+
+## Workspace redesign (P6, 5 Nov)
+| Topic | Decision |
+|---|---|
+| Sign-in replaces role menu | Landing is a sign-in screen where each role is a button; it still sends `X-Role` (demo only, no passwords). |
+| Refusal-only buttons removed (server still refuses and logs) | The UI no longer shows buttons a role may not use; the server still refuses direct calls and logs "Blocked: <action>". |
+| Names deferred | Real person names are not shown; roles and titles only, so no personal data and no per-person identity yet. |
+| Tour optional | The guided tour is opt-in from Sign in and Help; it starts on My work and resets to the role's own home. |
+| Avatar initials | Strip any "(...)", keep an all-capitals word whole (CSO, CEO), else first letters of two words, else the first letter. |
+| Nearest legal deadline | The tile excludes internal clocks (`class`, `mat`) and shows "<clock name> · <case id>". |
+| Counts equal rows | One filter per All-cases view feeds both the list and the sidebar count; Security shows all cases. |
+| Board Overview count | The Overview item shows the number of unacknowledged notices. |
+| Tour wording | Log step is "Every action, in order" (no tamper claim, see 5 Nov); "Demo complete" names the other ending from the replay case outcome. |
+| My work help per role | Help on My work explains that role's queue (GC/CPO decisions; Security and CSO cases). |
+| CSO My work line | "Security's finding is in" only once a finding exists; otherwise "Review the case and recommend". |
+| Vote line | A case with no recommendation yet shows "A decision is waiting for your vote." on GC/CPO My work. |
+| Breadcrumb source | The case breadcrumb is the sidebar item marked current. |
+| Outcome sentence | One `outcomeText()` for Board, CEO, Security and CSO: pending, rejected (names the approver and the decision), escalated, disclosed. |
+| Illustrative everywhere | Every legal clock time carries "(illustrative)": summary, Deadlines tab, Next deadline column, Board, notice text. Internal clocks do not. The Next deadline column now shows the nearest legal clock only. |
+| Keyboard case rows | The case id in each row is a real button; the row stays clickable for the mouse. |
+| Tour mode resets | Closing the tour ("End tour", or Close on Demo complete) returns to explore mode: Help explains the page, forms start empty. |
+| Empty-state hints | An empty My work says what will arrive and from whom, per role. |
+| Hash chain | Still dropped from the UI; **report/slides must explain the hash chain** (see 5 Nov). |
+

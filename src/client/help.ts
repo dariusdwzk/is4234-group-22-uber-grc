@@ -1,6 +1,7 @@
-// "About this page": the guide card while exploring on your own (not the guided demo).
+// "About this page": the guide card while exploring on your own (not the guided tour).
 // It explains whatever page and role are on screen, in a sentence or two.
 import type { CaseView } from "@/domain/view-state";
+import { guideCard } from "./guide";
 import { esc } from "./html";
 import { S } from "./store";
 
@@ -17,7 +18,7 @@ function caseHelp(c: CaseView): Help {
       : r === "security"
         ? {
             title: "Establish the facts",
-            text: "The reporter was unsure about the impact. Record what you found. Only the Chief Privacy Officer can rate it: try “Confirm rating” and see it refused and logged.",
+            text: "The reporter was unsure about the impact. Record what you found; the Chief Privacy Officer then confirms the rating.",
           }
         : {
             title: "Waiting for triage",
@@ -52,12 +53,12 @@ function caseHelp(c: CaseView): Help {
     case "security":
       return {
         title: "Investigate",
-        text: "This case opened by itself and the board was already told. Record what the investigation found. You can recommend, but never close the case or lower its risk: try “Case actions” to see.",
+        text: "This case opened by itself and the board was already told. Record what the investigation found.",
       };
     case "cso":
       return {
         title: "Recommend",
-        text: "Attach messages no system saw, then recommend: escalate internally (needs a reason) or notify regulators. You report to Security, so you cannot approve. Try “Case actions”.",
+        text: "Attach any message no system saw, then recommend: escalate internally (needs a reason) or notify regulators.",
       };
     case "gc":
     case "cpo":
@@ -68,7 +69,7 @@ function caseHelp(c: CaseView): Help {
     case "ceo":
       return {
         title: "Read-only",
-        text: "You can follow every step of the case, but you cannot approve or close it. Those buttons are refused and logged.",
+        text: "You can follow every step of the case and see what the board has been told.",
       };
     default:
       return {
@@ -76,6 +77,19 @@ function caseHelp(c: CaseView): Help {
         text: "Everything that happened on this case, step by step. The board reads the same record.",
       };
   }
+}
+
+function approvalsHelp(r: string | null): Help {
+  return {
+    title: "Your decisions",
+    text:
+      (r === "cpo"
+        ? "You also rate staff reports the reporter was unsure about. "
+        : "") +
+      "Holding back disclosure needs both the General Counsel and the Chief Privacy Officer; notifying needs one. Staff concerns about Security come to you and the " +
+      (r === "gc" ? "Chief Privacy Officer" : "General Counsel") +
+      " directly.",
+  };
 }
 
 /** Help for the page on screen. */
@@ -87,25 +101,21 @@ export function pageHelp(): Help {
         title: "Speak up",
         text: "Employees report anything that worries them here, anonymously if they like. Seven quick questions decide who the report goes to. ",
       };
+    case "work":
+      if (r === "gc" || r === "cpo") return approvalsHelp(r);
+    // falls through: Security and CSO share the Security cases wording
     case "security":
       return r === "cso"
         ? {
             title: "Security’s cases",
-            text: "As CSO you lead Security. Open a case to attach messages no system saw and to recommend what to do. Your reporting line is Security, so you cannot approve.",
+            text: "As CSO you lead Security. Open a case to attach messages no system saw and to recommend what to do.",
           }
         : {
             title: "Security’s cases",
-            text: "Cases open by themselves from cloud monitoring, HackerOne and secret scanning. Open one to investigate. Cases that involve Security handles an incident never appear here.",
+            text: "Cases open by themselves from cloud monitoring, HackerOne and secret scanning. Open one to investigate. Staff concerns about how Security handles an incident go to the General Counsel and the Chief Privacy Officer instead, so they never appear here.",
           };
     case "approvals":
-      return {
-        title: "Your decisions",
-        text:
-          (r === "cpo"
-            ? "You also rate staff reports the reporter was unsure about. "
-            : "") +
-          "Holding back disclosure needs both the General Counsel and the Chief Privacy Officer; notifying needs one. Cases involving Security come straight to CPO.",
-      };
+      return approvalsHelp(r);
     case "ceo":
       return {
         title: "Overview",
@@ -115,11 +125,11 @@ export function pageHelp(): Help {
       return S.boardTab === "log"
         ? {
             title: "The evidence log",
-            text: "Every action is written here the moment it happens, and nobody can change it. Filter by “Blocked attempts” to see what people tried but were not allowed to do.",
+            text: "Every action is added here the moment it happens. Filter by type to see decisions and board notices.",
           }
         : {
             title: "What the board is told",
-            text: "Dashboard shows serious incidents. Board's only action is acknowledging them; real decisions happen in board meetings.",
+            text: "This dashboard shows serious incidents. Your only action here is to acknowledge each notice; decisions are taken in a board meeting.",
           };
     case "case": {
       const c = S.d.cases.find((x) => x.id === S.caseId);
@@ -130,12 +140,12 @@ export function pageHelp(): Help {
     default:
       return {
         title: "UberSecure",
-        text: "Pick a role to explore, or start the guided demo.",
+        text: "Choose your account, or take the guided tour.",
       };
   }
 }
 
-/** The guide card while exploring: explains this page; offers the guided demo instead. */
+/** The guide card while exploring: explains this page; offers the guided tour instead. */
 export function helpCard(): string {
   const h = pageHelp();
   return (
@@ -145,7 +155,11 @@ export function helpCard(): string {
     esc(h.title) +
     "</h3><p>" +
     esc(h.text) +
-    '</p><button class="link" data-a="startGuide">Take the guided demo instead</button>' +
+    '</p><button class="link" data-a="startGuide">Take the guided tour instead</button>' +
     "</aside>"
   );
 }
+
+/** The card for the guide button: the tour while it runs, else this page's help. */
+export const guideOrHelp = (): string =>
+  S.mode === "demo" ? guideCard() : helpCard();

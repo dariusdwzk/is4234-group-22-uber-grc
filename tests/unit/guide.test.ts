@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { STEPS, stepIdx } from "@/client/guide";
+import { STEPS, atStep, stepIdx } from "@/client/guide";
+import { ROLES } from "@/domain/roles";
 import { S, emptyState } from "@/client/store";
 
 const progress = (o: Partial<typeof S.d.progress>) => {
@@ -26,8 +27,32 @@ describe("guided tour: the current step", () => {
 
   it("acknowledging notices or filtering the log early does not skip the tour ahead", () => {
     progress({ allAcked: true });
-    S.logFilter = "blocked";
+    S.logFilter = "decision";
     expect(stepIdx()).toBe(0);
+  });
+
+  it("step 2 no longer waits for a refused attempt", () => {
+    progress({ finding: true, recommended: true });
+    expect(STEPS[stepIdx()]!.title).toBe("Approve as General Counsel");
+  });
+
+  it("tour copy makes no auditor or tamper-detection claim", () => {
+    const all: string[] = [];
+    for (const tab of ["overview", "log"] as const) {
+      S.boardTab = tab;
+      for (const st of STEPS)
+        for (const x of [st.title, st.text])
+          all.push(typeof x === "function" ? x() : x);
+    }
+    expect(all.join(" ")).not.toMatch(
+      /auditor|detect|tamper|no one can change/i,
+    );
+  });
+
+  it("step 1 is shown on Security's home, My work", () => {
+    S.role = "security";
+    S.view = ROLES.security.home;
+    expect(atStep(STEPS[0]!)).toBe(true);
   });
 
   it("never moves back", () => {

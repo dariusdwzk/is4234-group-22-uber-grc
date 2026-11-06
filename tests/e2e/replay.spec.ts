@@ -1,23 +1,40 @@
 import { expect, test, type Page } from "@playwright/test";
+import { ROLES } from "@/domain/roles";
+import type { RoleKey } from "@/domain/types";
 
 // The mockup's guided tour, clicked through in the browser, for both endings.
 // Reduced motion: the guide then jumps (not smooth-scrolls) to the highlighted control.
 test.use({ contextOptions: { reducedMotion: "reduce" } });
 
 async function asRole(page: Page, role: string): Promise<void> {
-  await page.selectOption("#roleSel", role);
+  const out = page.getByRole("button", { name: "Switch account" });
+  if (await out.isVisible()) await out.click();
+  await page
+    .getByRole("button", {
+      name: new RegExp(
+        "^" + ROLES[role as RoleKey].name.replace(/[()]/g, "\\$&"),
+      ),
+    })
+    .click();
+}
+
+/** Sidebar item, e.g. "All cases" (the sign-in home is now "My work"). */
+async function sideTo(page: Page, name: string): Promise<void> {
+  await page.locator("nav.side").getByRole("button", { name }).click();
 }
 
 async function reset(page: Page): Promise<void> {
-  await page.getByRole("button", { name: "Reset data" }).click();
+  const out = page.getByRole("button", { name: "Switch account" });
+  if (await out.isVisible()) await out.click();
+  await page.getByRole("button", { name: "Reset demo data" }).click();
   await expect(page.locator("#toast")).toHaveText("Demo reset.");
 }
 
-/** Guided steps 1-3: finding, email, recommendation, blocked close, GC approves. */
+/** Guided steps 1-3: finding, email, recommendation, GC approves. */
 async function playToCpo(page: Page): Promise<void> {
   await page.goto("/");
   await reset(page);
-  await page.getByRole("button", { name: "Start guided demo" }).click();
+  await page.getByRole("button", { name: "Take the guided tour" }).click();
   await page.locator('[data-a="openCase"][data-x="C-104"]').click();
   await page.getByRole("button", { name: "Add finding" }).click();
   await expect(page.locator("#toast")).toHaveText("Finding added to the case.");
@@ -29,13 +46,10 @@ async function playToCpo(page: Page): Promise<void> {
   await expect(page.locator("#toast")).toHaveText(
     "Email attached. R5 fired: extortion demand.",
   );
-  await page.getByRole("button", { name: "Send for decision" }).click();
+  await page.getByRole("button", { name: "Send to approvers" }).click();
   await expect(page.locator("#toast")).toHaveText(
     "Sent to the General Counsel and the Chief Privacy Officer.",
   );
-  await page.getByRole("button", { name: "Close case" }).click();
-  await expect(page.getByText("Not allowed: Close case")).toBeVisible();
-  await expect(page.getByText("Security cannot close cases.")).toBeVisible();
 
   await page.getByRole("button", { name: "Go as General Counsel" }).click();
   await page.locator("#v1").check();
@@ -57,8 +71,8 @@ test("Ending A: the CPO rejects; disclosure required, board told", async ({
   await expect(page.locator(".case-head")).toContainText("Disclosure required");
 
   await asRole(page, "board");
-  // The role menu keeps the open case; Back goes to the board's dashboard.
-  await page.getByRole("button", { name: "← Back" }).click();
+  // The role menu keeps the open case; the breadcrumb goes to the board's overview.
+  await page.locator("nav[aria-label=Breadcrumb] button").click();
   await expect(page.locator(".brief")).toContainText(
     "Disclosure has been required, but not yet made.",
   );
@@ -73,10 +87,7 @@ test("Ending A: the CPO rejects; disclosure required, board told", async ({
   }
 
   await page.getByRole("button", { name: "Evidence log" }).click();
-  await page.locator('[data-a="logFilter"][data-x="blocked"]').click();
-  await expect(
-    page.getByText("CSO (also Deputy GC) tried to close case. Not allowed."),
-  ).toBeVisible();
+  await page.locator('[data-a="logFilter"][data-x="decision"]').click();
   await expect(page.locator(".guidecard h3")).toHaveText("Demo complete");
 });
 
@@ -92,9 +103,22 @@ test("Ending B: both approve escalating internally, board told", async ({
     page.getByText("Escalated internally by both approvers"),
   ).toBeVisible();
 
-  await asRole(page, "board");
-  // The role menu keeps the open case; Back goes to the board's dashboard.
-  await page.getByRole("button", { name: "← Back" }).click();
+  await page.getByRole("button", { name: "Go as Board" }).click();
+  // The highlighted control ends up clear of the guide card once scrolling settles.
+  await expect
+    .poll(async () => {
+      const tb = await page.locator(".pulse").boundingBox();
+      const cb = await page.locator(".guidecard").boundingBox();
+      return (
+        !!tb &&
+        !!cb &&
+        (tb.x + tb.width <= cb.x ||
+          cb.x + cb.width <= tb.x ||
+          tb.y + tb.height <= cb.y ||
+          cb.y + cb.height <= tb.y)
+      );
+    })
+    .toBe(true);
   await expect(page.locator(".brief")).toContainText(
     "Management chose to investigate internally before disclosing.",
   );
@@ -163,12 +187,11 @@ test("unsure reporter → triage; Security cannot rate, the CPO can", async ({
   await expect(page.locator(".alert.ok")).toBeVisible();
 
   await asRole(page, "security");
+  await sideTo(page, "All cases");
   await expect(page.locator("tr", { hasText: "C-105" })).toContainText(
     "Needs triage",
   );
-  await page.locator('[data-a="openCase"][data-x="C-105"]').click();
-  await page.getByRole("button", { name: "Confirm rating" }).click();
-  await expect(page.getByText("Not allowed: Confirm rating")).toBeVisible();
+  await page.locator('[data-a="openCase"][data-x="C-105"]').first().click();
 
   await asRole(page, "cpo"); // the case stays open when the new role may see it
   await expect(page.locator(".case-head")).toContainText("C-105");
@@ -192,9 +215,11 @@ test("a concern about how Security handles a case never reaches Security", async
   await expect(page.locator(".alert.ok")).toBeVisible();
 
   await asRole(page, "security");
+  await sideTo(page, "All cases");
   await expect(page.locator('[data-x="C-104"]').first()).toBeVisible(); // Security's list has loaded
   await expect(page.locator('[data-x="C-105"]')).toHaveCount(0);
   await asRole(page, "gc");
+  await sideTo(page, "All cases");
   await expect(
     page.locator("section", { hasText: "Handled independently of Security" }),
   ).toContainText("C-105");
@@ -256,4 +281,24 @@ test("independent path: the GC investigates with evidence and recommends; the CP
   await page.locator("#v1").check();
   await page.getByRole("button", { name: "Reject" }).click();
   await expect(page.locator(".case-head")).toContainText("Disclosure required");
+
+  // Review Focus 2: a role that cannot see this case lands on its home, not "not found".
+  await asRole(page, "security");
+  await expect(page.getByRole("heading", { name: "My work" })).toBeVisible();
+  await expect(page.getByText("Case not found")).toHaveCount(0);
+});
+
+test("the CSO must choose a recommendation", async ({ page }) => {
+  await page.goto("/");
+  await reset(page);
+  await asRole(page, "cso");
+  await page.locator('[data-a="openCase"][data-x="C-104"]').first().click();
+  await page.getByRole("button", { name: "Send to approvers" }).click();
+  await expect(page.locator("#toast")).toHaveText("Choose a recommendation.");
+  await page.getByLabel("Escalate internally").check();
+  await page.locator("#rReason").fill("Keep it in-house while we confirm.");
+  await page.getByRole("button", { name: "Send to approvers" }).click();
+  await expect(page.locator("#toast")).toHaveText(
+    "Sent to the General Counsel and the Chief Privacy Officer.",
+  );
 });

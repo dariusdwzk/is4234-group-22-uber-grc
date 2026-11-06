@@ -9,11 +9,9 @@ import * as schema from "@/server/db/schema";
 import { OWNER_URL, TEST_ROLE_PASSWORD } from "../tests/integration/setup/urls";
 
 const TABLES =
-  "board_items, challenge_flags, decisions, recommendations, rule_evaluations, intake_events, cases, sessions, users, rule_packs, head_exports, ledger_entries, ledger_head, demo_settings";
+  "receipts, approvals, decisions, recommendations, board_notices, evidence, signals, cases, external_anchors, ledger_entries, ledger_head, settings";
 
 async function main(): Promise<void> {
-  const demoPassword = process.env.DEMO_PASSWORD;
-  if (!demoPassword) throw new Error("DEMO_PASSWORD is not set");
   const pool = new Pool({ connectionString: OWNER_URL, max: 1 });
   try {
     const db = drizzle({ client: pool, schema });
@@ -26,7 +24,7 @@ async function main(): Promise<void> {
       await pool.query(rows[0]!.stmt);
     }
     await pool.query(`TRUNCATE ${TABLES} RESTART IDENTITY CASCADE`);
-    await db.transaction((tx) => seed(tx, { demoPassword, now: new Date() }));
+    await db.transaction((tx) => seed(tx));
   } finally {
     await pool.end();
   }

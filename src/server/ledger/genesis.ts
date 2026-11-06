@@ -5,11 +5,7 @@ import { ledgerHead } from "../db/schema";
 import { appendEntry } from "./append";
 
 /** Seq 1, prevHash = 64 zeros, event GENESIS (spec §5). Refuses to run on a non-empty ledger. */
-export async function writeGenesis(
-  tx: Tx,
-  ts: string,
-  rulePackVersion: string,
-): Promise<void> {
+export async function writeGenesis(tx: Tx, ts: string): Promise<void> {
   await tx
     .insert(ledgerHead)
     .values({ id: 1, seq: 0, hash: GENESIS_PREV_HASH })
@@ -17,7 +13,7 @@ export async function writeGenesis(
   const { seq } = await appendEntry(tx, {
     actorId: null,
     eventType: "GENESIS",
-    payload: { rulePackVersion },
+    payload: {},
     ts,
   });
   if (seq !== 1)

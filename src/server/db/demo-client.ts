@@ -7,7 +7,7 @@ import * as schema from "./schema";
 
 const g = globalThis as unknown as { __grcDemoDb?: Db };
 
-/** demo_admin connection. 404s unless DEMO_MODE=true so production cannot reach tamper/reset. */
+/** demo_admin connection. 404s unless DEMO_MODE=true so production cannot reach reset. */
 export function getDemoDb(): Db {
   if (process.env.DEMO_MODE !== "true") throw new NotFound();
   if (!g.__grcDemoDb) {

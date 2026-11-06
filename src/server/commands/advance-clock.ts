@@ -1,22 +1,29 @@
 import "server-only";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Actor } from "@/domain/types";
-import { demoSettings } from "../db/schema";
+import { settings } from "../db/schema";
 import { assertDemoMode } from "../demo";
-import { runCommand, type CommandDef } from "../run-command";
+import { anchorHead } from "../ledger/anchor";
+import { runEscalations } from "../cases/engine";
+import { logFor, runCommand, type CommandDef } from "../run-command";
 
-const schema = z.strictObject({ hours: z.number().int().min(1).max(168) });
+// Not in the UI: tests use it to move demo time (triage timeouts, review deadlines, escalations).
+const schema = z.strictObject({ hours: z.literal(24) });
 
 export const advanceClockCommand: CommandDef<z.infer<typeof schema>, void> = {
   action: "advanceClock",
+  blocked: "Blocked: Move time",
   schema,
-  handler: async ({ tx, log }, { hours }) => {
+  handler: async (ctx, { hours }) => {
+    const { tx } = ctx;
+    const now = ctx.now + hours;
     await tx
-      .update(demoSettings)
-      .set({ offsetMs: sql`${demoSettings.offsetMs} + ${hours * 3_600_000}` })
-      .where(sql`${demoSettings.id} = 1`);
-    await log("CLOCK_ADVANCED", { hours });
+      .update(settings)
+      .set({ clockH: sql`${settings.clockH} + ${hours}` })
+      .where(eq(settings.id, 1));
+    await runEscalations({ ...ctx, now, log: logFor(tx, ctx.actor, now) });
+    await anchorHead(tx, now, "Daily export");
   },
 };
 

@@ -1,64 +1,55 @@
-import "server-only";
-import type { Actor, Role } from "@/domain/types";
+import type { Actor, RoleKey } from "@/domain/types";
 
-const ALL_ROLES = [
-  "SA",
-  "CISO",
-  "GC",
-  "PCO",
-  "IA",
-  "ACC",
-  "EMP",
-  "EXEC",
-  "DEMO",
-] as const satisfies readonly Role[];
-
-// Spec §6. One table; deny by default. Commands first, then read actions.
+// Deny by default: an action not listed here, or a role not in its list, is refused.
+// Empty lists are deliberate: the attempt exists so it can be refused and logged.
 export const POLICY = {
-  login: ALL_ROLES,
-  logout: ALL_ROLES,
-  declareIncident: ["EMP", "SA", "CISO", "GC", "PCO"],
-  ingestEvent: ["DEMO"],
-  recordRecommendation: ["SA", "CISO"],
-  // Nobody may close a HIGH case directly; the attempt exists so it is refused and logged (US-11).
+  reportIncident: ["employee"],
+  checkReceipt: ["employee"],
+  // GC / CPO only on INDEPENDENT cases; the route check is in getCaseFor().
+  recordFinding: ["security", "gc", "cpo"],
+  addEvidence: ["gc", "cpo"],
+  attachContact: ["cso"],
+  recommend: ["security", "cso", "gc", "cpo"],
+  vote: ["gc", "cpo"],
+  disclose: ["gc", "cpo"],
+  confirmTriage: ["cpo"],
   closeCase: [],
-  recordMateriality: ["GC"],
-  submitDecision: ["GC", "PCO"],
-  raiseFlag: ALL_ROLES, // any signed-in user (F6)
-  resolveFlag: ["ACC", "IA"],
-  acknowledgeTier2: ["ACC"],
-  exportHead: ["ACC", "IA"],
-  verifyLedger: ["IA", "ACC", "DEMO"],
-  publishRulePack: ["GC"],
-  // Only the system actor sweeps; viewers trigger it on page load but never act as it.
-  sweep: ["EXEC"],
-  advanceClock: ["DEMO"],
-  resetDemo: ["DEMO"],
-  tamperEntry: ["DEMO"],
-  viewCases: ["SA", "CISO", "GC", "PCO", "IA"],
-  viewCase: ["SA", "CISO", "GC", "PCO", "IA"],
-  viewBoard: ["ACC"],
-  // IA verifies and exports, so IA must be able to read the ledger it verifies.
-  // DEMO operates the tamper control on this page (spec §6).
-  viewLedger: ["ACC", "IA", "DEMO"],
-  viewDemo: ["DEMO"],
-} as const satisfies Record<string, readonly Role[]>;
+  lowerSeverity: [],
+  acknowledgeNotice: ["board"],
+  viewCases: ["security", "cso", "gc", "cpo", "ceo", "board"],
+  viewBoard: ["board"],
+  viewNotices: ["security", "cso", "gc", "cpo", "ceo", "board"],
+  advanceClock: [],
+  resetDemo: [],
+} as const satisfies Record<string, readonly RoleKey[]>;
 
 export type Action = keyof typeof POLICY;
 
-// The only action that does not need a signed-in actor.
-const PUBLIC_ACTIONS: ReadonlySet<Action> = new Set<Action>(["login"]);
+// The demo menu works with or without a role, as in the mockup. Callers still assert DEMO_MODE.
+const DEMO_ACTIONS: ReadonlySet<Action> = new Set<Action>([
+  "advanceClock",
+  "resetDemo",
+]);
 
 export type AuthzResult = { ok: true } | { ok: false; reason: string };
 
+// Refusals people are expected to try get a plain explanation instead of the generic one.
+const REASONS: Partial<Record<Action, string>> = {
+  confirmTriage:
+    "Only the Chief Privacy Officer can confirm the rating. Security establishes the facts.",
+};
+
 export function authorize(actor: Actor | null, action: Action): AuthzResult {
-  if (PUBLIC_ACTIONS.has(action)) return { ok: true };
-  if (!actor) return { ok: false, reason: "not signed in" };
+  if (DEMO_ACTIONS.has(action)) return { ok: true };
+  if (!actor?.role) return { ok: false, reason: "Choose a role first." };
   const allowed = (
     Object.hasOwn(POLICY, action) ? POLICY[action] : []
-  ) as readonly Role[];
+  ) as readonly RoleKey[];
   if (!allowed.includes(actor.role)) {
-    return { ok: false, reason: `role ${actor.role} may not ${action}` };
+    return {
+      ok: false,
+      reason: REASONS[action] ?? `${actor.name} may not ${action}.`,
+    };
   }
   return { ok: true };
 }

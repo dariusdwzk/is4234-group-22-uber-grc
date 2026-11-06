@@ -1,170 +1,259 @@
-import { expect, test } from "@playwright/test";
-import {
-  firePreset,
-  loginAs,
-  raiseFlag,
-  resetDemo,
-  tamper,
-  verifyLedger,
-} from "./fixtures";
+import { expect, test, type Page } from "@playwright/test";
 
-test.describe.serial("replay: Uber 2016, steps 1-8", () => {
-  test.beforeAll(async ({ browser }) => {
-    const page = await browser.newPage();
-    await resetDemo(page);
-    await page.close();
-  });
+// The mockup's guided tour, clicked through in the browser, for both endings.
+// Reduced motion: the guide then jumps (not smooth-scrolls) to the highlighted control.
+test.use({ contextOptions: { reducedMotion: "reduce" } });
 
-  test("Step 1 (F11): employee declares out-of-band demand; sees receipt only", async ({
-    page,
-  }) => {
-    await loginAs(page, "emp");
-    await page.goto("/report");
+async function asRole(page: Page, role: string): Promise<void> {
+  await page.selectOption("#roleSel", role);
+}
+
+async function reset(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Reset data" }).click();
+  await expect(page.locator("#toast")).toHaveText("Demo reset.");
+}
+
+/** Guided steps 1-3: finding, email, recommendation, blocked close, GC approves. */
+async function playToCpo(page: Page): Promise<void> {
+  await page.goto("/");
+  await reset(page);
+  await page.getByRole("button", { name: "Start guided demo" }).click();
+  await page.locator('[data-a="openCase"][data-x="C-104"]').click();
+  await page.getByRole("button", { name: "Add finding" }).click();
+  await expect(page.locator("#toast")).toHaveText("Finding added to the case.");
+
+  await page
+    .getByRole("button", { name: "Go as CSO (also Deputy GC)" })
+    .click();
+  await page.getByRole("button", { name: "Attach to case" }).click();
+  await expect(page.locator("#toast")).toHaveText(
+    "Email attached. R5 fired: extortion demand.",
+  );
+  await page.getByRole("button", { name: "Send for decision" }).click();
+  await expect(page.locator("#toast")).toHaveText(
+    "Sent to the General Counsel and the Chief Privacy Officer.",
+  );
+  await page.getByRole("button", { name: "Close case" }).click();
+  await expect(page.getByText("Not allowed: Close case")).toBeVisible();
+  await expect(page.getByText("Security cannot close cases.")).toBeVisible();
+
+  await page.getByRole("button", { name: "Go as General Counsel" }).click();
+  await page.locator("#v1").check();
+  await page.getByRole("button", { name: "Approve", exact: true }).click();
+  await expect(page.locator("#toast")).toHaveText(
+    "Approved. Waiting for Chief Privacy Officer.",
+  );
+  await page
+    .getByRole("button", { name: "Go as Chief Privacy Officer" })
+    .click();
+  await page.locator("#v1").check();
+}
+
+test("Ending A: the CPO rejects; disclosure required, board told", async ({
+  page,
+}) => {
+  await playToCpo(page);
+  await page.getByRole("button", { name: "Reject" }).click();
+  await expect(page.locator(".case-head")).toContainText("Disclosure required");
+
+  await asRole(page, "board");
+  // The role menu keeps the open case; Back goes to the board's dashboard.
+  await page.getByRole("button", { name: "← Back" }).click();
+  await expect(page.locator(".brief")).toContainText(
+    "Disclosure has been required, but not yet made.",
+  );
+  await page.locator('[data-a="expand"][data-x="C-104"]').click();
+  await expect(
+    page.getByText(/rejected the recommendation on C-104/),
+  ).toBeVisible();
+  const ack = page.getByRole("button", { name: "Acknowledge" });
+  for (let left = await ack.count(); left > 0; left--) {
+    await ack.first().click();
+    await expect(ack).toHaveCount(left - 1);
+  }
+
+  await page.getByRole("button", { name: "Evidence log" }).click();
+  await page.locator('[data-a="logFilter"][data-x="blocked"]').click();
+  await expect(
+    page.getByText("CSO (also Deputy GC) tried to close case. Not allowed."),
+  ).toBeVisible();
+  await expect(page.locator(".guidecard h3")).toHaveText("Demo complete");
+});
+
+test("Ending B: both approve escalating internally, board told", async ({
+  page,
+}) => {
+  await playToCpo(page);
+  await expect(
+    page.getByText("Reason: Treat it as a bug bounty and keep it in-house"),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Approve", exact: true }).click();
+  await expect(
+    page.getByText("Escalated internally by both approvers"),
+  ).toBeVisible();
+
+  await asRole(page, "board");
+  // The role menu keeps the open case; Back goes to the board's dashboard.
+  await page.getByRole("button", { name: "← Back" }).click();
+  await expect(page.locator(".brief")).toContainText(
+    "Management chose to investigate internally before disclosing.",
+  );
+  await expect(page.getByText("Legal duties")).toHaveCount(0);
+  await expect(page.getByText("Safeguards")).toHaveCount(0);
+  await expect(page.locator(".inc2").first()).toContainText(
+    "Waiting on General Counsel or Chief Privacy Officer (to disclose)",
+  );
+});
+
+async function answer(
+  page: Page,
+  answers: Record<string, string>,
+): Promise<void> {
+  for (const q of [
+    "data",
+    "money",
+    "harm",
+    "handling",
+    "systems",
+    "outsiders",
+    "ongoing",
+  ])
     await page
-      .getByLabel("Description")
-      .fill(
-        "External party emailed a security lead's personal address claiming to hold rider/driver data and demanding payment.",
-      );
-    await page.getByLabel("Related reference (optional)").fill("REPLAY-2016");
-    await page.getByRole("button", { name: "Submit report" }).click();
-    await expect(page.getByRole("status")).toContainText("Thank you — receipt");
-    await expect(page.getByRole("status")).toContainText(
-      "The case is now with the incident governance process.",
-    );
-    await expect(page.locator("body")).not.toContainText("CASE-");
-    await page.goto("/cases");
-    // Streamed under Suspense, so the status is already 200: assert on what renders.
-    await expect(page.getByText("could not be found")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Cases" })).toHaveCount(0);
-  });
+      .locator(`input[name="q-${q}"][value="${answers[q] ?? "NO"}"]`)
+      .check();
+}
 
-  test("Step 2 (F12, F3): alert + bounty + payment merge into the declared case", async ({
-    page,
-  }) => {
-    await firePreset(page, /Cloud download alert/);
-    await firePreset(page, /Bug bounty report/);
-    await firePreset(page, /Payment request/);
-    await loginAs(page, "sa");
-    await page.goto("/cases");
-    await expect(page.getByRole("link", { name: /CASE-/ })).toHaveCount(1);
-    await page.getByRole("link", { name: "CASE-0001" }).click();
-    await expect(
-      page.getByRole("region", { name: "Events" }).getByRole("listitem"),
-    ).toHaveCount(4);
-  });
+test("an employee's report runs through the same flow: rated by the rules, board told", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await reset(page);
+  await asRole(page, "employee");
+  await page
+    .locator("#eTxt")
+    .fill("Someone emailed me demanding money for rider data.");
+  await page.getByRole("button", { name: "Send report" }).click();
+  await expect(page.locator("#toast")).toHaveText(
+    "Answer every question: Yes, No or Not sure.",
+  );
+  await answer(page, { data: "YES", money: "YES", outsiders: "YES" });
+  await page.getByRole("button", { name: "Send report" }).click();
+  await expect(page.locator(".alert.ok")).toContainText(
+    /Report sent. Receipt code: RC-[0-9A-Z]{4}/,
+  );
 
-  test("Step 3 (F3–F5, F8): case is HIGH with R-PII, R-PAY-LINKED, R-PAYEE, R-CAP, R-EXTORT and a Tier 1 notice exists", async ({
-    page,
-  }) => {
-    await loginAs(page, "sa");
-    await page.goto("/cases");
-    await page.getByRole("link", { name: "CASE-0001" }).click();
-    await expect(page.getByTestId("tier")).toHaveText("HIGH");
-    const rules = page.getByRole("region", { name: "Fired rules" });
-    for (const id of ["R-PII", "R-PAY-LINKED", "R-PAYEE", "R-CAP", "R-EXTORT"])
-      await expect(rules).toContainText(id);
-    const tier1 = page.getByRole("region", { name: "Tier 1 board notice" });
-    await expect(tier1).toContainText("CASE-0001");
-    await expect(tier1).toContainText("Read-only notice — no action required.");
-  });
+  await asRole(page, "security");
+  await page.locator('[data-a="openCase"][data-x="C-105"]').click();
+  await expect(page.locator(".case-head")).toContainText("HIGH");
+  await expect(
+    page.getByText("Reported by staff; scale not yet known").first(),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add finding" })).toBeVisible();
+});
 
-  test('Step 4 (F1): security recommends "treat as bug bounty", close is refused naming missing approvals', async ({
-    page,
-  }) => {
-    await loginAs(page, "sa");
-    await page.goto("/cases");
-    await page.getByRole("link", { name: "CASE-0001" }).click();
-    await page.getByLabel("Was data taken?").selectOption("no");
-    await page.getByLabel("Treat as").selectOption("bug_bounty");
-    await page.getByLabel("Proposed outcome").selectOption("withhold");
-    await page.getByLabel("Recommendation", { exact: true }).fill("Bounty.");
-    await page.getByRole("button", { name: "Record recommendation" }).click();
-    await expect(
-      page.getByText("Recommendation conflicts with evidence"),
-    ).toBeVisible();
-    await page.getByRole("button", { name: "Close case" }).click();
-    await expect(page.getByRole("alert").first()).toContainText(
-      "Missing: General Counsel, Privacy/Compliance",
-    );
-    await expect(page.getByTestId("tier")).toHaveText("HIGH");
-    await expect(page.getByTestId("status")).toHaveText("open");
-  });
+test("unsure reporter → triage; Security cannot rate, the CPO can", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await reset(page);
+  await asRole(page, "employee");
+  await page.locator("#eTxt").fill("Lost a laptop that may have rider data.");
+  await answer(page, { data: "NOT_SURE" });
+  await page.getByRole("button", { name: "Send report" }).click();
+  await expect(page.locator(".alert.ok")).toBeVisible();
 
-  test("Step 5 (F2): GC and PCO sign withhold with checklist and reason code → case closed; board Tier 1 still present", async ({
-    page,
-  }) => {
-    for (const who of ["gc", "pco"] as const) {
-      await loginAs(page, who);
-      await page.goto("/cases");
-      await page.getByRole("link", { name: "CASE-0001" }).click();
-      await page.getByLabel("Withhold").check();
-      await page.getByLabel("Reason code").selectOption("LEGAL_ADVICE");
-      for (const box of await page
-        .getByRole("group", { name: /Checklist/ })
-        .getByRole("checkbox")
-        .all())
-        await box.check();
-      await page.getByRole("button", { name: "Submit decision" }).click();
-    }
-    await expect(page.getByTestId("status")).toHaveText("closed");
-    await expect(page.getByTestId("gate-state")).toContainText(
-      "Agreed: withhold",
-    );
-    await expect(
-      page.getByRole("region", { name: "Tier 1 board notice" }),
-    ).toContainText("CASE-0001");
-  });
+  await asRole(page, "security");
+  await expect(page.locator("tr", { hasText: "C-105" })).toContainText(
+    "Needs triage",
+  );
+  await page.locator('[data-a="openCase"][data-x="C-105"]').click();
+  await page.getByRole("button", { name: "Confirm rating" }).click();
+  await expect(page.getByText("Not allowed: Confirm rating")).toBeVisible();
 
-  test("Step 6 (F6): employee challenge flag escalates to Tier 2", async ({
-    page,
-  }) => {
-    await raiseFlag(page, "CASE-0001", "The case was closed too quickly.");
-    await loginAs(page, "acc");
-    await page.goto("/board");
-    const item = page
-      .getByTestId("tier2-item")
-      .filter({ hasText: "challenge flag" });
-    await expect(item).toHaveCount(1);
-    await expect(item).toContainText("CASE-0001");
-  });
+  await asRole(page, "cpo"); // the case stays open when the new role may see it
+  await expect(page.locator(".case-head")).toContainText("C-105");
+  await page.selectOption("#tRating", "LOW");
+  await page.locator("#tReason").fill("Encrypted and wiped remotely.");
+  await page.getByRole("button", { name: "Confirm rating" }).click();
+  await expect(page.locator("#toast")).toHaveText(
+    "Rated LOW. Security reviews it within 3 business days.",
+  );
+});
 
-  test("Step 7 (F10): demo tamper makes verify fail at entry N", async ({
-    page,
-  }) => {
-    await loginAs(page, "acc");
-    await page.goto("/ledger");
-    await verifyLedger(page);
-    await expect(page.getByTestId("verify-result")).toContainText("Ledger OK");
-    await tamper(page, 4);
-    await page.goto("/ledger");
-    await verifyLedger(page);
-    await expect(page.getByTestId("verify-result")).toContainText(
-      "Verification failed at entry 4",
-    );
-  });
+test("a concern about how Security handles a case never reaches Security", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await reset(page);
+  await asRole(page, "employee");
+  await page.locator("#eTxt").fill("The CSO is calling a breach a bug bounty.");
+  await answer(page, { handling: "YES" });
+  await page.getByRole("button", { name: "Send report" }).click();
+  await expect(page.locator(".alert.ok")).toBeVisible();
 
-  test("Step 8 (F9): dashboard shows days-to-board vs 371", async ({
-    page,
-  }) => {
-    await loginAs(page, "acc");
-    await page.goto("/board");
-    await expect(page.getByTestId("kpi-card").first()).toContainText(
-      "Detection → board notice",
-    );
-    await expect(page.getByTestId("kpi-uber")).toContainText(
-      "Uber 2016: 371 days to disclosure",
-    );
-    await expect(page.getByTestId("head-status")).toContainText(
-      "Verification failed at entry 4",
-    );
-  });
+  await asRole(page, "security");
+  await expect(page.locator('[data-x="C-104"]').first()).toBeVisible(); // Security's list has loaded
+  await expect(page.locator('[data-x="C-105"]')).toHaveCount(0);
+  await asRole(page, "gc");
+  await expect(
+    page.locator("section", { hasText: "Handled independently of Security" }),
+  ).toContainText("C-105");
+});
 
-  test("Scenario C: low-risk login auto-logged as LOW", async ({ page }) => {
-    await firePreset(page, /Scenario C/);
-    await loginAs(page, "sa");
-    await page.goto("/cases");
-    const row = page.getByRole("row", { name: /CASE-0002/ });
-    await expect(row).toContainText("LOW");
-    await expect(row).toContainText("auto_closed");
+test("independent path: the GC investigates with evidence and recommends; the CPO decides", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await reset(page);
+  await asRole(page, "employee");
+  await page.locator("#eTxt").fill("The CSO is calling a breach a bug bounty.");
+  await answer(page, { handling: "YES" });
+  await page.getByRole("button", { name: "Send report" }).click();
+  await expect(page.locator(".alert.ok")).toBeVisible();
+
+  await asRole(page, "gc");
+  await page.locator('[data-a="openCase"][data-x="C-105"]').first().click();
+  const tracker = page.locator(".tracker");
+  await expect(tracker).toContainText("Report received");
+  await expect(tracker).not.toContainText("Security team");
+  await expect(tracker).toContainText("The other one must approve");
+
+  await page.locator("#fTxt").fill("The CSO asked staff to keep it quiet.");
+  await page.getByRole("button", { name: "Add finding" }).click();
+  await expect(page.locator("#toast")).toHaveText("Finding added to the case.");
+  await page.locator("#evNote").fill("Message the CSO sent to the team.");
+  await page.locator("#evFile").setInputFiles({
+    name: "message.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("Call it a bug bounty. Keep it quiet."),
   });
+  await page.getByRole("button", { name: "Add evidence" }).click();
+  await expect(page.locator("#toast")).toHaveText("Evidence and file added.");
+  await expect(
+    page.locator("section", { hasText: "Evidence (1)" }),
+  ).toContainText("message.txt");
+  await expect(tracker).toContainText("General Counsel");
+
+  await page.selectOption("#iAct", "escalate");
+  await page.locator("#iReason").fill("No customer data involved.");
+  await page
+    .getByRole("button", { name: "Send to the Chief Privacy Officer" })
+    .click();
+  await expect(
+    page.getByText(
+      "You recommended this, so the Chief Privacy Officer decides.",
+    ),
+  ).toBeVisible();
+
+  await asRole(page, "cpo"); // the case stays open when the new role may see it
+  await expect(page.locator(".case-head")).toContainText("C-105");
+  await expect(
+    page.getByRole("heading", { name: "Your decision" }),
+  ).toBeVisible();
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Download" }).click();
+  expect((await download).suggestedFilename()).toBe("message.txt");
+  await page.locator("#v1").check();
+  await page.getByRole("button", { name: "Reject" }).click();
+  await expect(page.locator(".case-head")).toContainText("Disclosure required");
 });

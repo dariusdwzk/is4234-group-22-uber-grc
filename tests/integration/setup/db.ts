@@ -1,7 +1,6 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { GENESIS_PREV_HASH } from "@/domain/hash";
-import type { Actor, Role } from "@/domain/types";
 import * as schema from "@/server/db/schema";
 import { APP_URL, DEMO_URL, OWNER_URL } from "./urls";
 
@@ -14,20 +13,18 @@ export const appDb = drizzle({ client: appPool, schema });
 export const demoDb = drizzle({ client: demoPool, schema });
 
 const TABLES = [
-  "board_items",
-  "challenge_flags",
+  "receipts",
+  "approvals",
   "decisions",
   "recommendations",
-  "rule_evaluations",
-  "intake_events",
+  "board_notices",
+  "evidence",
+  "signals",
   "cases",
-  "sessions",
-  "users",
-  "rule_packs",
-  "head_exports",
+  "external_anchors",
   "ledger_entries",
   "ledger_head",
-  "demo_settings",
+  "settings",
 ];
 
 /** Truncates everything as owner and re-seeds the two single-row tables. */
@@ -39,9 +36,31 @@ export async function resetTestDb(): Promise<void> {
     "INSERT INTO ledger_head (id, seq, hash) VALUES (1, 0, $1)",
     [GENESIS_PREV_HASH],
   );
-  await ownerPool.query(
-    "INSERT INTO demo_settings (id, offset_ms) VALUES (1, 0)",
-  );
+  await ownerPool.query("INSERT INTO settings (id, clock_h) VALUES (1, 0)");
+}
+
+/** Edits a ledger row as owner with the append-only trigger off: simulates an attacker with DB access. */
+export async function tamperAsOwner(
+  statement: string,
+  params: unknown[] = [],
+): Promise<void> {
+  const c = await ownerPool.connect();
+  try {
+    await c.query("BEGIN");
+    await c.query(
+      "ALTER TABLE ledger_entries DISABLE TRIGGER ledger_entries_append_only",
+    );
+    await c.query(statement, params);
+    await c.query(
+      "ALTER TABLE ledger_entries ENABLE TRIGGER ledger_entries_append_only",
+    );
+    await c.query("COMMIT");
+  } catch (err) {
+    await c.query("ROLLBACK");
+    throw err;
+  } finally {
+    c.release();
+  }
 }
 
 export async function closeAll(): Promise<void> {
@@ -52,27 +71,4 @@ export async function closeAll(): Promise<void> {
     demoPool.end(),
     g.__grcAppPool?.end(),
   ]);
-}
-
-/** Inserts a synthetic user as owner. Pass a precomputed hash to keep tests fast. */
-export async function seedUser(opts: {
-  email: string;
-  role: Role;
-  passwordHash: string;
-  displayName?: string;
-}): Promise<Actor> {
-  const [row] = await ownerDb
-    .insert(schema.users)
-    .values({
-      email: opts.email,
-      role: opts.role,
-      displayName: opts.displayName ?? opts.role,
-      passwordHash: opts.passwordHash,
-    })
-    .returning({ id: schema.users.id });
-  return {
-    id: row!.id,
-    role: opts.role,
-    displayName: opts.displayName ?? opts.role,
-  };
 }

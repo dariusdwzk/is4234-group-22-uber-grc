@@ -1,7 +1,19 @@
 import "server-only";
+import type { BlockedEventType } from "./ledger/event-types";
 
 export class Forbidden extends Error {
-  constructor(public readonly reason: string) {
+  /**
+   * @param reason shown to the user.
+   * @param opts go into the Blocked ledger entry; each defaults to the command's own.
+   */
+  constructor(
+    public readonly reason: string,
+    public readonly opts: {
+      blocked?: BlockedEventType;
+      caseId?: string;
+      detail?: string;
+    } = {},
+  ) {
     super(reason);
     this.name = "Forbidden";
   }
@@ -15,7 +27,11 @@ export class NotFound extends Error {
 }
 
 export class ValidationError extends Error {
-  constructor(public readonly issues: unknown) {
+  /** @param userMessage shown to the user when the problem is theirs to fix (e.g. file too big). */
+  constructor(
+    public readonly issues: unknown,
+    public readonly userMessage?: string,
+  ) {
     super("invalid input");
     this.name = "ValidationError";
   }

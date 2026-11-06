@@ -1,25 +1,27 @@
 import "server-only";
-import { asc, desc, eq, gt } from "drizzle-orm";
+import { asc, gt } from "drizzle-orm";
 import {
   ChainVerifier,
   type LedgerRow,
   type VerifyResult,
 } from "@/domain/ledger-verify";
 import { db, type DbClient } from "../db/client";
-import { headExports, ledgerEntries } from "../db/schema";
+import { externalAnchors, ledgerEntries } from "../db/schema";
 
 const BATCH = 1000;
 
-export type ExportedHeadCheck = { seq: number; hash: string; matches: boolean };
 export type ChainVerification = VerifyResult & {
-  exportedHead?: ExportedHeadCheck;
+  anchorsOk: boolean;
+  /** Anchor seqs whose stored hash no longer matches the ledger. */
+  anchorMismatches: number[];
 };
 
-/** Read-only: walks the whole chain in seq order and compares the latest exported head. */
+/** Read-only: recomputes the whole chain in seq order, then compares every external anchor. */
 export async function verifyChain(
   client: DbClient = db,
 ): Promise<ChainVerification> {
   const verifier = new ChainVerifier();
+  const hashBySeq = new Map<number, string>();
   let after = 0;
   for (;;) {
     const batch = await client
@@ -39,41 +41,20 @@ export async function verifyChain(
         payload: r.payload,
         hash: r.hash,
       };
+      hashBySeq.set(r.seq, r.hash);
       if (verifier.push(row)) break;
     }
     if (!verifier.result().ok || batch.length < BATCH) break;
     after = batch[batch.length - 1]!.seq;
   }
-  const result = verifier.result();
 
-  // A reset restarts the chain at seq 1, so exports from before the latest DEMO_RESET
-  // belong to a chain that no longer exists (its head is kept in the DEMO_RESET payload).
-  const [reset] = await client
-    .select({ ts: ledgerEntries.tsIso })
-    .from(ledgerEntries)
-    .where(eq(ledgerEntries.eventType, "DEMO_RESET"))
-    .orderBy(desc(ledgerEntries.seq))
-    .limit(1);
-  const exports = await client
-    .select()
-    .from(headExports)
-    .orderBy(desc(headExports.id))
-    .limit(1);
-  const [exported] =
-    reset && exports[0] && exports[0].exportedAt.toISOString() <= reset.ts
-      ? []
-      : exports;
-  if (!exported) return result;
-  const [atSeq] = await client
-    .select({ hash: ledgerEntries.hash })
-    .from(ledgerEntries)
-    .where(eq(ledgerEntries.seq, exported.seq));
+  const anchors = await client.select().from(externalAnchors);
+  const anchorMismatches = anchors
+    .filter((a) => hashBySeq.get(a.seq) !== a.headHash)
+    .map((a) => a.seq);
   return {
-    ...result,
-    exportedHead: {
-      seq: exported.seq,
-      hash: exported.hash,
-      matches: atSeq?.hash === exported.hash,
-    },
+    ...verifier.result(),
+    anchorsOk: anchorMismatches.length === 0,
+    anchorMismatches,
   };
 }

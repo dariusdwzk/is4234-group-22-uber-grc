@@ -1,90 +1,81 @@
-import type { Actor, Outcome } from "./types";
+import { ROLES } from "./roles";
 
-export type ReasonCode =
-  | "LEGAL_ADVICE"
-  | "REGULATORY_DEADLINE"
-  | "CONTAINMENT_CONFIRMED"
-  | "INSUFFICIENT_EVIDENCE"
-  | "LAW_ENFORCEMENT_REQUEST"
-  | "OTHER";
+export type RecAction = "escalate" | "disclose";
+export type Approver = "gc" | "cpo";
+export type Vote = "approve" | "reject";
+export type DecisionStatus = "Pending" | "Approved" | "Rejected";
 
-export const REASON_CODES: readonly ReasonCode[] = [
-  "LEGAL_ADVICE",
-  "REGULATORY_DEADLINE",
-  "CONTAINMENT_CONFIRMED",
-  "INSUFFICIENT_EVIDENCE",
-  "LAW_ENFORCEMENT_REQUEST",
-  "OTHER",
-];
+export const ESCALATE_TYPE = "Escalate internally for further investigation";
+export const DISCLOSE_TYPE = "Notify regulators and affected people";
+/** Both keys agreed to investigate further before disclosing. Clocks keep running. */
+export const ESCALATED_STATUS = "Under internal investigation";
 
-type GateRole = "GC" | "PCO";
-const GATE_ROLES: readonly GateRole[] = ["GC", "PCO"];
-
-export type Decision = {
-  approverId: string;
-  approverRole: GateRole;
-  outcome: Outcome;
-  notifyBy: string | null;
-  reasonCode: ReasonCode;
+export type NewDecision = {
+  type: string;
+  need: 1 | 2;
+  disclose: boolean;
+  caseStatus: string;
 };
 
-export type Checklist = {
-  reviewedEvidence: boolean;
-  noPersonalConflict: boolean;
-  consideredRegulatorDeadlines: boolean;
-  consideredBoardNotice: boolean;
-  notInstructedBySecurity: boolean;
-};
+/** The approver who is not `role`. */
+export const otherApprover = (role: Approver): Approver =>
+  role === "gc" ? "cpo" : "gc";
 
-export type GateState =
-  | { status: "awaiting"; missing: GateRole[] }
-  | { status: "agreed"; outcome: Outcome; notifyBy: string | null }
-  | { status: "disagreement" };
+const typeFor = (action: RecAction) =>
+  action === "escalate" ? ESCALATE_TYPE : DISCLOSE_TYPE;
 
-/** Two keys: GC and PCO. A later entry for the same role replaces the earlier one. */
-export function gateState(decisions: readonly Decision[]): GateState {
-  const byRole = new Map<GateRole, Decision>();
-  for (const x of decisions) byRole.set(x.approverRole, x);
-  const missing = GATE_ROLES.filter((r) => !byRole.has(r));
-  if (missing.length > 0) return { status: "awaiting", missing };
-  const [a, b] = GATE_ROLES.map((r) => byRole.get(r)!) as [Decision, Decision];
-  const sameDate = a.outcome !== "notify_later" || a.notifyBy === b.notifyBy;
-  if (a.outcome !== b.outcome || !sameDate) return { status: "disagreement" };
+/**
+ * Independent path: one of GC / CPO recommends, and the recommendation is their key.
+ * The other one must decide, so no one approves their own recommendation.
+ */
+export function independentDecisionFor(
+  action: RecAction,
+  author: Approver,
+): NewDecision {
   return {
-    status: "agreed",
-    outcome: a.outcome,
-    notifyBy: a.outcome === "notify_later" ? a.notifyBy : null,
+    type: typeFor(action),
+    need: 1,
+    disclose: action === "disclose",
+    caseStatus: "Awaiting " + ROLES[otherApprover(author)].name,
   };
 }
 
-export type DecisionRefusal =
-  | "WRONG_ROLE"
-  | "NOT_INDEPENDENT"
-  | "SAME_APPROVER"
-  | "CHECKLIST_INCOMPLETE"
-  | "NOTIFY_DATE_REQUIRED";
+/** Anything short of disclosure needs both keys; disclosing needs one (mockup: A.rec). */
+export function decisionFor(action: RecAction): NewDecision {
+  return action === "escalate"
+    ? {
+        type: typeFor(action),
+        need: 2,
+        disclose: false,
+        caseStatus: "Awaiting 2 approvals",
+      }
+    : {
+        type: typeFor(action),
+        need: 1,
+        disclose: true,
+        caseStatus: "Awaiting decision",
+      };
+}
 
-export function checkDecision(input: {
-  approver: Actor;
-  independent: boolean;
-  checklist: Checklist;
-  outcome: Outcome;
-  notifyBy: string | null;
-  existing: readonly Decision[];
-}): { ok: true } | { ok: false; reason: DecisionRefusal } {
-  const { approver } = input;
-  if (approver.role !== "GC" && approver.role !== "PCO")
-    return { ok: false, reason: "WRONG_ROLE" };
-  if (!input.independent) return { ok: false, reason: "NOT_INDEPENDENT" };
-  if (
-    input.existing.some(
-      (x) => x.approverRole !== approver.role && x.approverId === approver.id,
-    )
-  )
-    return { ok: false, reason: "SAME_APPROVER" };
-  if (!Object.values(input.checklist).every((v) => v === true))
-    return { ok: false, reason: "CHECKLIST_INCOMPLETE" };
-  if (input.outcome === "notify_later" && !input.notifyBy)
-    return { ok: false, reason: "NOTIFY_DATE_REQUIRED" };
-  return { ok: true };
+export type VoteOutcome =
+  /** Any rejection: disclosure required, board told. */
+  | { kind: "rejected" }
+  /** A disclose decision approved by one key. */
+  | { kind: "disclosed" }
+  /** Both keys agreed to escalate internally: board told, clocks run on. */
+  | { kind: "escalated" }
+  | { kind: "waiting"; caseStatus: string };
+
+/** What a vote does, given the decision and the other approver's vote (mockup: A.vote). */
+export function voteOutcome(
+  decision: { disclose: boolean },
+  voter: Approver,
+  vote: Vote,
+  otherVote: Vote | null,
+): VoteOutcome {
+  if (vote === "reject") return { kind: "rejected" };
+  if (decision.disclose) return { kind: "disclosed" };
+  if (otherVote === "approve") return { kind: "escalated" };
+  const other: Approver = voter === "gc" ? "cpo" : "gc";
+  return { kind: "waiting", caseStatus: "Awaiting " + ROLES[other].name };
 }

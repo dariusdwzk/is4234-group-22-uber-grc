@@ -1,24 +1,131 @@
 {
   "version": "v1",
-  "owner": "GC",
-  "programmeMaxCents": 1000000,
-  "extortionTerms": ["pay us", "unless you pay", "we will release", "ransom"],
-  "slas": { "classifyH": 24, "decideH": 72, "escalateAtPct": 75 },
-  "clocks": [
-    { "id": "SEC_1_05", "label": "SEC Form 8-K Item 1.05 (illustrative: 4 business days from materiality determination)" },
-    { "id": "GDPR_33", "label": "GDPR Art. 33 (illustrative: 72 hours from awareness)" },
-    { "id": "PDPA_26D", "label": "Singapore PDPA s.26D (illustrative: 3 calendar days from notifiable assessment)" },
-    { "id": "INT_CLASSIFY", "label": "Internal SLA: classify within 24 hours (illustrative)" },
-    { "id": "INT_DECIDE", "label": "Internal SLA: decide within 72 hours (illustrative)" }
-  ],
+  "owner": "Legal (General Counsel)",
   "rules": [
-    { "id": "R-PII", "description": "Personal data accessed", "when": { "fact": "personalDataAccessed", "op": "isTrue" }, "tier": "HIGH" },
-    { "id": "R-PAY-LINKED", "description": "Payment linked to an incident, whatever its label", "when": { "fact": "paymentLinkedToIncident", "op": "isTrue" }, "tier": "HIGH" },
-    { "id": "R-PAYEE", "description": "Payee identity not verified", "when": { "fact": "payeeVerified", "op": "isFalse" }, "tier": "HIGH" },
-    { "id": "R-CAP", "description": "Amount exceeds the programme maximum", "when": { "fact": "amountCents", "op": "gtFact", "value": "programmeMaxCents" }, "tier": "HIGH" },
-    { "id": "R-EXTORT", "description": "Extortion language present", "when": { "fact": "extortionLanguage", "op": "isTrue" }, "tier": "HIGH" },
-    { "id": "R-REGULATOR", "description": "Regulator inquiry open", "when": { "fact": "regulatorInquiryOpen", "op": "isTrue" }, "tier": "HIGH" },
-    { "id": "R-DEADLINE", "description": "Legal notification deadline triggered", "when": { "fact": "legalDeadlineTriggered", "op": "isTrue" }, "tier": "HIGH" },
-    { "id": "R-FLAG", "description": "Open challenge flag on the case", "when": { "fact": "openChallengeFlag", "op": "isTrue" }, "tier": "HIGH" }
+    {
+      "id": "R1",
+      "name": "Personal data downloaded",
+      "effect": "high",
+      "when": [
+        {
+          "fact": "dataAccessed",
+          "op": "isTrue"
+        }
+      ],
+      "evidence": "{objects} objects, about {records} records",
+      "unknownEvidence": "Reported by staff; scale not yet known"
+    },
+    {
+      "id": "R5",
+      "name": "Extortion demand from the attacker",
+      "effect": "high",
+      "when": [
+        {
+          "fact": "extortion",
+          "op": "isTrue"
+        }
+      ],
+      "evidence": "Attacker demands money to delete the data"
+    },
+    {
+      "id": "R6",
+      "name": "Regulator inquiry open",
+      "effect": "modifier",
+      "when": [
+        {
+          "fact": "regulatorInquiryOpen",
+          "op": "isTrue"
+        },
+        {
+          "fact": "anyHigh",
+          "op": "isTrue"
+        }
+      ],
+      "evidence": "FTC inquiry into the 2014 breach"
+    },
+    {
+      "id": "R8",
+      "name": "Legal deadline triggered",
+      "effect": "clocks",
+      "when": [
+        {
+          "fact": "dataAccessed",
+          "op": "isTrue"
+        },
+        {
+          "fact": "jurisdictions",
+          "op": "nonEmpty"
+        }
+      ],
+      "evidence": "Residents of {jurisdictions}"
+    },
+    {
+      "id": "R9",
+      "name": "Money demanded, paid, moved or lost wrongly",
+      "effect": "high",
+      "when": [
+        {
+          "fact": "moneyConcern",
+          "op": "isTrue"
+        }
+      ],
+      "evidence": "Reported by staff"
+    },
+    {
+      "id": "R10",
+      "name": "Someone could be harmed",
+      "effect": "high",
+      "when": [
+        {
+          "fact": "harmConcern",
+          "op": "isTrue"
+        }
+      ],
+      "evidence": "Reported by staff"
+    },
+    {
+      "id": "R11",
+      "name": "Concern about how the incident is handled",
+      "effect": "high",
+      "when": [
+        {
+          "fact": "handlingConcern",
+          "op": "isTrue"
+        }
+      ],
+      "evidence": "Reported by staff; handled independently of Security"
+    },
+    {
+      "id": "R12",
+      "name": "Systems down and still happening",
+      "effect": "high",
+      "when": [
+        {
+          "fact": "systemsDown",
+          "op": "isTrue"
+        },
+        {
+          "fact": "ongoing",
+          "op": "isTrue"
+        }
+      ],
+      "evidence": "Reported by staff"
+    },
+    {
+      "id": "R13",
+      "name": "Systems down and outsiders involved",
+      "effect": "high",
+      "when": [
+        {
+          "fact": "systemsDown",
+          "op": "isTrue"
+        },
+        {
+          "fact": "outsidersAware",
+          "op": "isTrue"
+        }
+      ],
+      "evidence": "Reported by staff"
+    }
   ]
 }

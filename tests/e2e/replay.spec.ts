@@ -52,6 +52,12 @@ async function playToCpo(page: Page): Promise<void> {
   );
 
   await page.getByRole("button", { name: "Go as General Counsel" }).click();
+  // Keeping it internal brought the 2016 payout request; it is held before anyone decides.
+  const summary = page.locator(".summary");
+  await expect(summary).toContainText("Payment held");
+  await expect(summary).toContainText(
+    "US$100,000 to an unverified payee, above the US$10,000 limit",
+  );
   await page.locator("#v1").check();
   await page.getByRole("button", { name: "Approve", exact: true }).click();
   await expect(page.locator("#toast")).toHaveText(
@@ -60,6 +66,9 @@ async function playToCpo(page: Page): Promise<void> {
   await page
     .getByRole("button", { name: "Go as Chief Privacy Officer" })
     .click();
+  await expect(page.locator(".summary")).toContainText(
+    "US$100,000 to an unverified payee, above the US$10,000 limit",
+  );
   await page.locator("#v1").check();
 }
 
@@ -78,7 +87,9 @@ test("Ending A: the CPO rejects; disclosure required, board told", async ({
   );
   await page.locator('[data-a="expand"][data-x="C-104"]').click();
   await expect(
-    page.getByText(/rejected the recommendation on C-104/),
+    page.getByText(
+      /rejected the recommendation on C-104\. Disclosure is required\. The US\$100,000 payment stays held\./,
+    ),
   ).toBeVisible();
   const ack = page.getByRole("button", { name: "Acknowledge" });
   for (let left = await ack.count(); left > 0; left--) {

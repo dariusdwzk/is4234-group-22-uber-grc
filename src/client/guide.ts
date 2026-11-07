@@ -50,8 +50,8 @@ export const STEPS: Step[] = [
         : "Attach the hacker’s email, then recommend",
     text: () =>
       S.d.emailAttached
-        ? "Send the prefilled recommendation to escalate internally, as the CSO kept it in-house in 2016. The reason goes on the record."
-        : "The hacker emailed the CSO directly, so no system saw it. Attaching it is optional: click “Attach to case”, then send the prefilled recommendation below.",
+        ? "Send the prefilled recommendation to escalate internally, as the CSO kept it in-house in 2016. The reason goes on the record. Keeping it internal means paying the attacker, as in 2016: sending this also creates the US$100,000 payment request, which the system holds."
+        : "The hacker emailed the CSO directly, so no system saw it. Attaching it is optional: click “Attach to case”, then send the prefilled recommendation below. Keeping it internal means paying the attacker, as in 2016: sending this also creates the US$100,000 payment request, which the system holds.",
     target: () => (S.d.emailAttached ? '[data-a="rec"]' : '[data-a="attach"]'),
     done: () => P().recommended,
   },
@@ -59,7 +59,7 @@ export const STEPS: Step[] = [
     role: "gc",
     onCase: true,
     title: "Approve as General Counsel",
-    text: "This is the first of two approvals. Read the CSO’s reason first. Then tick the checkbox and click Approve.",
+    text: "This is the first of two approvals. Read the CSO’s reason first, and note the held payment in the case summary before you decide. Then tick the checkbox and click Approve.",
     target: () => "#actionbox",
     done: () => P().gcDone,
   },
@@ -67,7 +67,7 @@ export const STEPS: Step[] = [
     role: "cpo",
     onCase: true,
     title: "Decide as Chief Privacy Officer",
-    text: "This is the second of two approvals. Reject: disclosure is required. Approve: the case stays internal and the board is told.",
+    text: "This is the second of two approvals. Reject: disclosure is required. Approve: the case stays internal. Either way the board is told and the US$100,000 payment stays held: it never goes out.",
     target: () => "#actionbox",
     done: () => P().cpoDone,
   },

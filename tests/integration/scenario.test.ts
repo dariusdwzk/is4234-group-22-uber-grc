@@ -122,7 +122,7 @@ describe("the guided tour, end to end on the server", () => {
     )!;
     expect(rejected).toMatchObject({ tier: 2 });
     expect(rejected.body).toBe(
-      "Chief Privacy Officer rejected the recommendation on C-104. Disclosure is required.",
+      "Chief Privacy Officer rejected the recommendation on C-104. Disclosure is required. The US$100,000 payment stays held.",
     );
 
     await disclose(as("gc"), { caseId: "C-104" });
@@ -141,11 +141,51 @@ describe("the guided tour, end to end on the server", () => {
     )!;
     expect(notice).toMatchObject({ tier: 2 });
     expect(notice.body).toBe(
-      "General Counsel and Chief Privacy Officer agreed to escalate C-104 internally for further investigation. Disclosure has not been made.",
+      "General Counsel and Chief Privacy Officer agreed to escalate C-104 internally for further investigation. Disclosure has not been made. The US$100,000 payment stays held.",
     );
     await disclose(as("cpo"), { caseId: "C-104" });
     expect((await caseC104()).status).toBe("Disclosed");
     expect(await verifyChain()).toMatchObject({ ok: true, anchorsOk: true });
+  });
+
+  it("keeping C-104 internal brings the US$100,000 payout request, held at once", async () => {
+    await playUntilApprovals();
+    const c = await caseC104();
+    expect(c.facts).toMatchObject({
+      paymentCents: 10_000_000,
+      payeeVerified: false,
+    });
+    const gc = await getViewState(as("gc"));
+    const sig = gc.signals.find((s) => s.src === "Finance")!;
+    expect(sig).toMatchObject({ caseId: "C-104" });
+    // The board sees every entry, including the signal before it joins the case.
+    const { ledger } = await getViewState(as("board"));
+    // The board is told at the moment of the hold, without anyone choosing to tell it.
+    const notice = (await db.select().from(boardNotices)).find(
+      (n) => n.kind === "payment",
+    )!;
+    expect(notice).toMatchObject({ caseId: "C-104", tier: 2 });
+    expect(notice.body).toBe(
+      "US$100,000 payment to an unverified payee on C-104 was held automatically.",
+    );
+    const at = ledger.findIndex((e) => e.action === "Recommendation sent");
+    const after = ledger.slice(at, at + 5);
+    expect(after.map((e) => e.action)).toEqual([
+      "Recommendation sent",
+      "Signal received",
+      "Signal merged",
+      "Payment held",
+      "Board notice sent (Tier 2)",
+    ]);
+    expect(after[3]!.detail).toBe(
+      "US$100,000 to an unverified payee, above the US$10,000 limit. Held while the case is high risk.",
+    );
+    expect(await verifyChain()).toMatchObject({ ok: true });
+  });
+
+  it("recommending disclosure brings no payout request", async () => {
+    await recommend(as("cso"), { caseId: "C-104", action: "disclose" });
+    expect((await caseC104()).facts.paymentCents).toBe(0);
   });
 
   it("escalating needs a reason; disclosing does not", async () => {

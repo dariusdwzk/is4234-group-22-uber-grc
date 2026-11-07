@@ -1,4 +1,5 @@
 // The case page: header, timeline, alerts, summary, action panel, Deadlines / Activity.
+import { heldPaymentText } from "@/domain/payment";
 import { knownScale } from "@/domain/board-text";
 import { ESCALATED_STATUS } from "@/domain/gate";
 import { fmtDur, fmtT } from "@/domain/demo-time";
@@ -104,6 +105,8 @@ function caseSummary(c: CaseView): string {
     ]);
   if (f.jurisdictions.length)
     kv.push(["Affected residents", f.jurisdictions.join(", ")]);
+  const pay = heldPaymentText(f);
+  if (pay) kv.push([c.severity === "HIGH" ? "Payment held" : "Payment", pay]);
   if (c.severity === "HIGH") kv.push(["Regulator", "FTC inquiry open"]);
   if (t1) kv.push(["Board", "Notified " + fmtT(t1.t)]);
   if (g && g.start !== null && g.dur !== null && c.status !== "Disclosed")
@@ -116,9 +119,12 @@ function caseSummary(c: CaseView): string {
         kv
           .map(
             ([k, v]) =>
-              "<dt>" +
+              // The held payment stands out: approvers should see it before deciding.
+              (k === "Payment held" ? '<dt class="kv-hold">' : "<dt>") +
               k +
-              "</dt><dd>" +
+              (k === "Payment held"
+                ? '</dt><dd class="kv-hold">'
+                : "</dt><dd>") +
               (k === "GDPR deadline" ? v : esc(v)) +
               "</dd>",
           )

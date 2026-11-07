@@ -70,6 +70,29 @@ describe("plainEvent (the board's evidence log wording)", () => {
     });
   });
 
+  it("the held payout request is a Payment entry", () => {
+    expect(
+      plainEvent(
+        e("Finance", "Signal received", "SIG-202: payment request US$100,000"),
+      ),
+    ).toEqual({
+      cat: "money",
+      text: "Finance received a payment request US$100,000.",
+    });
+    expect(
+      plainEvent(
+        e(
+          "System",
+          "Payment held",
+          "US$100,000 to an unverified payee, above the US$10,000 limit. Held while the case is high risk.",
+        ),
+      ),
+    ).toEqual({
+      cat: "money",
+      text: "Payment held automatically: US$100,000 to an unverified payee, above the US$10,000 limit.",
+    });
+  });
+
   it("notices get their own category", () => {
     expect(
       plainEvent(

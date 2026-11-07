@@ -20,6 +20,9 @@ export type Facts = {
   objects: number;
   records: string;
   licences: string;
+  /** A payment requested on the case, in US cents (src/domain/payment.ts). */
+  paymentCents: number;
+  payeeVerified: boolean;
   extortion: boolean;
   jurisdictions: string[];
   // From the staff report questionnaire (src/domain/questionnaire.ts).
@@ -36,6 +39,8 @@ export const defaultFacts = (): Facts => ({
   objects: 0,
   records: "0",
   licences: "",
+  paymentCents: 0,
+  payeeVerified: true,
   extortion: false,
   jurisdictions: [],
   moneyConcern: false,

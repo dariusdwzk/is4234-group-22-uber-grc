@@ -10,7 +10,8 @@ export type LedgerView = {
   hash: string;
 };
 
-export type EventCat = "detect" | "notice" | "work" | "decision" | "blocked";
+export type EventCat =
+  "detect" | "notice" | "work" | "decision" | "blocked" | "money";
 
 export type PlainEvent = { cat: EventCat; text: string };
 
@@ -21,6 +22,7 @@ export const CATS: Record<EventCat, [label: string, cls: string]> = {
   work: ["Investigation", ""],
   decision: ["Decision", "a"],
   blocked: ["Blocked", "r"],
+  money: ["Payment", "a"],
 };
 
 const staff = (who: string) =>
@@ -33,6 +35,8 @@ export function plainEvent(e: LedgerView): PlainEvent | null {
     d = e.detail;
   if (a === "Signal received") {
     const t = d.split(": ")[1] || d;
+    if (who === "Finance")
+      return { cat: "money", text: "Finance received a " + t + "." };
     if (who === "HackerOne")
       return { cat: "detect", text: "HackerOne received a " + t + "." };
     return { cat: "detect", text: who + " detected a " + t + "." };
@@ -99,6 +103,11 @@ export function plainEvent(e: LedgerView): PlainEvent | null {
     return {
       cat: "decision",
       text: "Both approvers agreed to escalate internally before disclosing.",
+    };
+  if (a === "Payment held")
+    return {
+      cat: "money",
+      text: "Payment held automatically: " + d.split(". ")[0] + ".",
     };
   if (a === "Disclosure approved")
     return {

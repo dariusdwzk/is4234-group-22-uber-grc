@@ -8,6 +8,7 @@ import {
 } from "@/domain/gate";
 import type { Actor, RoleKey } from "@/domain/types";
 import { getCaseFor } from "../cases/engine";
+import { payoutRequest } from "../cases/payout";
 import { cases, decisions, recommendations } from "../db/schema";
 import { Conflict } from "../errors";
 import { caseIdOf, runCommand, type CommandDef } from "../run-command";
@@ -70,6 +71,7 @@ export const recommendCommand: CommandDef<z.infer<typeof schema>, void> = {
       caseId,
       d.type + (reason ? ". " + reason : ""),
     );
+    if (action === "escalate") await payoutRequest(ctx, caseId);
   },
 };
 

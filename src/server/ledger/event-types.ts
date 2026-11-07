@@ -30,6 +30,7 @@ export const LEDGER_EVENT_TYPES = [
   "Rejected",
   "Approved by both approvers",
   "Disclosure approved",
+  "Payment held",
 ] as const;
 
 /** A refused action is itself evidence: "Blocked: <what was tried>". */

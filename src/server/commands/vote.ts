@@ -7,6 +7,7 @@ import {
   voteOutcome,
   type Approver,
 } from "@/domain/gate";
+import { usd } from "@/domain/payment";
 import { ROLES } from "@/domain/roles";
 import type { Actor } from "@/domain/types";
 import { getCase, runEscalations, sendNotice } from "../cases/engine";
@@ -76,6 +77,11 @@ export const voteCommand: CommandDef<z.infer<typeof schema>, void> = {
       ? "approve"
       : (votes.find((v) => v.role !== voter)?.vote ?? null);
     const outcome = voteOutcome(d, voter, vote, other);
+    // No decision releases a held payment: the board is told it stays held either way.
+    const stillHeld =
+      c.facts.paymentCents > 0
+        ? " The " + usd(c.facts.paymentCents) + " payment stays held."
+        : "";
     const sys = { actor: "System" };
     const resolve = (status: "Approved" | "Rejected") =>
       tx
@@ -97,7 +103,8 @@ export const voteCommand: CommandDef<z.infer<typeof schema>, void> = {
         actor.name +
           " rejected the recommendation on " +
           c.id +
-          ". Disclosure is required.",
+          ". Disclosure is required." +
+          stillHeld,
       );
     } else if (outcome.kind === "disclosed") {
       await resolve("Approved");
@@ -117,7 +124,8 @@ export const voteCommand: CommandDef<z.infer<typeof schema>, void> = {
         "escalated",
         "General Counsel and Chief Privacy Officer agreed to escalate " +
           c.id +
-          " internally for further investigation. Disclosure has not been made.",
+          " internally for further investigation. Disclosure has not been made." +
+          stillHeld,
       );
       await log(
         "Approved by both approvers",

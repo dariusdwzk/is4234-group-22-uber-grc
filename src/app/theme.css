@@ -171,3 +171,8 @@ main.landing{align-content:center;gap:16px}
 }
 /* Toast near the top edge: clear of the Sign in heading and the case title. */
 #toast{top:calc(12px + env(safe-area-inset-top,0px))}
+
+/* Case summary: the held payment row, highlighted for the approvers */
+.kv dt.kv-hold,.kv dd.kv-hold{background:var(--warn-bg);color:var(--warn);font-weight:600;padding:6px 10px;box-shadow:inset 0 1px 0 #FEDF89,inset 0 -1px 0 #FEDF89}
+.kv dt.kv-hold{border-radius:8px 0 0 8px;box-shadow:inset 3px 0 0 #F79009,inset 0 1px 0 #FEDF89,inset 0 -1px 0 #FEDF89}
+.kv dd.kv-hold{margin-left:-14px;padding-left:14px;border-radius:0 8px 8px 0;box-shadow:inset -1px 0 0 #FEDF89,inset 0 1px 0 #FEDF89,inset 0 -1px 0 #FEDF89}

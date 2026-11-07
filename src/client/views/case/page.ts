@@ -119,9 +119,12 @@ function caseSummary(c: CaseView): string {
         kv
           .map(
             ([k, v]) =>
-              "<dt>" +
+              // The held payment stands out: approvers should see it before deciding.
+              (k === "Payment held" ? '<dt class="kv-hold">' : "<dt>") +
               k +
-              "</dt><dd>" +
+              (k === "Payment held"
+                ? '</dt><dd class="kv-hold">'
+                : "</dt><dd>") +
               (k === "GDPR deadline" ? v : esc(v)) +
               "</dd>",
           )

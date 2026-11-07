@@ -160,13 +160,22 @@ describe("the guided tour, end to end on the server", () => {
     expect(sig).toMatchObject({ caseId: "C-104" });
     // The board sees every entry, including the signal before it joins the case.
     const { ledger } = await getViewState(as("board"));
+    // The board is told at the moment of the hold, without anyone choosing to tell it.
+    const notice = (await db.select().from(boardNotices)).find(
+      (n) => n.kind === "payment",
+    )!;
+    expect(notice).toMatchObject({ caseId: "C-104", tier: 2 });
+    expect(notice.body).toBe(
+      "US$100,000 payment to an unverified payee on C-104 was held automatically.",
+    );
     const at = ledger.findIndex((e) => e.action === "Recommendation sent");
-    const after = ledger.slice(at, at + 4);
+    const after = ledger.slice(at, at + 5);
     expect(after.map((e) => e.action)).toEqual([
       "Recommendation sent",
       "Signal received",
       "Signal merged",
       "Payment held",
+      "Board notice sent (Tier 2)",
     ]);
     expect(after[3]!.detail).toBe(
       "US$100,000 to an unverified payee, above the US$10,000 limit. Held while the case is high risk.",

@@ -1,9 +1,9 @@
 import "server-only";
 import { eq } from "drizzle-orm";
-import { heldPaymentText } from "@/domain/payment";
+import { heldPaymentText, usd } from "@/domain/payment";
 import { signals } from "../db/schema";
 import type { CommandCtx } from "../run-command";
-import { addToCase, getCase, insertSignal } from "./engine";
+import { addToCase, getCase, insertSignal, sendNotice } from "./engine";
 
 const AMOUNT_CENTS = 10_000_000;
 
@@ -42,5 +42,16 @@ export async function payoutRequest(
     caseId,
     heldPaymentText(c.facts) + ". Held while the case is high risk.",
     { actor: "System" },
+  );
+  // The board hears about the hold when it happens, not only after a vote.
+  await sendNotice(
+    ctx,
+    caseId,
+    2,
+    "payment",
+    usd(AMOUNT_CENTS) +
+      " payment to an unverified payee on " +
+      caseId +
+      " was held automatically.",
   );
 }

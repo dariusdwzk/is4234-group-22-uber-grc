@@ -50,8 +50,8 @@ export const STEPS: Step[] = [
         : "Attach the hacker’s email, then recommend",
     text: () =>
       S.d.emailAttached
-        ? "Send the prefilled recommendation to escalate internally, as the CSO kept it in-house in 2016. The reason goes on the record."
-        : "The hacker emailed the CSO directly, so no system saw it. Attaching it is optional: click “Attach to case”, then send the prefilled recommendation below.",
+        ? "Send the prefilled recommendation to escalate internally, as the CSO kept it in-house in 2016. The reason goes on the record. Keeping it internal means paying the attacker, as in 2016: sending this also creates the US$100,000 payment request, which the system holds."
+        : "The hacker emailed the CSO directly, so no system saw it. Attaching it is optional: click “Attach to case”, then send the prefilled recommendation below. Keeping it internal means paying the attacker, as in 2016: sending this also creates the US$100,000 payment request, which the system holds.",
     target: () => (S.d.emailAttached ? '[data-a="rec"]' : '[data-a="attach"]'),
     done: () => P().recommended,
   },

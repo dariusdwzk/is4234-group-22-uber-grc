@@ -484,8 +484,12 @@ async function run(name: string, x: string | undefined): Promise<void> {
     }
   })();
   inFlight = p;
+  root?.setAttribute("aria-busy", "true");
   await p;
-  if (inFlight === p) inFlight = null;
+  if (inFlight === p) {
+    inFlight = null;
+    root?.removeAttribute("aria-busy");
+  }
 }
 
 function onClick(e: MouseEvent): void {
@@ -501,7 +505,11 @@ export function mount(el: HTMLElement): () => void {
   document.addEventListener("click", onClick);
   S.role = loadRole();
   S.view = S.role ? ROLES[S.role].home : "landing";
-  if (!S.role) render(); // a restored role waits for its data, so My work never flashes empty
+  // a restored role waits for its data, so My work never flashes empty
+  if (!S.role) render();
+  else
+    el.innerHTML =
+      '<main class="boot" role="status">Loading your workspace…</main>';
   refresh()
     .then(render)
     .catch(() => {

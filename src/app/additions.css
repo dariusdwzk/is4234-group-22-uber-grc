@@ -16,3 +16,10 @@
 /* Board: three number tiles since staff challenges were removed (the mockup had four). */
 .kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
 @media (max-width:900px){.kpis{grid-template-columns:1fr}}
+
+/* Loading: first load with a remembered role, and a thin bar while an action waits on the server. */
+.boot{min-height:60vh;display:grid;place-items:center;color:var(--muted)}
+#root[aria-busy="true"]{cursor:progress}
+#root[aria-busy="true"]::before{content:"";position:fixed;top:0;left:0;right:0;height:3px;z-index:40;background:linear-gradient(90deg,transparent,var(--ink),transparent);background-size:40% 100%;background-repeat:no-repeat;animation:busybar 1s linear infinite}
+@keyframes busybar{from{background-position:-40% 0}to{background-position:140% 0}}
+@media (prefers-reduced-motion:reduce){#root[aria-busy="true"]::before{animation:none;background:var(--ink);opacity:.4}}
